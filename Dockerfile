@@ -1,7 +1,11 @@
 FROM python:3.12-slim
 
+ARG APP_VERSION=dev
+
 ENV PYTHONDONTWRITEBYTECODE=1 \
-    PYTHONUNBUFFERED=1
+    PYTHONUNBUFFERED=1 \
+    FORWARDED_ALLOW_IPS=* \
+    APP_VERSION=${APP_VERSION}
 
 WORKDIR /app
 
@@ -25,4 +29,4 @@ RUN mkdir -p /app/data /app/uploads \
 EXPOSE 8080
 
 ENTRYPOINT ["keyvault-entrypoint"]
-CMD ["uvicorn", "app.main:app", "--host", "0.0.0.0", "--port", "8080", "--proxy-headers"]
+CMD ["sh", "-c", "exec uvicorn app.main:app --host 0.0.0.0 --port 8080 --proxy-headers --forwarded-allow-ips \"${FORWARDED_ALLOW_IPS:-*}\""]

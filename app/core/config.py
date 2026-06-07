@@ -10,8 +10,10 @@ class InvalidConfigurationError(RuntimeError):
 
 class Settings(BaseSettings):
     app_name: str = "KeyVault"
+    app_version: str = "dev"
     app_env: str = "production"
     base_url: str = "http://localhost:8080"
+    root_path: str = ""
     database_url: str = "sqlite:////app/data/keyvault.db"
     secret_key: str = "change-this-secret-key"
     encryption_key: str = ""
@@ -21,10 +23,20 @@ class Settings(BaseSettings):
     upload_dir: str = "/app/uploads"
     max_upload_mb: int = 25
     allowed_hosts: str = ""
+    github_repo: str = "antybubbs/KeyVault"
 
     class Config:
         env_file = ".env"
         extra = "ignore"
+
+
+def trusted_hosts(settings: Settings) -> list[str]:
+    hosts = {"localhost", "127.0.0.1", "::1", "keyvault"}
+    parsed_host = urlparse(settings.base_url).hostname
+    if parsed_host:
+        hosts.add(parsed_host)
+    hosts.update(host.strip() for host in settings.allowed_hosts.split(",") if host.strip())
+    return sorted(hosts)
 
 
 @lru_cache
@@ -54,8 +66,4 @@ def get_settings() -> Settings:
             "ENCRYPTION_KEY must be 32 url-safe base64-encoded bytes. Generate one with: "
             "python scripts/generate_secrets.py"
         ) from exc
-    if settings.app_env == "production" and not settings.allowed_hosts:
-        parsed_host = urlparse(settings.base_url).hostname
-        if parsed_host and parsed_host not in {"localhost", "127.0.0.1"}:
-            settings.allowed_hosts = parsed_host
     return settings

@@ -1,8 +1,13 @@
 import pandas as pd
 from sqlalchemy.orm import Session
+from app.core.config import InvalidConfigurationError
 from app.core.security import encrypt_secret
 from app.models.models import Licence, User
 from app.services.audit import write_audit
+
+
+class ImportCSVError(RuntimeError):
+    pass
 
 
 def clean(value):
@@ -22,27 +27,44 @@ def to_int(value):
 
 
 def import_csv(db: Session, user: User, path: str, ip_address: str | None = None) -> int:
-    df = pd.read_csv(path)
+    try:
+        df = pd.read_csv(path)
+    except Exception as exc:
+        raise ImportCSVError("The uploaded file could not be read as a CSV.") from exc
+
+    required_columns = {"Product", "Product Key"}
+    missing_columns = sorted(required_columns - set(df.columns))
+    if missing_columns:
+        raise ImportCSVError("Missing required CSV columns: " + ", ".join(missing_columns))
+
     count = 0
-    for _, row in df.iterrows():
-        product = clean(row.get("Product"))
-        product_key = clean(row.get("Product Key"))
-        if not product or not product_key:
-            continue
-        licence = Licence(
-            licence_id=clean(row.get("License ID")),
-            parent_program=clean(row.get("Parent Program")),
-            organisation=clean(row.get("Organization")),
-            product=product,
-            vendor="Microsoft",
-            encrypted_product_key=encrypt_secret(product_key),
-            licence_type=clean(row.get("Type")),
-            activations=clean(row.get("MAK Activations-Used/Available")),
-            seats=to_int(row.get("Seats")),
-            osa_status=clean(row.get("OSA Status")),
-        )
-        db.add(licence)
-        count += 1
-    db.commit()
+    try:
+        for _, row in df.iterrows():
+            product = clean(row.get("Product"))
+            product_key = clean(row.get("Product Key"))
+            if not product or not product_key:
+                continue
+            licence = Licence(
+                licence_id=clean(row.get("License ID")),
+                parent_program=clean(row.get("Parent Program")),
+                organisation=clean(row.get("Organization")),
+                product=product,
+                vendor="Microsoft",
+                encrypted_product_key=encrypt_secret(product_key),
+                licence_type=clean(row.get("Type")),
+                activations=clean(row.get("MAK Activations-Used/Available")),
+                seats=to_int(row.get("Seats")),
+                osa_status=clean(row.get("OSA Status")),
+            )
+            db.add(licence)
+            count += 1
+        db.commit()
+    except InvalidConfigurationError as exc:
+        db.rollback()
+        raise ImportCSVError(str(exc)) from exc
+    except Exception as exc:
+        db.rollback()
+        raise ImportCSVError("The CSV import failed before records could be saved.") from exc
+
     write_audit(db, user, "import", "licence", detail=f"Imported {count} licence records", ip_address=ip_address)
     return count

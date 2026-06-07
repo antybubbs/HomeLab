@@ -1,4 +1,5 @@
 import json
+import re
 import time
 from dataclasses import dataclass
 from urllib.error import URLError
@@ -16,6 +17,7 @@ class VersionCache:
 
 
 _cache = VersionCache()
+SHA_PATTERN = re.compile(r"^[0-9a-f]{7,40}$")
 
 
 def normalize_version(version: str) -> tuple[int, ...]:
@@ -30,6 +32,12 @@ def normalize_version(version: str) -> tuple[int, ...]:
         if digits:
             parts.append(int(digits))
     return tuple(parts)
+
+
+def display_version(version: str) -> str:
+    if SHA_PATTERN.match(version.strip().lower()):
+        return "dev build"
+    return version
 
 
 def latest_release() -> tuple[str | None, str | None]:
@@ -62,10 +70,13 @@ def version_status() -> dict[str, str | bool | None]:
     installed = settings.app_version
     latest, release_url = latest_release()
     update_available = False
-    if latest and normalize_version(latest) and normalize_version(installed):
+    if latest and SHA_PATTERN.match(installed.strip().lower()):
+        update_available = True
+    elif latest and normalize_version(latest) and normalize_version(installed):
         update_available = normalize_version(latest) > normalize_version(installed)
     return {
         "installed": installed,
+        "installed_display": display_version(installed),
         "latest": latest,
         "release_url": release_url,
         "update_available": update_available,

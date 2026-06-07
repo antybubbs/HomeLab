@@ -46,18 +46,17 @@ jobs:
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v3
 
-      - name: Build and push image
+      - name: Build and push commit image
+        if: "!startsWith(github.ref, 'refs/tags/')"
         uses: docker/build-push-action@v6
         with:
           context: .
           push: true
           build-args: |
             APP_VERSION=${{ steps.meta.outputs.version }}
-          tags: |
-            ${{ steps.meta.outputs.image }}:latest
-            ${{ steps.meta.outputs.image }}:${{ steps.meta.outputs.short_sha }}
+          tags: ${{ steps.meta.outputs.image }}:${{ steps.meta.outputs.short_sha }}
 
-      - name: Push version tag
+      - name: Build and push release image
         if: startsWith(github.ref, 'refs/tags/')
         uses: docker/build-push-action@v6
         with:
@@ -65,4 +64,6 @@ jobs:
           push: true
           build-args: |
             APP_VERSION=${{ steps.meta.outputs.version }}
-          tags: ${{ steps.meta.outputs.image }}:${{ github.ref_name }}
+          tags: |
+            ${{ steps.meta.outputs.image }}:${{ github.ref_name }}
+            ${{ steps.meta.outputs.image }}:latest

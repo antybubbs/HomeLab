@@ -21,7 +21,7 @@
   <form method="post" action="/logout"><input type="hidden" name="csrf_token" value="{{ csrf_token }}"><button class="ghost" type="submit">Sign out</button></form>
   {% if version_status %}
   <div class="version-card">
-    <div><span>Installed</span><strong>{{ version_status.installed }}</strong></div>
+    <div><span>Installed</span><strong>{{ version_status.installed_display }}</strong></div>
     {% if version_status.update_available %}
     <a href="{{ version_status.release_url }}" target="_blank" rel="noopener noreferrer"><span>Update available</span><strong>{{ version_status.latest }}</strong></a>
     {% elif version_status.latest %}

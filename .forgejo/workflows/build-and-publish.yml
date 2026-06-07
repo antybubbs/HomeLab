@@ -36,9 +36,9 @@ jobs:
       - name: Log in to Forgejo registry
         shell: bash
         run: |
-          printf '%s' '${{ secrets.FORGEJO_TOKEN }}' |
+          printf '%s' "$FORGEJO_TOKEN" |
             docker login '${{ steps.meta.outputs.registry }}' \
-              --username '${{ github.repository_owner }}' \
+              --username '${{ github.actor }}' \
               --password-stdin
 
       - name: Build image

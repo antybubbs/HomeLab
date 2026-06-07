@@ -17,4 +17,4 @@ def dashboard(request: Request, db: Session = Depends(get_db), user=Depends(requ
     products = db.query(func.count(func.distinct(Licence.product))).scalar() or 0
     organisations = db.query(func.count(func.distinct(Licence.organisation))).scalar() or 0
     recent = db.query(Licence).order_by(Licence.created_at.desc()).limit(8).all()
-    return templates.TemplateResponse("dashboard.html", {"request": request, "user": user, "total": total, "products": products, "organisations": organisations, "recent": recent, **csrf_context(request)})
+    return templates.TemplateResponse(request, "dashboard.html", {"user": user, "total": total, "products": products, "organisations": organisations, "recent": recent, **csrf_context(request)})

@@ -23,12 +23,12 @@ def list_licences(request: Request, q: str = Query("", max_length=200), db: Sess
         like = f"%{clean_q}%"
         query = query.filter(or_(Licence.product.ilike(like), Licence.organisation.ilike(like), Licence.licence_type.ilike(like), Licence.licence_id.ilike(like)))
     rows = query.order_by(Licence.product.asc()).limit(500).all()
-    return templates.TemplateResponse("licences.html", {"request": request, "user": user, "rows": rows, "q": clean_q, "mask_key": lambda encrypted: mask_key(decrypt_secret(encrypted)), **csrf_context(request)})
+    return templates.TemplateResponse(request, "licences.html", {"user": user, "rows": rows, "q": clean_q, "mask_key": lambda encrypted: mask_key(decrypt_secret(encrypted)), **csrf_context(request)})
 
 
 @router.get("/new")
 def new_licence(request: Request, user=Depends(require_editor)):
-    return templates.TemplateResponse("licence_form.html", {"request": request, "user": user, "licence": None, **csrf_context(request)})
+    return templates.TemplateResponse(request, "licence_form.html", {"user": user, "licence": None, **csrf_context(request)})
 
 
 @router.post("/new")
@@ -50,7 +50,7 @@ def detail(request: Request, licence_id: int, db: Session = Depends(get_db), use
     row = db.get(Licence, licence_id)
     if not row:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Licence not found")
-    return templates.TemplateResponse("licence_detail.html", {"request": request, "user": user, "licence": row, "display_key": mask_key(decrypt_secret(row.encrypted_product_key)), "revealed": False, **csrf_context(request)})
+    return templates.TemplateResponse(request, "licence_detail.html", {"user": user, "licence": row, "display_key": mask_key(decrypt_secret(row.encrypted_product_key)), "revealed": False, **csrf_context(request)})
 
 
 @router.post("/{licence_id}/reveal")
@@ -60,4 +60,4 @@ def reveal(request: Request, licence_id: int, csrf_token: str = Form(...), db: S
     if not row:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Licence not found")
     write_audit(db, user, "reveal", "licence", str(row.id), request.client.host if request.client else None)
-    return templates.TemplateResponse("licence_detail.html", {"request": request, "user": user, "licence": row, "display_key": decrypt_secret(row.encrypted_product_key), "revealed": True, **csrf_context(request)})
+    return templates.TemplateResponse(request, "licence_detail.html", {"user": user, "licence": row, "display_key": decrypt_secret(row.encrypted_product_key), "revealed": True, **csrf_context(request)})

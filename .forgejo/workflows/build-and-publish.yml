@@ -9,7 +9,7 @@ on:
 
 jobs:
   container:
-    runs-on: docker
+    runs-on: ubuntu-latest
     steps:
       - name: Check out source
         uses: actions/checkout@v4

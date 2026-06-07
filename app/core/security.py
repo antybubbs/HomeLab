@@ -37,5 +37,5 @@ def mask_key(value: str | None) -> str:
         return ""
     clean = value.strip()
     if len(clean) <= 8:
-        return "•" * len(clean)
-    return "•" * max(0, len(clean) - 5) + clean[-5:]
+        return "*" * len(clean)
+    return "*" * max(0, len(clean) - 5) + clean[-5:]

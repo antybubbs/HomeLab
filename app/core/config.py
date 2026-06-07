@@ -3,6 +3,10 @@ from pydantic_settings import BaseSettings
 from cryptography.fernet import Fernet
 
 
+class InvalidConfigurationError(RuntimeError):
+    pass
+
+
 class Settings(BaseSettings):
     app_name: str = "KeyVault"
     app_env: str = "production"
@@ -25,6 +29,17 @@ class Settings(BaseSettings):
 def get_settings() -> Settings:
     settings = Settings()
     if not settings.encryption_key or settings.encryption_key == "change-this-fernet-key":
-        # Development fallback only. Production should set ENCRYPTION_KEY explicitly.
+        if settings.app_env == "production":
+            raise InvalidConfigurationError(
+                "ENCRYPTION_KEY must be set to a valid Fernet key. Generate one with: "
+                "python scripts/generate_secrets.py"
+            )
         settings.encryption_key = Fernet.generate_key().decode()
+    try:
+        Fernet(settings.encryption_key.encode())
+    except Exception as exc:
+        raise InvalidConfigurationError(
+            "ENCRYPTION_KEY must be 32 url-safe base64-encoded bytes. Generate one with: "
+            "python scripts/generate_secrets.py"
+        ) from exc
     return settings

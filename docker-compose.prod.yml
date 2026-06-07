@@ -10,6 +10,8 @@ services:
     volumes:
       - ./data:/app/data
       - ./uploads:/app/uploads
+    read_only: true
+    pids_limit: 256
     security_opt:
       - no-new-privileges:true
     cap_drop:

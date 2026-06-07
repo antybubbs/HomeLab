@@ -1,4 +1,5 @@
 from functools import lru_cache
+from urllib.parse import urlparse
 from pydantic_settings import BaseSettings
 from cryptography.fernet import Fernet
 
@@ -19,6 +20,7 @@ class Settings(BaseSettings):
     session_cookie_secure: bool = False
     upload_dir: str = "/app/uploads"
     max_upload_mb: int = 25
+    allowed_hosts: str = ""
 
     class Config:
         env_file = ".env"
@@ -28,6 +30,16 @@ class Settings(BaseSettings):
 @lru_cache
 def get_settings() -> Settings:
     settings = Settings()
+    if settings.app_env == "production":
+        if settings.secret_key == "change-this-secret-key" or len(settings.secret_key) < 32:
+            raise InvalidConfigurationError(
+                "SECRET_KEY must be set to a strong random value. Generate one with: "
+                "python scripts/generate_secrets.py"
+            )
+        if settings.admin_password == "change-me-now" or len(settings.admin_password) < 12:
+            raise InvalidConfigurationError(
+                "ADMIN_PASSWORD must be changed before production startup."
+            )
     if not settings.encryption_key or settings.encryption_key == "change-this-fernet-key":
         if settings.app_env == "production":
             raise InvalidConfigurationError(
@@ -42,4 +54,8 @@ def get_settings() -> Settings:
             "ENCRYPTION_KEY must be 32 url-safe base64-encoded bytes. Generate one with: "
             "python scripts/generate_secrets.py"
         ) from exc
+    if settings.app_env == "production" and not settings.allowed_hosts:
+        parsed_host = urlparse(settings.base_url).hostname
+        if parsed_host and parsed_host not in {"localhost", "127.0.0.1"}:
+            settings.allowed_hosts = parsed_host
     return settings

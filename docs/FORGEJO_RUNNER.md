@@ -43,14 +43,14 @@ services:
     command: >
       sh -c '
         if [ ! -f /data/.runner ]; then
-          forgejo-runner register
-            --no-interactive
-            --instance https://forg.app.strubens.uk
-            --token "$${FORGEJO_RUNNER_TOKEN}"
-            --name keyvault-runner
+          forgejo-runner register \
+            --no-interactive \
+            --instance https://forg.app.strubens.uk \
+            --token "$${FORGEJO_RUNNER_TOKEN}" \
+            --name keyvault-runner \
             --labels "ubuntu-latest:docker://ghcr.io/catthehacker/ubuntu:act-22.04";
         fi;
-        forgejo-runner daemon --config /data/config.yml
+        forgejo-runner daemon
       '
 ```
 

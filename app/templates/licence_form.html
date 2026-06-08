@@ -1,16 +1,18 @@
 {% extends "base.html" %}
 {% block content %}
-<div class="topbar"><div><h1>Add licence</h1><p class="muted">New keys are encrypted before being saved.</p></div></div>
+<div class="topbar"><div><h1>{% if licence %}Edit License Key{% else %}Add License Key{% endif %}</h1><p class="muted">Keys are encrypted before being saved.</p></div><a class="button secondary" href="{% if licence %}/licences/{{ licence.id }}{% else %}/licences{% endif %}">Back</a></div>
+{% if error %}<div class="alert">{{ error }}</div>{% endif %}
 <section class="panel">
 <form method="post" class="form-grid">
   <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
-  <label>Product<input name="product" required></label>
-  <label>Organisation<input name="organisation"></label>
-  <label>Product key<input name="product_key" autocomplete="off" required></label>
-  <label>Licence type<input name="licence_type"></label>
-  <label>Seats<input name="seats" type="number" value="0"></label>
-  <label class="wide">Notes<textarea name="notes"></textarea></label>
-  <button type="submit">Save licence</button>
+  <label>Product<input name="product" value="{{ licence.product if licence else '' }}" required></label>
+  <label>Organisation<input name="organisation" value="{{ licence.organisation if licence and licence.organisation else '' }}"></label>
+  <label>Product key<input name="product_key" autocomplete="off" value="{{ product_key }}" required></label>
+  <label>Licence type<input name="licence_type" value="{{ licence.licence_type if licence and licence.licence_type else '' }}"></label>
+  <label>Seats<input name="seats" type="number" value="{{ licence.seats if licence and licence.seats is not none else 0 }}"></label>
+  <label class="wide">Notes<textarea name="notes">{{ licence.notes if licence and licence.notes else '' }}</textarea></label>
+  <button class="button secondary" type="reset">Reset</button>
+  <button type="submit">Save</button>
 </form>
 </section>
 {% endblock %}

@@ -28,7 +28,7 @@ def list_licences(request: Request, q: str = Query("", max_length=200), db: Sess
 
 @router.get("/new")
 def new_licence(request: Request, user=Depends(require_editor)):
-    return templates.TemplateResponse(request, "licence_form.html", {"user": user, "licence": None, **csrf_context(request)})
+    return templates.TemplateResponse(request, "licence_form.html", {"user": user, "licence": None, "product_key": "", "error": None, **csrf_context(request)})
 
 
 @router.post("/new")
@@ -43,6 +43,35 @@ def create_licence(request: Request, product: str = Form(..., max_length=500), p
     db.commit()
     write_audit(db, user, "create", "licence", str(row.id), request.client.host if request.client else None)
     return RedirectResponse("/licences", status_code=303)
+
+
+@router.get("/{licence_id}/edit")
+def edit_licence(request: Request, licence_id: int, db: Session = Depends(get_db), user=Depends(require_editor)):
+    row = db.get(Licence, licence_id)
+    if not row:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Licence not found")
+    return templates.TemplateResponse(request, "licence_form.html", {"user": user, "licence": row, "product_key": decrypt_secret(row.encrypted_product_key), "error": None, **csrf_context(request)})
+
+
+@router.post("/{licence_id}/edit")
+def update_licence(request: Request, licence_id: int, product: str = Form(..., max_length=500), product_key: str = Form(..., max_length=500), organisation: str = Form("", max_length=255), licence_type: str = Form("", max_length=120), seats: int = Form(0, ge=0, le=1000000), notes: str = Form("", max_length=10000), csrf_token: str = Form(...), db: Session = Depends(get_db), user=Depends(require_editor)):
+    validate_csrf_token(request, csrf_token)
+    row = db.get(Licence, licence_id)
+    if not row:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Licence not found")
+    product = product.strip()
+    product_key = product_key.strip()
+    if not product or not product_key:
+        return templates.TemplateResponse(request, "licence_form.html", {"user": user, "licence": row, "product_key": product_key, "error": "Product and product key are required.", **csrf_context(request)}, status_code=400)
+    row.product = product
+    row.encrypted_product_key = encrypt_secret(product_key)
+    row.organisation = organisation.strip() or None
+    row.licence_type = licence_type.strip() or None
+    row.seats = seats
+    row.notes = notes.strip() or None
+    db.commit()
+    write_audit(db, user, "update", "licence", str(row.id), request.client.host if request.client else None, detail=product)
+    return RedirectResponse(f"/licences/{row.id}", status_code=303)
 
 
 @router.get("/{licence_id}")

@@ -13,18 +13,31 @@
   <div class="brand"><span class="brand-mark">H</span><span>HomeLab</span></div>
   <nav class="nav-tree">
     <a class="nav-link" href="/dashboard" data-reset-sidebar>Dashboard</a>
-    <details class="nav-group" data-sidebar-menu="software">
-      <summary>Software</summary>
+    <details class="nav-group" data-sidebar-menu="my-lab">
+      <summary>My Lab</summary>
       <div class="nav-children">
-        <a class="nav-link" href="/licences">License Keys</a>
-        <span class="nav-link disabled" title="Coming soon">Certs</span>
-      </div>
-    </details>
-    <details class="nav-group" data-sidebar-menu="hardware">
-      <summary>Hardware</summary>
-      <div class="nav-children">
-        <span class="nav-link disabled" title="Coming soon">IP Addresses</span>
-        <span class="nav-link disabled" title="Coming soon">Asset List</span>
+        <details class="nav-subgroup" data-sidebar-menu="software">
+          <summary>Software</summary>
+          <div class="nav-children">
+            <a class="nav-link" href="/licences">License Keys</a>
+            <span class="nav-link disabled" title="Coming soon">Software Assets</span>
+          </div>
+        </details>
+        <span class="nav-link disabled" title="Coming soon">Certificates</span>
+        <details class="nav-subgroup" data-sidebar-menu="hardware">
+          <summary>Hardware</summary>
+          <div class="nav-children">
+            <span class="nav-link disabled" title="Coming soon">Assets</span>
+            <span class="nav-link disabled" title="Coming soon">Warranty Tracker</span>
+          </div>
+        </details>
+        <details class="nav-subgroup" data-sidebar-menu="network">
+          <summary>Network</summary>
+          <div class="nav-children">
+            <span class="nav-link disabled" title="Coming soon">IP Addresses</span>
+            <span class="nav-link disabled" title="Coming soon">Network Monitor</span>
+          </div>
+        </details>
       </div>
     </details>
     {% if user.role == 'admin' %}
@@ -43,10 +56,9 @@
         <details class="nav-subgroup" data-sidebar-menu="data-management">
           <summary>Data Management</summary>
           <div class="nav-children">
-            <a class="nav-link" href="/admin/import">License Keys</a>
-            <a class="nav-link" href="/admin/import">Import</a>
-            <a class="nav-link" href="/admin/import#export">Export</a>
+            <a class="nav-link" href="/admin/import">License Import/Export</a>
             <span class="nav-link disabled" title="Coming soon">Duplication check</span>
+            <span class="nav-link disabled" title="Coming soon">Backups</span>
           </div>
         </details>
         <a class="nav-link" href="/admin/audit">Audit Logs</a>

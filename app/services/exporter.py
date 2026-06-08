@@ -40,6 +40,7 @@ def export_ip_addresses_csv(db: Session) -> str:
     output = io.StringIO()
     writer = csv.writer(output)
     writer.writerow([
+        "VLAN",
         "IP Address",
         "Name",
         "Description",
@@ -48,6 +49,7 @@ def export_ip_addresses_csv(db: Session) -> str:
     ])
     for row in db.query(IPAddress).order_by(IPAddress.address.asc()).all():
         writer.writerow([
+            row.vlan.name if row.vlan else "VLAN 1",
             row.address,
             row.name or "",
             row.description or "",

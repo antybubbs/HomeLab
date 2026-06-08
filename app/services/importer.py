@@ -3,7 +3,7 @@ import pandas as pd
 from sqlalchemy.orm import Session
 from app.core.config import InvalidConfigurationError
 from app.core.security import encrypt_secret
-from app.models.models import IPAddress, Licence, User
+from app.models.models import IPAddress, Licence, User, VLAN
 from app.services.audit import write_audit
 
 
@@ -58,6 +58,17 @@ def clean_ip_address(value):
         return str(parse_ip_address(text))
     except ValueError as exc:
         raise ImportCSVError(f"Invalid IP address: {text}") from exc
+
+
+def get_or_create_vlan(db: Session, name: str | None) -> VLAN:
+    clean_name = name or "VLAN 1"
+    vlan = db.query(VLAN).filter(VLAN.name == clean_name).first()
+    if vlan:
+        return vlan
+    vlan = VLAN(name=clean_name)
+    db.add(vlan)
+    db.flush()
+    return vlan
 
 
 def import_csv(db: Session, user: User, path: str, ip_address: str | None = None) -> int:
@@ -123,10 +134,12 @@ def import_ip_addresses_csv(db: Session, user: User, path: str, ip_address: str 
             address = clean_ip_address(row.get("IP Address"))
             if not address:
                 continue
-            record = db.query(IPAddress).filter(IPAddress.address == address).first()
+            vlan = get_or_create_vlan(db, clean(row.get("VLAN")))
+            record = db.query(IPAddress).filter(IPAddress.address == address, IPAddress.vlan_id == vlan.id).first()
             if not record:
-                record = IPAddress(address=address)
+                record = IPAddress(address=address, vlan_id=vlan.id)
                 db.add(record)
+            record.vlan_id = vlan.id
             assignment_type = clean(row.get("Static/Dynamic")) or clean(row.get("Assignment Type")) or "Static"
             record.name = clean(row.get("Name"))
             record.description = clean(row.get("Description"))

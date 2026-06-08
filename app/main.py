@@ -9,7 +9,7 @@ from sqlalchemy.orm import Session
 from app.core.config import get_settings, trusted_hosts
 from app.core.security import hash_password
 from app.db.session import Base, engine, SessionLocal
-from app.models.models import User
+from app.models.models import User, VLAN
 from app.routers import auth, dashboard, licences, admin, ip_addresses
 
 settings = get_settings()
@@ -67,6 +67,10 @@ def bootstrap():
         if not admin:
             db.add(User(email=admin_email, password_hash=hash_password(settings.admin_password), role="admin"))
             db.commit()
+        default_vlan = db.query(VLAN).filter(VLAN.name == "VLAN 1").first()
+        if not default_vlan:
+            db.add(VLAN(name="VLAN 1"))
+            db.commit()
     finally:
         db.close()
 
@@ -80,6 +84,16 @@ def migrate_existing_database():
             conn.execute(text("ALTER TABLE users ADD COLUMN totp_secret TEXT"))
         if "totp_enabled" not in columns:
             conn.execute(text("ALTER TABLE users ADD COLUMN totp_enabled BOOLEAN DEFAULT 0 NOT NULL"))
+        vlan_columns = {row[1] for row in conn.execute(text("PRAGMA table_info(vlans)"))}
+        if not vlan_columns:
+            conn.execute(text("CREATE TABLE vlans (id INTEGER NOT NULL PRIMARY KEY, name VARCHAR(120) NOT NULL UNIQUE, description TEXT, created_at DATETIME, updated_at DATETIME)"))
+            conn.execute(text("CREATE INDEX ix_vlans_name ON vlans (name)"))
+        ip_columns = {row[1] for row in conn.execute(text("PRAGMA table_info(ip_addresses)"))}
+        if ip_columns and "vlan_id" not in ip_columns:
+            conn.execute(text("ALTER TABLE ip_addresses ADD COLUMN vlan_id INTEGER REFERENCES vlans(id)"))
+            conn.execute(text("CREATE INDEX ix_ip_addresses_vlan_id ON ip_addresses (vlan_id)"))
+        conn.execute(text("INSERT OR IGNORE INTO vlans (name, created_at, updated_at) VALUES ('VLAN 1', CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)"))
+        conn.execute(text("UPDATE ip_addresses SET vlan_id = (SELECT id FROM vlans WHERE name = 'VLAN 1') WHERE vlan_id IS NULL"))
 
 
 @app.on_event("startup")

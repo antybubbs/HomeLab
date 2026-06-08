@@ -1,13 +1,18 @@
 {% extends "base.html" %}
 {% block content %}
-<div class="topbar"><div><h1>IP Addresses</h1></div>{% if user.role in ['admin','editor'] %}<a class="button" href="/ip-addresses/new">Add IP</a>{% endif %}</div>
+<div class="topbar"><div><h1>IP Addresses</h1></div>{% if user.role in ['admin','editor'] %}<div><a class="button secondary" href="/ip-addresses/vlans/new">Add VLAN</a> <a class="button" href="/ip-addresses/new{% if active_vlan %}?vlan_id={{ active_vlan.id }}{% endif %}">Add IP</a></div>{% endif %}</div>
 <section class="cards">
   <div class="card"><span>Total IP Addresses</span><strong>{{ total }}</strong></div>
 </section>
-<form class="search" method="get"><input name="q" placeholder="Search IP addresses..." value="{{ q }}"><button>Search</button></form>
+<div class="tabs">
+  <a class="{% if not active_vlan %}active{% endif %}" href="/ip-addresses">All</a>
+  {% for vlan in vlans %}<a class="{% if active_vlan and active_vlan.id == vlan.id %}active{% endif %}" href="/ip-addresses?vlan_id={{ vlan.id }}">{{ vlan.name }}</a>{% endfor %}
+</div>
+<form class="search" method="get">{% if active_vlan %}<input type="hidden" name="vlan_id" value="{{ active_vlan.id }}">{% endif %}<input name="q" placeholder="Search IP addresses..." value="{{ q }}"><button>Search</button></form>
 <section class="panel">
-<table><thead><tr><th>IP</th><th>Name</th><th>Description</th><th>Static/Dynamic</th><th>Notes</th><th></th></tr></thead><tbody>
-{% for row in rows %}<tr><td class="mono">{{ row.address }}</td><td>{{ row.name or '-' }}</td><td>{{ row.description or '-' }}</td><td>{{ row.assignment_type }}</td><td>{{ row.notes or '-' }}</td><td><a class="button secondary" href="/ip-addresses/{{ row.id }}">View</a></td></tr>{% endfor %}
+{% if active_vlan %}<p class="muted">{{ active_vlan.description or active_vlan.name }}</p>{% endif %}
+<table><thead><tr><th>VLAN</th><th>IP</th><th>Name</th><th>Description</th><th>Static/Dynamic</th><th>Notes</th><th></th></tr></thead><tbody>
+{% for row in rows %}<tr><td>{{ row.vlan.name if row.vlan else 'VLAN 1' }}</td><td class="mono">{{ row.address }}</td><td>{{ row.name or '-' }}</td><td>{{ row.description or '-' }}</td><td>{{ row.assignment_type }}</td><td>{{ row.notes or '-' }}</td><td><a class="button secondary" href="/ip-addresses/{{ row.id }}">View</a></td></tr>{% endfor %}
 </tbody></table>
 </section>
 {% endblock %}

@@ -1,5 +1,5 @@
 from datetime import datetime
-from sqlalchemy import Boolean, Date, DateTime, ForeignKey, Integer, String, Text
+from sqlalchemy import Boolean, Date, DateTime, ForeignKey, Integer, String, Text, UniqueConstraint
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 from app.db.session import Base
 
@@ -37,12 +37,24 @@ class Licence(Base):
 
 class IPAddress(Base):
     __tablename__ = "ip_addresses"
+    __table_args__ = (UniqueConstraint("vlan_id", "address", name="uq_ip_addresses_vlan_address"),)
     id: Mapped[int] = mapped_column(Integer, primary_key=True)
-    address: Mapped[str] = mapped_column(String(80), unique=True, index=True)
+    vlan_id: Mapped[int | None] = mapped_column(ForeignKey("vlans.id"), nullable=True, index=True)
+    address: Mapped[str] = mapped_column(String(80), index=True)
     name: Mapped[str | None] = mapped_column(String(255), index=True, nullable=True)
     description: Mapped[str | None] = mapped_column(Text, nullable=True)
     assignment_type: Mapped[str] = mapped_column(String(20), default="Static")
     notes: Mapped[str | None] = mapped_column(Text, nullable=True)
+    created_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow)
+    updated_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+    vlan = relationship("VLAN")
+
+
+class VLAN(Base):
+    __tablename__ = "vlans"
+    id: Mapped[int] = mapped_column(Integer, primary_key=True)
+    name: Mapped[str] = mapped_column(String(120), unique=True, index=True)
+    description: Mapped[str | None] = mapped_column(Text, nullable=True)
     created_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow)
     updated_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
 

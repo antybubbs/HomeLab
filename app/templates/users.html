@@ -1,0 +1,18 @@
+{% extends "base.html" %}
+{% block content %}
+<div class="topbar"><div><h1>User Management</h1><p class="muted">Control local accounts and access roles.</p></div><div><a class="button secondary" href="/admin">Back</a> <a class="button" href="/admin/users/new">Add user</a></div></div>
+<section class="panel">
+<table><thead><tr><th>Email</th><th>Role</th><th>Status</th><th>2FA</th><th>Created</th><th></th></tr></thead><tbody>
+{% for row in rows %}
+<tr>
+  <td>{{ row.email }}</td>
+  <td>{{ row.role }}</td>
+  <td>{{ 'Active' if row.is_active else 'Disabled' }}</td>
+  <td>{{ 'Enabled' if row.totp_enabled else 'Off' }}</td>
+  <td>{{ row.created_at }}</td>
+  <td><a href="/admin/users/{{ row.id }}/edit">Edit</a></td>
+</tr>
+{% endfor %}
+</tbody></table>
+</section>
+{% endblock %}

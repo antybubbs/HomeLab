@@ -8,9 +8,14 @@
     {% if error %}<div class="alert">{{ error }}</div>{% endif %}
     <form method="post" action="/login" class="stack">
       <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+      {% if requires_2fa %}
+      <label>Authentication code<input name="totp_code" inputmode="numeric" pattern="[0-9]{6}" autocomplete="one-time-code" required autofocus></label>
+      <button type="submit">Verify code</button>
+      {% else %}
       <label>Email<input name="email" type="email" required autofocus></label>
       <label>Password<input name="password" type="password" required></label>
       <button type="submit">Sign in</button>
+      {% endif %}
     </form>
   </div>
 </div>

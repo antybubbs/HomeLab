@@ -1,0 +1,29 @@
+{% extends "base.html" %}
+{% block content %}
+<div class="topbar"><div><h1>2FA</h1><p class="muted">Protect your admin account with an authenticator app.</p></div><a class="button secondary" href="/admin">Back</a></div>
+<section class="panel stack">
+{% if error %}<div class="alert">{{ error }}</div>{% endif %}
+{% if user.totp_enabled %}
+  <div class="success">Two-factor authentication is enabled for {{ user.email }}.</div>
+  <form method="post" action="/admin/security/2fa/disable">
+    <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+    <button class="ghost" type="submit">Disable 2FA</button>
+  </form>
+{% elif setup_secret %}
+  <p class="muted">Add this account to your authenticator app, then enter the 6-digit code to enable 2FA.</p>
+  <div class="secret mono">{{ setup_secret }}</div>
+  <label>Authenticator URI<textarea readonly>{{ setup_uri }}</textarea></label>
+  <form method="post" action="/admin/security/2fa/enable" class="stack">
+    <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+    <label>Authentication code<input name="code" inputmode="numeric" pattern="[0-9]{6}" autocomplete="one-time-code" required></label>
+    <button type="submit">Enable 2FA</button>
+  </form>
+{% else %}
+  <p class="muted">Start setup to generate a new authenticator secret for {{ user.email }}.</p>
+  <form method="post" action="/admin/security/2fa/start">
+    <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+    <button type="submit">Start 2FA setup</button>
+  </form>
+{% endif %}
+</section>
+{% endblock %}

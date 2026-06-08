@@ -5,6 +5,7 @@ from fastapi.templating import Jinja2Templates
 from sqlalchemy.orm import Session
 from app.core.csrf import csrf_context, validate_csrf_token
 from app.core.security import hash_password, verify_password
+from app.core.totp import decrypted_totp_secret, verify_totp
 from app.db.session import get_db
 from app.models.models import User
 from app.services.audit import write_audit
@@ -65,20 +66,38 @@ def require_editor(request: Request, db: Session = Depends(get_db)) -> User:
 
 @router.get("/login")
 def login_page(request: Request):
+    request.session.pop("pending_2fa_user_id", None)
     return templates.TemplateResponse(request, "login.html", {"error": None, **csrf_context(request, include_version=False)})
 
 
 @router.post("/login")
-def login(request: Request, email: str = Form(...), password: str = Form(...), csrf_token: str = Form(...), db: Session = Depends(get_db)):
+def login(request: Request, email: str = Form(""), password: str = Form(""), totp_code: str = Form(""), csrf_token: str = Form(...), db: Session = Depends(get_db)):
     validate_csrf_token(request, csrf_token)
     key = client_key(request)
     if login_is_limited(key):
         return templates.TemplateResponse(request, "login.html", {"error": "Too many failed sign-in attempts. Try again later.", **csrf_context(request, include_version=False)}, status_code=429)
+
+    pending_user_id = request.session.get("pending_2fa_user_id")
+    if pending_user_id:
+        user = db.query(User).filter(User.id == pending_user_id, User.is_active == True).first()
+        if not user or not user.totp_enabled or not verify_totp(decrypted_totp_secret(user.totp_secret), totp_code):
+            record_login_failure(key)
+            return templates.TemplateResponse(request, "login.html", {"error": "Invalid authentication code", "requires_2fa": True, **csrf_context(request, include_version=False)}, status_code=401)
+        request.session.clear()
+        request.session["user_id"] = user.id
+        LOGIN_FAILURES.pop(key, None)
+        write_audit(db, user, "login", "user", str(user.id), request.client.host if request.client else None, detail="2FA verified")
+        return RedirectResponse("/dashboard", status_code=303)
+
     user = db.query(User).filter(User.email == email.strip().lower(), User.is_active == True).first()
     password_hash = user.password_hash if user else DUMMY_PASSWORD_HASH
     if not verify_password(password, password_hash) or not user:
         record_login_failure(key)
         return templates.TemplateResponse(request, "login.html", {"error": "Invalid email or password", **csrf_context(request, include_version=False)}, status_code=401)
+    if user.totp_enabled:
+        request.session.clear()
+        request.session["pending_2fa_user_id"] = user.id
+        return templates.TemplateResponse(request, "login.html", {"error": None, "requires_2fa": True, **csrf_context(request, include_version=False)})
     request.session.clear()
     request.session["user_id"] = user.id
     LOGIN_FAILURES.pop(key, None)

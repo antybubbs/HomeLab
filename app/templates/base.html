@@ -14,8 +14,7 @@
     <a href="/dashboard">Dashboard</a>
     <a href="/licences">Licences</a>
     {% if user.role == 'admin' %}
-    <a href="/admin/import">Import CSV</a>
-    <a href="/admin/audit">Audit Log</a>
+    <a href="/admin">Site Admin</a>
     {% endif %}
   </nav>
   <form method="post" action="/logout"><input type="hidden" name="csrf_token" value="{{ csrf_token }}"><button class="ghost" type="submit">Sign out</button></form>

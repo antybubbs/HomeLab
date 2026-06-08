@@ -17,6 +17,9 @@ KeyVault stores, searches and maintains software licence records securely. It su
 - Product key encryption at rest
 - Key masking with audited reveal
 - Audit log for sensitive actions
+- Site administration with local user management
+- TOTP two-factor authentication for admin accounts
+- CSV export for admin users
 - Production compose file and installer script
 
 ## Security-first defaults

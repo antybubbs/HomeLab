@@ -1,0 +1,17 @@
+{% extends "base.html" %}
+{% block content %}
+<div class="topbar"><div><h1>Site Admin</h1><p class="muted">Manage users, data movement, audit events and account security.</p></div></div>
+<section class="cards">
+  <div class="card"><span>Users</span><strong>{{ users }}</strong></div>
+  <div class="card"><span>2FA enabled</span><strong>{{ enabled_2fa }}</strong></div>
+  <div class="card"><span>Audit events</span><strong>{{ audit_events }}</strong></div>
+</section>
+<section class="panel">
+  <table><thead><tr><th>Area</th><th>Status</th><th></th></tr></thead><tbody>
+    <tr><td>User Management</td><td class="muted">Create users, roles, passwords and 2FA resets.</td><td><a href="/admin/users">Open</a></td></tr>
+    <tr><td>Imports / Exports</td><td class="muted">Import Microsoft-style CSVs and export licence records.</td><td><a href="/admin/import">Open</a></td></tr>
+    <tr><td>Audit Logs</td><td class="muted">Review recent security and data access events.</td><td><a href="/admin/audit">Open</a></td></tr>
+    <tr><td>2FA</td><td class="muted">Manage two-factor authentication for your admin account.</td><td><a href="/admin/security">Open</a></td></tr>
+  </tbody></table>
+</section>
+{% endblock %}

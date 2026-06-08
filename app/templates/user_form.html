@@ -1,0 +1,21 @@
+{% extends "base.html" %}
+{% block content %}
+<div class="topbar"><div><h1>{{ 'Edit user' if target else 'Add user' }}</h1><p class="muted">Use strong unique passwords and assign the lowest role needed.</p></div><a class="button secondary" href="/admin/users">Back</a></div>
+<section class="panel">
+{% if error %}<div class="alert">{{ error }}</div>{% endif %}
+<form method="post" class="form-grid">
+  <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+  <label>Email<input name="email" type="email" value="{{ target.email if target else '' }}" required></label>
+  <label>Role<select name="role">{% for role in roles %}<option value="{{ role }}" {% if target and target.role == role %}selected{% endif %}>{{ role }}</option>{% endfor %}</select></label>
+  <label>Password<input name="password" type="password" autocomplete="new-password" {% if not target %}required{% endif %}></label>
+  <label>Active<select name="is_active"><option value="on" {% if not target or target.is_active %}selected{% endif %}>Active</option><option value="" {% if target and not target.is_active %}selected{% endif %}>Disabled</option></select></label>
+  <button type="submit">Save user</button>
+</form>
+{% if target %}
+<form method="post" action="/admin/users/{{ target.id }}/reset-2fa" class="stack section-gap">
+  <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+  <button class="ghost" type="submit">Reset user 2FA</button>
+</form>
+{% endif %}
+</section>
+{% endblock %}

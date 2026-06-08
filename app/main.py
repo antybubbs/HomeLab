@@ -4,6 +4,7 @@ from fastapi.responses import PlainTextResponse, RedirectResponse
 from fastapi.staticfiles import StaticFiles
 from starlette.middleware.sessions import SessionMiddleware
 from starlette.middleware.trustedhost import TrustedHostMiddleware
+from sqlalchemy import text
 from sqlalchemy.orm import Session
 from app.core.config import get_settings, trusted_hosts
 from app.core.security import hash_password
@@ -58,6 +59,7 @@ app.mount("/static", StaticFiles(directory="app/static"), name="static")
 
 def bootstrap():
     Base.metadata.create_all(bind=engine)
+    migrate_existing_database()
     db: Session = SessionLocal()
     try:
         admin_email = settings.admin_email.strip().lower()
@@ -67,6 +69,17 @@ def bootstrap():
             db.commit()
     finally:
         db.close()
+
+
+def migrate_existing_database():
+    if not settings.database_url.startswith("sqlite"):
+        return
+    with engine.begin() as conn:
+        columns = {row[1] for row in conn.execute(text("PRAGMA table_info(users)"))}
+        if "totp_secret" not in columns:
+            conn.execute(text("ALTER TABLE users ADD COLUMN totp_secret TEXT"))
+        if "totp_enabled" not in columns:
+            conn.execute(text("ALTER TABLE users ADD COLUMN totp_enabled BOOLEAN DEFAULT 0 NOT NULL"))
 
 
 @app.on_event("startup")

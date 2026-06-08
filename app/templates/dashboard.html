@@ -1,6 +1,6 @@
 {% extends "base.html" %}
 {% block content %}
-<div class="topbar"><div><h1>Dashboard</h1><p class="muted">Encrypted product key inventory and licence overview.</p></div><a class="button" href="/licences/new">Add licence</a></div>
+<div class="topbar"><div><h1>Dashboard</h1><p class="muted">Encrypted product key inventory and licence overview.</p></div>{% if user.role in ['admin','editor'] %}<a class="button" href="/licences/new">Add licence</a>{% endif %}</div>
 <section class="cards">
   <div class="card"><span>Total records</span><strong>{{ total }}</strong></div>
   <div class="card"><span>Products</span><strong>{{ products }}</strong></div>

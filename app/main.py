@@ -10,7 +10,7 @@ from app.core.config import get_settings, trusted_hosts
 from app.core.security import hash_password
 from app.db.session import Base, engine, SessionLocal
 from app.models.models import User
-from app.routers import auth, dashboard, licences, admin
+from app.routers import auth, dashboard, licences, admin, ip_addresses
 
 settings = get_settings()
 app = FastAPI(
@@ -90,6 +90,7 @@ async def on_startup():
 app.include_router(auth.router)
 app.include_router(dashboard.router)
 app.include_router(licences.router)
+app.include_router(ip_addresses.router)
 app.include_router(admin.router)
 
 @app.get("/healthz", include_in_schema=False)

@@ -1,0 +1,28 @@
+{% extends "base.html" %}
+{% block content %}
+<div class="topbar"><div><h1>{{ record.address }}</h1><p class="muted">IP address record #{{ record.id }}</p></div><a class="button secondary" href="/ip-addresses">Back</a></div>
+{% if error %}<div class="alert">{{ error }}</div>{% endif %}
+<section class="panel">
+{% if user.role in ['admin','editor'] %}
+<form method="post" class="form-grid">
+  <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+  <label>IP Address<input name="address" value="{{ record.address }}" required></label>
+  <label>Name<input name="name" value="{{ record.name or '' }}"></label>
+  <label>Description<textarea name="description">{{ record.description or '' }}</textarea></label>
+  <label>Static/Dynamic<select name="assignment_type">{% for option in assignment_types %}<option value="{{ option }}" {% if record.assignment_type == option %}selected{% endif %}>{{ option }}</option>{% endfor %}</select></label>
+  <label class="wide">Notes<textarea name="notes">{{ record.notes or '' }}</textarea></label>
+  <div class="wide"><h2>Custom Fields</h2></div>
+  <button class="button secondary" type="reset">Reset</button>
+  <button type="submit">Save</button>
+</form>
+{% else %}
+<section class="detail-grid">
+  <div><label>IP Address</label><p class="mono">{{ record.address }}</p></div>
+  <div><label>Name</label><p>{{ record.name or '-' }}</p></div>
+  <div><label>Description</label><p>{{ record.description or '-' }}</p></div>
+  <div><label>Static/Dynamic</label><p>{{ record.assignment_type }}</p></div>
+  <div class="wide"><label>Notes</label><p>{{ record.notes or '-' }}</p></div>
+</section>
+{% endif %}
+</section>
+{% endblock %}

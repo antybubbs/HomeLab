@@ -1,0 +1,18 @@
+{% extends "base.html" %}
+{% block content %}
+<div class="topbar"><div><h1>Add IP Address</h1></div><a class="button secondary" href="/ip-addresses">Back</a></div>
+{% if error %}<div class="alert">{{ error }}</div>{% endif %}
+<section class="panel">
+<form method="post" class="form-grid">
+  <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+  <label>IP Address<input name="address" placeholder="192.168.1.1" required></label>
+  <label>Name<input name="name" placeholder="HAL=Homelab"></label>
+  <label>Description<textarea name="description"></textarea></label>
+  <label>Static/Dynamic<select name="assignment_type">{% for option in assignment_types %}<option value="{{ option }}">{{ option }}</option>{% endfor %}</select></label>
+  <label class="wide">Notes<textarea name="notes"></textarea></label>
+  <div class="wide"><h2>Custom Fields</h2></div>
+  <button class="button secondary" type="reset">Reset</button>
+  <button type="submit">Save</button>
+</form>
+</section>
+{% endblock %}

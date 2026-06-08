@@ -48,7 +48,7 @@ def latest_release() -> tuple[str | None, str | None]:
     settings = get_settings()
     request = Request(
         f"https://api.github.com/repos/{settings.github_repo}/releases/latest",
-        headers={"Accept": "application/vnd.github+json", "User-Agent": "KeyVault"},
+        headers={"Accept": "application/vnd.github+json", "User-Agent": "HomeLab"},
     )
     try:
         with urlopen(request, timeout=3) as response:

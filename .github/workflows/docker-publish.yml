@@ -23,7 +23,7 @@ jobs:
         shell: bash
         run: |
           OWNER="$(printf '%s' '${{ github.repository_owner }}' | tr '[:upper:]' '[:lower:]')"
-          IMAGE="ghcr.io/$OWNER/keyvault"
+          IMAGE="ghcr.io/$OWNER/homelab"
           SHORT_SHA="$(printf '%s' '${{ github.sha }}' | cut -c1-12)"
           VERSION="$SHORT_SHA"
           if printf '%s' '${{ github.ref }}' | grep -q '^refs/tags/'; then

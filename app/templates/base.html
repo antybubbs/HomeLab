@@ -3,14 +3,14 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>{{ title or 'KeyVault' }}</title>
+  <title>{{ title or 'HomeLab' }}</title>
   <link rel="stylesheet" href="/static/css/app.css">
   <script src="/static/js/sidebar.js" defer></script>
 </head>
 <body>
 {% if user %}
 <aside class="sidebar">
-  <div class="brand"><span class="brand-mark">K</span><span>KeyVault</span></div>
+  <div class="brand"><span class="brand-mark">H</span><span>HomeLab</span></div>
   <nav class="nav-tree">
     <a class="nav-link" href="/dashboard" data-reset-sidebar>Dashboard</a>
     <details class="nav-group" data-sidebar-menu="software">

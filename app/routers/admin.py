@@ -131,7 +131,7 @@ def export_csv(request: Request, csrf_token: str = Form(...), db: Session = Depe
     return PlainTextResponse(
         csv_data,
         media_type="text/csv",
-        headers={"Content-Disposition": "attachment; filename=keyvault-licences.csv"},
+        headers={"Content-Disposition": "attachment; filename=homelab-licences.csv"},
     )
 
 

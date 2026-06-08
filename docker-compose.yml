@@ -1,7 +1,9 @@
+name: homelab
+
 services:
-  keyvault:
+  homelab:
     build: .
-    container_name: keyvault
+    container_name: homelab
     restart: unless-stopped
     env_file:
       - path: .env

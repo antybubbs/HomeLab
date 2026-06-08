@@ -9,12 +9,12 @@ class InvalidConfigurationError(RuntimeError):
 
 
 class Settings(BaseSettings):
-    app_name: str = "KeyVault"
+    app_name: str = "HomeLab"
     app_version: str = "dev"
     app_env: str = "production"
     base_url: str = "http://localhost:8080"
     root_path: str = ""
-    database_url: str = "sqlite:////app/data/keyvault.db"
+    database_url: str = "sqlite:////app/data/homelab.db"
     secret_key: str = "change-this-secret-key"
     encryption_key: str = ""
     admin_email: str = "admin@example.local"
@@ -23,7 +23,7 @@ class Settings(BaseSettings):
     upload_dir: str = "/app/uploads"
     max_upload_mb: int = 25
     allowed_hosts: str = ""
-    github_repo: str = "antybubbs/KeyVault"
+    github_repo: str = "antybubbs/HomeLab"
 
     class Config:
         env_file = ".env"
@@ -31,7 +31,7 @@ class Settings(BaseSettings):
 
 
 def trusted_hosts(settings: Settings) -> list[str]:
-    hosts = {"localhost", "127.0.0.1", "::1", "keyvault"}
+    hosts = {"localhost", "127.0.0.1", "::1", "homelab"}
     parsed_host = urlparse(settings.base_url).hostname
     if parsed_host:
         hosts.add(parsed_host)

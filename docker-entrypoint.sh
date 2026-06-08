@@ -2,6 +2,6 @@
 set -eu
 
 mkdir -p /app/data /app/uploads
-chown -R keyvault:keyvault /app/data /app/uploads
+chown -R homelab:homelab /app/data /app/uploads
 
-exec gosu keyvault "$@"
+exec gosu homelab "$@"

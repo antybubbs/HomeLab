@@ -1,5 +1,5 @@
 (function () {
-  const storageKey = "keyvault.sidebar.openMenus";
+  const storageKey = "homelab.sidebar.openMenus";
   const dashboardPath = "/dashboard";
   const menus = Array.from(document.querySelectorAll("[data-sidebar-menu]"));
   const resetLinks = Array.from(document.querySelectorAll("[data-reset-sidebar]"));

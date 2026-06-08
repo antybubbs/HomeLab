@@ -5,21 +5,22 @@
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>{{ title or 'KeyVault' }}</title>
   <link rel="stylesheet" href="/static/css/app.css">
+  <script src="/static/js/sidebar.js" defer></script>
 </head>
 <body>
 {% if user %}
 <aside class="sidebar">
   <div class="brand"><span class="brand-mark">K</span><span>KeyVault</span></div>
   <nav class="nav-tree">
-    <a class="nav-link" href="/dashboard">Dashboard</a>
-    <details class="nav-group">
+    <a class="nav-link" href="/dashboard" data-reset-sidebar>Dashboard</a>
+    <details class="nav-group" data-sidebar-menu="software">
       <summary>Software</summary>
       <div class="nav-children">
         <a class="nav-link" href="/licences">License Keys</a>
         <span class="nav-link disabled" title="Coming soon">Certs</span>
       </div>
     </details>
-    <details class="nav-group">
+    <details class="nav-group" data-sidebar-menu="hardware">
       <summary>Hardware</summary>
       <div class="nav-children">
         <span class="nav-link disabled" title="Coming soon">IP Addresses</span>
@@ -27,11 +28,11 @@
       </div>
     </details>
     {% if user.role == 'admin' %}
-    <details class="nav-group admin-group">
+    <details class="nav-group admin-group" data-sidebar-menu="site-admin">
       <summary>Site Admin</summary>
       <div class="nav-children">
         <a class="nav-link" href="/admin">Overview</a>
-        <details class="nav-subgroup">
+        <details class="nav-subgroup" data-sidebar-menu="user-management">
           <summary>User Management</summary>
           <div class="nav-children">
             <a class="nav-link" href="/admin/users">Users</a>
@@ -39,7 +40,7 @@
             <span class="nav-link disabled" title="Coming soon">IDP Integration OIDC</span>
           </div>
         </details>
-        <details class="nav-subgroup">
+        <details class="nav-subgroup" data-sidebar-menu="data-management">
           <summary>Data Management</summary>
           <div class="nav-children">
             <a class="nav-link" href="/admin/import">License Keys</a>

@@ -11,6 +11,29 @@ class ImportCSVError(RuntimeError):
     pass
 
 
+def read_csv_file(path: str):
+    attempts = [
+        {"encoding": "utf-8-sig", "sep": None, "engine": "python"},
+        {"encoding": "utf-8", "sep": None, "engine": "python"},
+        {"encoding": "utf-16", "sep": None, "engine": "python"},
+        {"encoding": "cp1252", "sep": None, "engine": "python"},
+        {"encoding": "latin1", "sep": None, "engine": "python"},
+        {"encoding": "utf-8-sig"},
+        {"encoding": "utf-8"},
+        {"encoding": "utf-16"},
+        {"encoding": "cp1252"},
+        {"encoding": "latin1"},
+    ]
+    last_error = None
+    for options in attempts:
+        try:
+            return pd.read_csv(path, dtype=str, keep_default_na=False, **options)
+        except Exception as exc:
+            last_error = exc
+    detail = f" {last_error}" if last_error else ""
+    raise ImportCSVError("The uploaded file could not be read as a CSV. Export a fresh template from HomeLab and save it as CSV before importing." + detail)
+
+
 def clean(value):
     if pd.isna(value):
         return None
@@ -38,10 +61,7 @@ def clean_ip_address(value):
 
 
 def import_csv(db: Session, user: User, path: str, ip_address: str | None = None) -> int:
-    try:
-        df = pd.read_csv(path)
-    except Exception as exc:
-        raise ImportCSVError("The uploaded file could not be read as a CSV.") from exc
+    df = read_csv_file(path)
 
     required_columns = {"Product", "Product Key"}
     missing_columns = sorted(required_columns - set(df.columns))
@@ -90,10 +110,7 @@ def import_csv(db: Session, user: User, path: str, ip_address: str | None = None
 
 
 def import_ip_addresses_csv(db: Session, user: User, path: str, ip_address: str | None = None) -> int:
-    try:
-        df = pd.read_csv(path)
-    except Exception as exc:
-        raise ImportCSVError("The uploaded file could not be read as a CSV.") from exc
+    df = read_csv_file(path)
 
     required_columns = {"IP Address"}
     missing_columns = sorted(required_columns - set(df.columns))

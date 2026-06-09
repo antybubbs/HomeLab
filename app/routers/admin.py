@@ -44,13 +44,13 @@ def new_user(request: Request, user=Depends(require_admin)):
 
 
 @router.post("/users/new")
-def create_user(request: Request, email: str = Form(..., max_length=255), password: str = Form(..., min_length=12, max_length=255), role: str = Form("viewer"), csrf_token: str = Form(...), db: Session = Depends(get_db), user=Depends(require_admin)):
+def create_user(request: Request, email: str = Form(..., max_length=255), first_name: str = Form("", max_length=120), last_name: str = Form("", max_length=120), password: str = Form(..., min_length=12, max_length=255), role: str = Form("viewer"), csrf_token: str = Form(...), db: Session = Depends(get_db), user=Depends(require_admin)):
     validate_csrf_token(request, csrf_token)
     role = role if role in ROLES else "viewer"
     email = email.strip().lower()
     if db.query(User).filter(User.email == email).first():
         return templates.TemplateResponse(request, "user_form.html", {"user": user, "target": None, "roles": sorted(ROLES), "error": "A user with that email already exists.", **csrf_context(request)}, status_code=400)
-    row = User(email=email, password_hash=hash_password(password), role=role, is_active=True)
+    row = User(email=email, first_name=first_name.strip() or None, last_name=last_name.strip() or None, password_hash=hash_password(password), role=role, is_active=True)
     db.add(row)
     db.commit()
     write_audit(db, user, "create", "user", str(row.id), request.client.host if request.client else None, detail=email)
@@ -66,7 +66,7 @@ def edit_user(request: Request, user_id: int, db: Session = Depends(get_db), use
 
 
 @router.post("/users/{user_id}/edit")
-def update_user(request: Request, user_id: int, email: str = Form(..., max_length=255), password: str = Form("", max_length=255), role: str = Form("viewer"), is_active: str = Form(""), csrf_token: str = Form(...), db: Session = Depends(get_db), user=Depends(require_admin)):
+def update_user(request: Request, user_id: int, email: str = Form(..., max_length=255), first_name: str = Form("", max_length=120), last_name: str = Form("", max_length=120), password: str = Form("", max_length=255), role: str = Form("viewer"), is_active: str = Form(""), csrf_token: str = Form(...), db: Session = Depends(get_db), user=Depends(require_admin)):
     validate_csrf_token(request, csrf_token)
     target = db.get(User, user_id)
     if not target:
@@ -75,6 +75,8 @@ def update_user(request: Request, user_id: int, email: str = Form(..., max_lengt
         return templates.TemplateResponse(request, "user_form.html", {"user": user, "target": target, "roles": sorted(ROLES), "error": "You cannot remove your own admin access or deactivate yourself.", **csrf_context(request)}, status_code=400)
     role = role if role in ROLES else "viewer"
     target.email = email.strip().lower()
+    target.first_name = first_name.strip() or None
+    target.last_name = last_name.strip() or None
     target.role = role
     target.is_active = bool(is_active)
     if password:

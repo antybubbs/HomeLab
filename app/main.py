@@ -87,6 +87,10 @@ def migrate_existing_database():
             conn.execute(text("ALTER TABLE users ADD COLUMN totp_secret TEXT"))
         if "totp_enabled" not in columns:
             conn.execute(text("ALTER TABLE users ADD COLUMN totp_enabled BOOLEAN DEFAULT 0 NOT NULL"))
+        if "first_name" not in columns:
+            conn.execute(text("ALTER TABLE users ADD COLUMN first_name VARCHAR(120)"))
+        if "last_name" not in columns:
+            conn.execute(text("ALTER TABLE users ADD COLUMN last_name VARCHAR(120)"))
         vlan_columns = {row[1] for row in conn.execute(text("PRAGMA table_info(vlans)"))}
         if not vlan_columns:
             conn.execute(text("CREATE TABLE vlans (id INTEGER NOT NULL PRIMARY KEY, name VARCHAR(120) NOT NULL UNIQUE, description TEXT, created_at DATETIME, updated_at DATETIME)"))

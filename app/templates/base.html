@@ -68,7 +68,17 @@
     </details>
     {% endif %}
   </nav>
-  <form method="post" action="/logout"><input type="hidden" name="csrf_token" value="{{ csrf_token }}"><button class="ghost" type="submit">Sign out</button></form>
+  <details class="settings-menu">
+    <summary>Settings</summary>
+    <div class="settings-panel">
+      <button class="theme-toggle" type="button" data-theme-toggle>Light mode</button>
+      <a class="profile-link" href="/profile">
+        <span class="avatar">{{ (user.first_name[:1] if user.first_name else user.email[:1])|upper }}</span>
+        <span><strong>{{ ((user.first_name or '') ~ ' ' ~ (user.last_name or ''))|trim or user.email }}</strong><small>{{ user.role|capitalize }}</small></span>
+      </a>
+      <form method="post" action="/logout"><input type="hidden" name="csrf_token" value="{{ csrf_token }}"><button class="ghost" type="submit">Sign out</button></form>
+    </div>
+  </details>
   {% if version_status %}
   <div class="version-card">
     <div><span>Installed</span><strong>{{ version_status.installed_display }}</strong></div>

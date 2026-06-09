@@ -7,13 +7,12 @@
   <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
   <label>Asset Tag<input name="asset_tag" value="{{ record.asset_tag if record and record.asset_tag else '' }}" placeholder="HL-001"></label>
   <label>Name<input name="name" value="{{ record.name if record else '' }}" placeholder="Main lab server" required></label>
-  <label>Category<input name="category" value="{{ record.category if record and record.category else '' }}" placeholder="Server, PC, Switch"></label>
-  <label>Status<select name="asset_status">{% for option in statuses %}<option value="{{ option }}" {% if record and record.status == option %}selected{% endif %}>{{ option }}</option>{% endfor %}</select></label>
+  <label>Category<select name="category"><option value=""></option>{% if record and record.category and record.category not in categories %}<option value="{{ record.category }}" selected>{{ record.category }}</option>{% endif %}{% for option in categories %}<option value="{{ option }}" {% if record and record.category == option %}selected{% endif %}>{{ option }}</option>{% endfor %}</select></label>
+  <label>Status<select name="asset_status">{% if record and record.status and record.status not in statuses %}<option value="{{ record.status }}" selected>{{ record.status }}</option>{% endif %}{% for option in statuses %}<option value="{{ option }}" {% if record and record.status == option %}selected{% endif %}>{{ option }}</option>{% endfor %}</select></label>
   <label>Manufacturer<input name="manufacturer" value="{{ record.manufacturer if record and record.manufacturer else '' }}"></label>
   <label>Model<input name="model" value="{{ record.model if record and record.model else '' }}"></label>
   <label>Serial Number<input name="serial_number" value="{{ record.serial_number if record and record.serial_number else '' }}"></label>
-  <label>Location<input name="location" value="{{ record.location if record and record.location else '' }}" placeholder="Rack, office, cupboard"></label>
-  <label>Assigned To<input name="assigned_to" value="{{ record.assigned_to if record and record.assigned_to else '' }}"></label>
+  <label>Location<select name="location"><option value=""></option>{% if record and record.location and record.location not in locations %}<option value="{{ record.location }}" selected>{{ record.location }}</option>{% endif %}{% for option in locations %}<option value="{{ option }}" {% if record and record.location == option %}selected{% endif %}>{{ option }}</option>{% endfor %}</select></label>
   <label>Supplier<input name="supplier" value="{{ record.supplier if record and record.supplier else '' }}"></label>
   <label>Purchase Date<input name="purchase_date" type="date" value="{{ record.purchase_date if record and record.purchase_date else '' }}"></label>
   <label>Purchase Cost<input name="purchase_cost" value="{{ record.purchase_cost if record and record.purchase_cost else '' }}"></label>

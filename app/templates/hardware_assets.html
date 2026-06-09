@@ -7,7 +7,7 @@
 <form class="search" method="get"><input name="q" placeholder="Search hardware assets..." value="{{ q }}"><button>Search</button></form>
 <section class="panel">
 <table>
-  <thead><tr><th>Asset Tag</th><th>Name</th><th>Category</th><th>Status</th><th>Location</th><th>Assigned To</th><th>Warranty</th><th></th></tr></thead>
+  <thead><tr><th>Asset Tag</th><th>Name</th><th>Category</th><th>Status</th><th>Location</th><th>Warranty</th><th></th></tr></thead>
   <tbody>
   {% for row in rows %}
   <tr>
@@ -16,7 +16,6 @@
     <td>{{ row.category or '-' }}</td>
     <td>{{ row.status }}</td>
     <td>{{ row.location or '-' }}</td>
-    <td>{{ row.assigned_to or '-' }}</td>
     <td>{{ row.warranty_expires or '-' }}</td>
     <td><a class="button secondary" href="/hardware-assets/{{ row.id }}">View</a></td>
   </tr>

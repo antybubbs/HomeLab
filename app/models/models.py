@@ -121,6 +121,19 @@ class CustomFieldValue(Base):
     field = relationship("CustomField")
 
 
+class ManagedListItem(Base):
+    __tablename__ = "managed_list_items"
+    __table_args__ = (UniqueConstraint("module", "list_key", "value", name="uq_managed_list_items_value"),)
+    id: Mapped[int] = mapped_column(Integer, primary_key=True)
+    module: Mapped[str] = mapped_column(String(80), index=True)
+    list_key: Mapped[str] = mapped_column(String(80), index=True)
+    value: Mapped[str] = mapped_column(String(120), index=True)
+    is_active: Mapped[bool] = mapped_column(Boolean, default=True)
+    sort_order: Mapped[int] = mapped_column(Integer, default=0)
+    created_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow)
+    updated_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+
+
 class AuditLog(Base):
     __tablename__ = "audit_logs"
     id: Mapped[int] = mapped_column(Integer, primary_key=True)

@@ -10,12 +10,13 @@ from app.core.csrf import csrf_context, validate_csrf_token
 from app.core.security import hash_password
 from app.core.totp import decrypted_totp_secret, encrypted_totp_secret, generate_totp_secret, provisioning_uri, verify_totp
 from app.db.session import get_db
-from app.models.models import AuditLog, CustomField, User
+from app.models.models import AuditLog, CustomField, ManagedListItem, User
 from app.routers.auth import require_admin
 from app.services.audit import write_audit
 from app.services.custom_fields import FIELD_TYPES, make_field_key
 from app.services.exporter import export_ip_addresses_csv, export_licences_csv
 from app.services.importer import ImportCSVError, import_csv, import_ip_addresses_csv
+from app.services.managed_lists import MANAGED_LIST_MODULES, MANAGED_LISTS, list_label
 
 router = APIRouter(prefix="/admin")
 templates = Jinja2Templates(directory="app/templates")
@@ -191,6 +192,46 @@ def toggle_custom_field(request: Request, field_id: int, csrf_token: str = Form(
     db.commit()
     write_audit(db, user, "update", "custom_field", str(row.id), request.client.host if request.client else None, detail=f"{row.label}: {'active' if row.is_active else 'inactive'}")
     return RedirectResponse(f"/admin/custom-fields?module={row.module}", status_code=303)
+
+
+@router.get("/categories")
+def categories(request: Request, module: str = "hardware_assets", list_key: str = "category", db: Session = Depends(get_db), user=Depends(require_admin)):
+    active_module = module if module in MANAGED_LIST_MODULES else "hardware_assets"
+    lists = MANAGED_LISTS.get(active_module, {})
+    active_list = list_key if list_key in lists else next(iter(lists))
+    rows = db.query(ManagedListItem).filter(ManagedListItem.module == active_module, ManagedListItem.list_key == active_list).order_by(ManagedListItem.sort_order.asc(), ManagedListItem.value.asc()).all()
+    return templates.TemplateResponse(request, "categories.html", {"user": user, "modules": MANAGED_LIST_MODULES, "lists": lists, "active_module": active_module, "active_list": active_list, "active_list_label": list_label(active_module, active_list), "rows": rows, "error": None, **csrf_context(request)})
+
+
+@router.post("/categories")
+def create_category(request: Request, module: str = Form("hardware_assets"), list_key: str = Form("category"), value: str = Form(..., max_length=120), sort_order: int = Form(0), csrf_token: str = Form(...), db: Session = Depends(get_db), user=Depends(require_admin)):
+    validate_csrf_token(request, csrf_token)
+    active_module = module if module in MANAGED_LIST_MODULES else "hardware_assets"
+    lists = MANAGED_LISTS.get(active_module, {})
+    active_list = list_key if list_key in lists else next(iter(lists))
+    clean_value = value.strip()
+    rows = db.query(ManagedListItem).filter(ManagedListItem.module == active_module, ManagedListItem.list_key == active_list).order_by(ManagedListItem.sort_order.asc(), ManagedListItem.value.asc()).all()
+    if not clean_value:
+        return templates.TemplateResponse(request, "categories.html", {"user": user, "modules": MANAGED_LIST_MODULES, "lists": lists, "active_module": active_module, "active_list": active_list, "active_list_label": list_label(active_module, active_list), "rows": rows, "error": "Name is required.", **csrf_context(request)}, status_code=400)
+    if db.query(ManagedListItem).filter(ManagedListItem.module == active_module, ManagedListItem.list_key == active_list, ManagedListItem.value == clean_value).first():
+        return templates.TemplateResponse(request, "categories.html", {"user": user, "modules": MANAGED_LIST_MODULES, "lists": lists, "active_module": active_module, "active_list": active_list, "active_list_label": list_label(active_module, active_list), "rows": rows, "error": "That value already exists.", **csrf_context(request)}, status_code=400)
+    row = ManagedListItem(module=active_module, list_key=active_list, value=clean_value, is_active=True, sort_order=sort_order)
+    db.add(row)
+    db.commit()
+    write_audit(db, user, "create", "category", str(row.id), request.client.host if request.client else None, detail=f"{MANAGED_LIST_MODULES[active_module]} {list_label(active_module, active_list)}: {clean_value}")
+    return RedirectResponse(f"/admin/categories?module={active_module}&list_key={active_list}", status_code=303)
+
+
+@router.post("/categories/{item_id}/toggle")
+def toggle_category(request: Request, item_id: int, csrf_token: str = Form(...), db: Session = Depends(get_db), user=Depends(require_admin)):
+    validate_csrf_token(request, csrf_token)
+    row = db.get(ManagedListItem, item_id)
+    if not row:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Category not found")
+    row.is_active = not row.is_active
+    db.commit()
+    write_audit(db, user, "update", "category", str(row.id), request.client.host if request.client else None, detail=f"{row.value}: {'active' if row.is_active else 'inactive'}")
+    return RedirectResponse(f"/admin/categories?module={row.module}&list_key={row.list_key}", status_code=303)
 
 
 @router.get("/security")

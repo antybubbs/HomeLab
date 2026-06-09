@@ -14,10 +14,10 @@ from app.models.models import HardwareAsset, HardwareAssetAttachment
 from app.routers.auth import require_editor, require_user
 from app.services.audit import write_audit
 from app.services.custom_fields import active_fields, field_values, option_list, save_custom_values, validate_custom_values
+from app.services.managed_lists import list_values
 
 router = APIRouter(prefix="/hardware-assets")
 templates = Jinja2Templates(directory="app/templates")
-STATUSES = ["In use", "Ready", "Repair", "Retired", "Missing"]
 MODULE = "hardware_assets"
 ENTITY_TYPE = "hardware_asset"
 
@@ -57,10 +57,13 @@ async def save_upload(upload: UploadFile | None, asset_id: int, prefix: str, ima
 def template_context(db: Session, request: Request, user, record=None, error=None):
     fields = active_fields(db, MODULE)
     values = field_values(db, MODULE, ENTITY_TYPE, record.id) if record else {}
+    lists = list_values(db, MODULE)
     return {
         "user": user,
         "record": record,
-        "statuses": STATUSES,
+        "categories": lists.get("category", []),
+        "locations": lists.get("location", []),
+        "statuses": lists.get("status", []),
         "custom_fields": fields,
         "custom_values": values,
         "option_list": option_list,
@@ -69,13 +72,20 @@ def template_context(db: Session, request: Request, user, record=None, error=Non
     }
 
 
+def clean_managed_value(value: str, allowed: list[str], current: str | None = None) -> str | None:
+    clean = value.strip()
+    if clean in allowed or (current and clean == current):
+        return clean
+    return None
+
+
 @router.get("")
 def list_assets(request: Request, q: str = Query("", max_length=200), db: Session = Depends(get_db), user=Depends(require_user)):
     query = db.query(HardwareAsset)
     clean_q = q.strip()
     if clean_q:
         like = f"%{clean_q}%"
-        query = query.filter(or_(HardwareAsset.asset_tag.ilike(like), HardwareAsset.name.ilike(like), HardwareAsset.category.ilike(like), HardwareAsset.status.ilike(like), HardwareAsset.manufacturer.ilike(like), HardwareAsset.model.ilike(like), HardwareAsset.serial_number.ilike(like), HardwareAsset.location.ilike(like), HardwareAsset.assigned_to.ilike(like)))
+        query = query.filter(or_(HardwareAsset.asset_tag.ilike(like), HardwareAsset.name.ilike(like), HardwareAsset.category.ilike(like), HardwareAsset.status.ilike(like), HardwareAsset.manufacturer.ilike(like), HardwareAsset.model.ilike(like), HardwareAsset.serial_number.ilike(like), HardwareAsset.location.ilike(like)))
     rows = query.order_by(HardwareAsset.name.asc()).limit(500).all()
     total = db.query(HardwareAsset).count()
     return templates.TemplateResponse(request, "hardware_assets.html", {"user": user, "rows": rows, "total": total, "q": clean_q, **csrf_context(request)})
@@ -87,7 +97,7 @@ def new_asset(request: Request, db: Session = Depends(get_db), user=Depends(requ
 
 
 @router.post("/new")
-async def create_asset(request: Request, asset_tag: str = Form("", max_length=120), name: str = Form(..., max_length=255), category: str = Form("", max_length=120), asset_status: str = Form("In use"), manufacturer: str = Form("", max_length=255), model: str = Form("", max_length=255), serial_number: str = Form("", max_length=255), location: str = Form("", max_length=255), assigned_to: str = Form("", max_length=255), purchase_date: str = Form(""), purchase_cost: str = Form("", max_length=80), warranty_expires: str = Form(""), supplier: str = Form("", max_length=255), notes: str = Form("", max_length=10000), csrf_token: str = Form(...), photo: UploadFile | None = File(None), attachment: UploadFile | None = File(None), db: Session = Depends(get_db), user=Depends(require_editor)):
+async def create_asset(request: Request, asset_tag: str = Form("", max_length=120), name: str = Form(..., max_length=255), category: str = Form("", max_length=120), asset_status: str = Form(""), manufacturer: str = Form("", max_length=255), model: str = Form("", max_length=255), serial_number: str = Form("", max_length=255), location: str = Form("", max_length=255), purchase_date: str = Form(""), purchase_cost: str = Form("", max_length=80), warranty_expires: str = Form(""), supplier: str = Form("", max_length=255), notes: str = Form("", max_length=10000), csrf_token: str = Form(...), photo: UploadFile | None = File(None), attachment: UploadFile | None = File(None), db: Session = Depends(get_db), user=Depends(require_editor)):
     validate_csrf_token(request, csrf_token)
     form = await request.form()
     fields = active_fields(db, MODULE)
@@ -99,7 +109,12 @@ async def create_asset(request: Request, asset_tag: str = Form("", max_length=12
     clean_asset_tag = asset_tag.strip() or None
     if clean_asset_tag and db.query(HardwareAsset).filter(HardwareAsset.asset_tag == clean_asset_tag).first():
         return templates.TemplateResponse(request, "hardware_asset_form.html", template_context(db, request, user, error="That asset tag already exists."), status_code=400)
-    row = HardwareAsset(asset_tag=clean_asset_tag, name=name.strip(), category=category.strip() or None, status=asset_status if asset_status in STATUSES else "In use", manufacturer=manufacturer.strip() or None, model=model.strip() or None, serial_number=serial_number.strip() or None, location=location.strip() or None, assigned_to=assigned_to.strip() or None, purchase_date=parse_date(purchase_date), purchase_cost=purchase_cost.strip() or None, warranty_expires=parse_date(warranty_expires), supplier=supplier.strip() or None, notes=notes.strip() or None)
+    lists = list_values(db, MODULE)
+    category_value = clean_managed_value(category, lists.get("category", []))
+    location_value = clean_managed_value(location, lists.get("location", []))
+    status_values = lists.get("status", [])
+    status_value = clean_managed_value(asset_status, status_values) or (status_values[0] if status_values else "In use")
+    row = HardwareAsset(asset_tag=clean_asset_tag, name=name.strip(), category=category_value, status=status_value, manufacturer=manufacturer.strip() or None, model=model.strip() or None, serial_number=serial_number.strip() or None, location=location_value, assigned_to=None, purchase_date=parse_date(purchase_date), purchase_cost=purchase_cost.strip() or None, warranty_expires=parse_date(warranty_expires), supplier=supplier.strip() or None, notes=notes.strip() or None)
     db.add(row)
     db.commit()
     db.refresh(row)
@@ -135,7 +150,7 @@ def edit_asset(request: Request, asset_id: int, db: Session = Depends(get_db), u
 
 
 @router.post("/{asset_id}/edit")
-async def update_asset(request: Request, asset_id: int, asset_tag: str = Form("", max_length=120), name: str = Form(..., max_length=255), category: str = Form("", max_length=120), asset_status: str = Form("In use"), manufacturer: str = Form("", max_length=255), model: str = Form("", max_length=255), serial_number: str = Form("", max_length=255), location: str = Form("", max_length=255), assigned_to: str = Form("", max_length=255), purchase_date: str = Form(""), purchase_cost: str = Form("", max_length=80), warranty_expires: str = Form(""), supplier: str = Form("", max_length=255), notes: str = Form("", max_length=10000), csrf_token: str = Form(...), photo: UploadFile | None = File(None), attachment: UploadFile | None = File(None), db: Session = Depends(get_db), user=Depends(require_editor)):
+async def update_asset(request: Request, asset_id: int, asset_tag: str = Form("", max_length=120), name: str = Form(..., max_length=255), category: str = Form("", max_length=120), asset_status: str = Form(""), manufacturer: str = Form("", max_length=255), model: str = Form("", max_length=255), serial_number: str = Form("", max_length=255), location: str = Form("", max_length=255), purchase_date: str = Form(""), purchase_cost: str = Form("", max_length=80), warranty_expires: str = Form(""), supplier: str = Form("", max_length=255), notes: str = Form("", max_length=10000), csrf_token: str = Form(...), photo: UploadFile | None = File(None), attachment: UploadFile | None = File(None), db: Session = Depends(get_db), user=Depends(require_editor)):
     validate_csrf_token(request, csrf_token)
     row = db.get(HardwareAsset, asset_id)
     if not row:
@@ -150,15 +165,17 @@ async def update_asset(request: Request, asset_id: int, asset_tag: str = Form(""
     clean_asset_tag = asset_tag.strip() or None
     if clean_asset_tag and db.query(HardwareAsset).filter(HardwareAsset.asset_tag == clean_asset_tag, HardwareAsset.id != row.id).first():
         return templates.TemplateResponse(request, "hardware_asset_form.html", template_context(db, request, user, record=row, error="That asset tag already exists."), status_code=400)
+    lists = list_values(db, MODULE)
+    status_values = lists.get("status", [])
     row.asset_tag = clean_asset_tag
     row.name = name.strip()
-    row.category = category.strip() or None
-    row.status = asset_status if asset_status in STATUSES else "In use"
+    row.category = clean_managed_value(category, lists.get("category", []), row.category)
+    row.status = clean_managed_value(asset_status, status_values, row.status) or (status_values[0] if status_values else "In use")
     row.manufacturer = manufacturer.strip() or None
     row.model = model.strip() or None
     row.serial_number = serial_number.strip() or None
-    row.location = location.strip() or None
-    row.assigned_to = assigned_to.strip() or None
+    row.location = clean_managed_value(location, lists.get("location", []), row.location)
+    row.assigned_to = None
     row.purchase_date = parse_date(purchase_date)
     row.purchase_cost = purchase_cost.strip() or None
     row.warranty_expires = parse_date(warranty_expires)

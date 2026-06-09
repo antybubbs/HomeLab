@@ -11,6 +11,7 @@ from app.core.security import hash_password
 from app.db.session import Base, engine, SessionLocal
 from app.models.models import User, VLAN
 from app.routers import auth, dashboard, licences, admin, ip_addresses, hardware_assets
+from app.services.managed_lists import seed_default_lists
 
 settings = get_settings()
 app = FastAPI(
@@ -71,6 +72,8 @@ def bootstrap():
         if not default_vlan:
             db.add(VLAN(name="VLAN 1"))
             db.commit()
+        seed_default_lists(db)
+        db.commit()
     finally:
         db.close()
 
@@ -116,6 +119,13 @@ def migrate_existing_database():
         if not attachment_columns:
             conn.execute(text("CREATE TABLE hardware_asset_attachments (id INTEGER NOT NULL PRIMARY KEY, asset_id INTEGER NOT NULL REFERENCES hardware_assets(id), original_filename VARCHAR(255) NOT NULL, stored_filename VARCHAR(255) NOT NULL, content_type VARCHAR(120), uploaded_at DATETIME)"))
             conn.execute(text("CREATE INDEX ix_hardware_asset_attachments_asset_id ON hardware_asset_attachments (asset_id)"))
+        managed_list_columns = {row[1] for row in conn.execute(text("PRAGMA table_info(managed_list_items)"))}
+        if not managed_list_columns:
+            conn.execute(text("CREATE TABLE managed_list_items (id INTEGER NOT NULL PRIMARY KEY, module VARCHAR(80) NOT NULL, list_key VARCHAR(80) NOT NULL, value VARCHAR(120) NOT NULL, is_active BOOLEAN DEFAULT 1 NOT NULL, sort_order INTEGER DEFAULT 0 NOT NULL, created_at DATETIME, updated_at DATETIME)"))
+            conn.execute(text("CREATE UNIQUE INDEX uq_managed_list_items_value ON managed_list_items (module, list_key, value)"))
+            conn.execute(text("CREATE INDEX ix_managed_list_items_module ON managed_list_items (module)"))
+            conn.execute(text("CREATE INDEX ix_managed_list_items_list_key ON managed_list_items (list_key)"))
+            conn.execute(text("CREATE INDEX ix_managed_list_items_value ON managed_list_items (value)"))
 
 
 @app.on_event("startup")

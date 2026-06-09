@@ -9,7 +9,7 @@
   function applyTheme(theme) {
     document.documentElement.dataset.theme = theme;
     if (themeToggle) {
-      themeToggle.textContent = "Light/Dark Mode";
+      themeToggle.setAttribute("aria-label", "Toggle light and dark mode");
     }
   }
 

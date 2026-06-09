@@ -75,7 +75,9 @@
     </a>
     <div class="sidebar-actions">
       <form method="post" action="/logout"><input type="hidden" name="csrf_token" value="{{ csrf_token }}"><button class="ghost" type="submit">Sign out</button></form>
-      <button class="theme-toggle" type="button" data-theme-toggle>Light/Dark Mode</button>
+      <button class="theme-toggle" type="button" data-theme-toggle aria-label="Toggle light and dark mode" title="Light/Dark Mode">
+        <svg aria-hidden="true" viewBox="0 0 24 24"><path d="M21 14.4A8.7 8.7 0 0 1 9.6 3a7.3 7.3 0 1 0 11.4 11.4Z"></path></svg>
+      </button>
     </div>
   </div>
   {% if version_status %}

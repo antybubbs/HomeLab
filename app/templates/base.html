@@ -11,59 +11,54 @@
 <body>
 {% if user %}
 <aside class="sidebar">
-  <div class="brand"><span class="brand-mark">H</span><span>HomeLab</span></div>
+  <div class="brand"><span class="brand-mark">H</span><span class="brand-text">HomeLab</span><button class="sidebar-toggle" type="button" data-sidebar-collapse aria-label="Collapse sidebar" title="Collapse sidebar">|<</button></div>
   <nav class="nav-tree">
-    <a class="nav-link" href="/dashboard" data-reset-sidebar>Dashboard</a>
-    <details class="nav-group" data-sidebar-menu="my-lab">
-      <summary>My Lab</summary>
+    <a class="nav-link" href="/dashboard" data-reset-sidebar><span class="nav-icon">D</span><span class="nav-text">Dashboard</span></a>
+    <details class="nav-group" data-sidebar-menu="top-draw">
+      <summary><span class="nav-icon">T</span><span class="nav-text">Top Draw</span></summary>
       <div class="nav-children">
-        <details class="nav-subgroup" data-sidebar-menu="software">
-          <summary>Top Draw</summary>
-          <div class="nav-children">
-            <span class="nav-link disabled" title="Coming soon">Certificates</span>
-            <a class="nav-link" href="/licences">License Keys</a>
-          </div>
-        </details>
-        <details class="nav-subgroup" data-sidebar-menu="hardware">
-          <summary>Hardware</summary>
-          <div class="nav-children">
-            <a class="nav-link" href="/hardware-assets">Assets</a>
-            <span class="nav-link disabled" title="Coming soon">Warranty Tracker</span>
-          </div>
-        </details>
-        <details class="nav-subgroup" data-sidebar-menu="network">
-          <summary>Network</summary>
-          <div class="nav-children">
-            <a class="nav-link" href="/ip-addresses">IP Addresses</a>
-            <span class="nav-link disabled" title="Coming soon">Network Monitor</span>
-          </div>
-        </details>
+        <span class="nav-link disabled" title="Coming soon"><span class="nav-text">Certificates</span></span>
+        <a class="nav-link" href="/licences"><span class="nav-text">License Keys</span></a>
+      </div>
+    </details>
+    <details class="nav-group" data-sidebar-menu="hardware">
+      <summary><span class="nav-icon">H</span><span class="nav-text">Hardware</span></summary>
+      <div class="nav-children">
+        <a class="nav-link" href="/hardware-assets"><span class="nav-text">Assets</span></a>
+        <span class="nav-link disabled" title="Coming soon"><span class="nav-text">Warranty Tracker</span></span>
+      </div>
+    </details>
+    <details class="nav-group" data-sidebar-menu="network">
+      <summary><span class="nav-icon">N</span><span class="nav-text">Network</span></summary>
+      <div class="nav-children">
+        <a class="nav-link" href="/ip-addresses"><span class="nav-text">IP Addresses</span></a>
+        <span class="nav-link disabled" title="Coming soon"><span class="nav-text">Network Monitor</span></span>
       </div>
     </details>
     {% if user.role == 'admin' %}
     <details class="nav-group admin-group" data-sidebar-menu="site-admin">
-      <summary>Site Admin</summary>
+      <summary><span class="nav-icon">S</span><span class="nav-text">Site Admin</span></summary>
       <div class="nav-children">
-        <a class="nav-link" href="/admin">Overview</a>
+        <a class="nav-link" href="/admin"><span class="nav-text">Overview</span></a>
         <details class="nav-subgroup" data-sidebar-menu="user-management">
-          <summary>User Management</summary>
+          <summary><span class="nav-text">User Management</span></summary>
           <div class="nav-children">
-            <a class="nav-link" href="/admin/users">Users</a>
-            <a class="nav-link" href="/admin/security">2FA</a>
-            <span class="nav-link disabled" title="Coming soon">IDP Integration OIDC</span>
+            <a class="nav-link" href="/admin/users"><span class="nav-text">Users</span></a>
+            <a class="nav-link" href="/admin/security"><span class="nav-text">2FA</span></a>
+            <span class="nav-link disabled" title="Coming soon"><span class="nav-text">IDP Integration OIDC</span></span>
           </div>
         </details>
         <details class="nav-subgroup" data-sidebar-menu="data-management">
-          <summary>Data Management</summary>
+          <summary><span class="nav-text">Data Management</span></summary>
           <div class="nav-children">
-            <a class="nav-link" href="/admin/import">Import/Export</a>
-            <a class="nav-link" href="/admin/custom-fields">Custom Fields</a>
-            <a class="nav-link" href="/admin/categories">Categories</a>
-            <span class="nav-link disabled" title="Coming soon">Duplication check</span>
-            <span class="nav-link disabled" title="Coming soon">Backups</span>
+            <a class="nav-link" href="/admin/import"><span class="nav-text">Import/Export</span></a>
+            <a class="nav-link" href="/admin/custom-fields"><span class="nav-text">Custom Fields</span></a>
+            <a class="nav-link" href="/admin/categories"><span class="nav-text">Categories</span></a>
+            <span class="nav-link disabled" title="Coming soon"><span class="nav-text">Duplication check</span></span>
+            <span class="nav-link disabled" title="Coming soon"><span class="nav-text">Backups</span></span>
           </div>
         </details>
-        <a class="nav-link" href="/admin/audit">Audit Logs</a>
+        <a class="nav-link" href="/admin/audit"><span class="nav-text">Audit Logs</span></a>
       </div>
     </details>
     {% endif %}

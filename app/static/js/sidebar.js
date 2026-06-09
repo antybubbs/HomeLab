@@ -5,6 +5,8 @@
   const resetLinks = Array.from(document.querySelectorAll("[data-reset-sidebar]"));
   const themeKey = "homelab.theme";
   const themeToggle = document.querySelector("[data-theme-toggle]");
+  const collapseKey = "homelab.sidebar.collapsed";
+  const collapseToggle = document.querySelector("[data-sidebar-collapse]");
 
   function applyTheme(theme) {
     document.documentElement.dataset.theme = theme;
@@ -25,6 +27,15 @@
     menus.forEach((menu) => {
       menu.open = false;
     });
+  }
+
+  function applyCollapsed(collapsed) {
+    document.body.classList.toggle("sidebar-collapsed", collapsed);
+    if (collapseToggle) {
+      collapseToggle.textContent = collapsed ? ">|" : "|<";
+      collapseToggle.setAttribute("aria-label", collapsed ? "Expand sidebar" : "Collapse sidebar");
+      collapseToggle.setAttribute("title", collapsed ? "Expand sidebar" : "Collapse sidebar");
+    }
   }
 
   if (window.location.pathname === dashboardPath) {
@@ -55,6 +66,16 @@
       const nextTheme = document.documentElement.dataset.theme === "light" ? "dark" : "light";
       localStorage.setItem(themeKey, nextTheme);
       applyTheme(nextTheme);
+    });
+  }
+
+  const savedCollapsed = localStorage.getItem(collapseKey) === "true";
+  applyCollapsed(savedCollapsed);
+  if (collapseToggle) {
+    collapseToggle.addEventListener("click", () => {
+      const collapsed = !document.body.classList.contains("sidebar-collapsed");
+      localStorage.setItem(collapseKey, String(collapsed));
+      applyCollapsed(collapsed);
     });
   }
 })();

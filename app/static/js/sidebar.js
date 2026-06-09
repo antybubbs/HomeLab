@@ -9,7 +9,7 @@
   function applyTheme(theme) {
     document.documentElement.dataset.theme = theme;
     if (themeToggle) {
-      themeToggle.textContent = theme === "light" ? "Dark mode" : "Light mode";
+      themeToggle.textContent = "Light/Dark Mode";
     }
   }
 

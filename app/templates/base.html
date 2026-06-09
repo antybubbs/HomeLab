@@ -4,128 +4,99 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>{{ title or 'HomeLab' }}</title>
-  <link rel="stylesheet" href="/static/css/sb-admin.css">
+  <link rel="stylesheet" href="/static/css/app.css">
   <link rel="stylesheet" href="/static/css/imports.css">
-  <link rel="stylesheet" href="/static/css/homelab-sb.css">
-  <script src="/static/js/fontawesome-all.js" defer></script>
-  <script src="/static/js/sb-admin.js" defer></script>
   <script src="/static/js/sidebar.js" defer></script>
 </head>
-<body class="{% if user %}sb-nav-fixed{% endif %}">
+<body>
 {% if user %}
-<nav class="sb-topnav navbar navbar-expand navbar-dark bg-dark">
-  <a class="navbar-brand ps-3" href="/dashboard" data-reset-sidebar>HomeLab</a>
-  <button class="btn btn-link btn-sm order-1 order-lg-0 me-4 me-lg-0" id="sidebarToggle" type="button" aria-label="Toggle navigation"><i class="fas fa-bars"></i></button>
-  <form class="d-none d-md-inline-block form-inline ms-auto me-0 me-md-3 my-2 my-md-0">
-    <div class="input-group">
-      <input class="form-control" type="text" placeholder="Search for..." aria-label="Search for...">
-      <button class="btn btn-primary" type="button"><i class="fas fa-search"></i></button>
+<aside class="sidebar">
+  <div class="brand"><span class="brand-mark">H</span><span>HomeLab</span></div>
+  <nav class="nav-tree">
+    <a class="nav-link" href="/dashboard" data-reset-sidebar>Dashboard</a>
+    <details class="nav-group" data-sidebar-menu="my-lab">
+      <summary>My Lab</summary>
+      <div class="nav-children">
+        <details class="nav-subgroup" data-sidebar-menu="software">
+          <summary>Top Draw</summary>
+          <div class="nav-children">
+            <span class="nav-link disabled" title="Coming soon">Certificates</span>
+            <a class="nav-link" href="/licences">License Keys</a>
+          </div>
+        </details>
+        <details class="nav-subgroup" data-sidebar-menu="hardware">
+          <summary>Hardware</summary>
+          <div class="nav-children">
+            <a class="nav-link" href="/hardware-assets">Assets</a>
+            <span class="nav-link disabled" title="Coming soon">Warranty Tracker</span>
+          </div>
+        </details>
+        <details class="nav-subgroup" data-sidebar-menu="network">
+          <summary>Network</summary>
+          <div class="nav-children">
+            <a class="nav-link" href="/ip-addresses">IP Addresses</a>
+            <span class="nav-link disabled" title="Coming soon">Network Monitor</span>
+          </div>
+        </details>
+      </div>
+    </details>
+    {% if user.role == 'admin' %}
+    <details class="nav-group admin-group" data-sidebar-menu="site-admin">
+      <summary>Site Admin</summary>
+      <div class="nav-children">
+        <a class="nav-link" href="/admin">Overview</a>
+        <details class="nav-subgroup" data-sidebar-menu="user-management">
+          <summary>User Management</summary>
+          <div class="nav-children">
+            <a class="nav-link" href="/admin/users">Users</a>
+            <a class="nav-link" href="/admin/security">2FA</a>
+            <span class="nav-link disabled" title="Coming soon">IDP Integration OIDC</span>
+          </div>
+        </details>
+        <details class="nav-subgroup" data-sidebar-menu="data-management">
+          <summary>Data Management</summary>
+          <div class="nav-children">
+            <a class="nav-link" href="/admin/import">Import/Export</a>
+            <a class="nav-link" href="/admin/custom-fields">Custom Fields</a>
+            <a class="nav-link" href="/admin/categories">Categories</a>
+            <span class="nav-link disabled" title="Coming soon">Duplication check</span>
+            <span class="nav-link disabled" title="Coming soon">Backups</span>
+          </div>
+        </details>
+        <a class="nav-link" href="/admin/audit">Audit Logs</a>
+      </div>
+    </details>
+    {% endif %}
+  </nav>
+  <details class="settings-menu">
+    <summary>Settings</summary>
+    <div class="settings-panel">
+      <button class="theme-toggle" type="button" data-theme-toggle>Light mode</button>
+      <a class="profile-link" href="/profile">
+        <span class="avatar">{{ (user.first_name[:1] if user.first_name else user.email[:1])|upper }}</span>
+        <span><strong>{{ ((user.first_name or '') ~ ' ' ~ (user.last_name or ''))|trim or user.email }}</strong><small>{{ user.role|capitalize }}</small></span>
+      </a>
+      <form method="post" action="/logout"><input type="hidden" name="csrf_token" value="{{ csrf_token }}"><button class="ghost" type="submit">Sign out</button></form>
     </div>
-  </form>
-  <ul class="navbar-nav ms-auto ms-md-0 me-3 me-lg-4">
-    <li class="nav-item me-2">
-      <button class="btn btn-link nav-link theme-toggle" type="button" data-theme-toggle aria-label="Toggle light and dark mode" title="Light/Dark Mode"><i class="fas fa-moon"></i></button>
-    </li>
-    <li class="nav-item dropdown">
-      <a class="nav-link dropdown-toggle" id="navbarDropdown" href="/profile" role="button" data-bs-toggle="dropdown" aria-expanded="false"><i class="fas fa-user fa-fw"></i></a>
-      <ul class="dropdown-menu dropdown-menu-end" aria-labelledby="navbarDropdown">
-        <li><a class="dropdown-item" href="/profile">Profile</a></li>
-        <li><hr class="dropdown-divider"></li>
-        <li><form method="post" action="/logout"><input type="hidden" name="csrf_token" value="{{ csrf_token }}"><button class="dropdown-item" type="submit">Sign out</button></form></li>
-      </ul>
-    </li>
-  </ul>
-</nav>
-<div id="layoutSidenav">
-  <div id="layoutSidenav_nav">
-    <nav class="sb-sidenav accordion sb-sidenav-dark" id="sidenavAccordion">
-      <div class="sb-sidenav-menu">
-        <div class="nav">
-          <div class="sb-sidenav-menu-heading">Core</div>
-          <a class="nav-link" href="/dashboard" data-reset-sidebar><div class="sb-nav-link-icon"><i class="fas fa-tachometer-alt"></i></div>Dashboard</a>
-          <div class="sb-sidenav-menu-heading">Lab</div>
-          <details class="nav-group" data-sidebar-menu="top-draw">
-            <summary class="nav-link"><div class="sb-nav-link-icon"><i class="fas fa-box-open"></i></div>Top Draw<div class="sb-sidenav-collapse-arrow"><i class="fas fa-angle-down"></i></div></summary>
-            <nav class="sb-sidenav-menu-nested nav">
-              <span class="nav-link disabled" title="Coming soon">Certificates</span>
-              <a class="nav-link" href="/licences">License Keys</a>
-            </nav>
-          </details>
-          <details class="nav-group" data-sidebar-menu="hardware">
-            <summary class="nav-link"><div class="sb-nav-link-icon"><i class="fas fa-desktop"></i></div>Hardware<div class="sb-sidenav-collapse-arrow"><i class="fas fa-angle-down"></i></div></summary>
-            <nav class="sb-sidenav-menu-nested nav">
-              <a class="nav-link" href="/hardware-assets">Assets</a>
-              <span class="nav-link disabled" title="Coming soon">Warranty Tracker</span>
-            </nav>
-          </details>
-          <details class="nav-group" data-sidebar-menu="network">
-            <summary class="nav-link"><div class="sb-nav-link-icon"><i class="fas fa-network-wired"></i></div>Network<div class="sb-sidenav-collapse-arrow"><i class="fas fa-angle-down"></i></div></summary>
-            <nav class="sb-sidenav-menu-nested nav">
-              <a class="nav-link" href="/ip-addresses">IP Addresses</a>
-              <span class="nav-link disabled" title="Coming soon">Network Monitor</span>
-            </nav>
-          </details>
-          {% if user.role == 'admin' %}
-          <div class="sb-sidenav-menu-heading">Admin</div>
-          <details class="nav-group" data-sidebar-menu="site-admin">
-            <summary class="nav-link"><div class="sb-nav-link-icon"><i class="fas fa-cogs"></i></div>Site Admin<div class="sb-sidenav-collapse-arrow"><i class="fas fa-angle-down"></i></div></summary>
-            <nav class="sb-sidenav-menu-nested nav">
-              <a class="nav-link" href="/admin">Overview</a>
-              <details class="nav-group nav-subgroup" data-sidebar-menu="user-management">
-                <summary class="nav-link">User Management<div class="sb-sidenav-collapse-arrow"><i class="fas fa-angle-down"></i></div></summary>
-                <nav class="sb-sidenav-menu-nested nav">
-                  <a class="nav-link" href="/admin/users">Users</a>
-                  <a class="nav-link" href="/admin/security">2FA</a>
-                  <span class="nav-link disabled" title="Coming soon">IDP Integration OIDC</span>
-                </nav>
-              </details>
-              <details class="nav-group nav-subgroup" data-sidebar-menu="data-management">
-                <summary class="nav-link">Data Management<div class="sb-sidenav-collapse-arrow"><i class="fas fa-angle-down"></i></div></summary>
-                <nav class="sb-sidenav-menu-nested nav">
-                  <a class="nav-link" href="/admin/import">Import/Export</a>
-                  <a class="nav-link" href="/admin/custom-fields">Custom Fields</a>
-                  <a class="nav-link" href="/admin/categories">Categories</a>
-                  <span class="nav-link disabled" title="Coming soon">Duplication check</span>
-                  <span class="nav-link disabled" title="Coming soon">Backups</span>
-                </nav>
-              </details>
-              <a class="nav-link" href="/admin/audit">Audit Logs</a>
-            </nav>
-          </details>
-          {% endif %}
-        </div>
-      </div>
-      <div class="sb-sidenav-footer">
-        <a class="profile-link" href="/profile">
-          <span class="avatar">{{ (user.first_name[:1] if user.first_name else user.email[:1])|upper }}</span>
-          <span><small>Logged in as:</small><strong>{{ ((user.first_name or '') ~ ' ' ~ (user.last_name or ''))|trim or user.email }}</strong></span>
-        </a>
-        {% if version_status %}
-        <div class="version-card">
-          <div><span>Installed</span><strong>{{ version_status.installed_display }}</strong></div>
-          {% if version_status.update_available %}
-          <a href="{{ version_status.release_url }}" target="_blank" rel="noopener noreferrer"><span>Update available</span><strong>{{ version_status.latest }}</strong></a>
-          {% elif version_status.latest %}
-          <div><span>Latest</span><strong>{{ version_status.latest }}</strong></div>
-          {% else %}
-          <div><span>Latest</span><strong>unknown</strong></div>
-          {% endif %}
-        </div>
-        {% endif %}
-      </div>
-    </nav>
+  </details>
+  {% if version_status %}
+  <div class="version-card">
+    <div><span>Installed</span><strong>{{ version_status.installed_display }}</strong></div>
+    {% if version_status.update_available %}
+    <a href="{{ version_status.release_url }}" target="_blank" rel="noopener noreferrer"><span>Update available</span><strong>{{ version_status.latest }}</strong></a>
+    {% elif version_status.latest %}
+    <div><span>Latest</span><strong>{{ version_status.latest }}</strong></div>
+    {% else %}
+    <div><span>Latest</span><strong>unknown</strong></div>
+    {% endif %}
   </div>
-  <div id="layoutSidenav_content">
-    <main>
-      <div class="container-fluid px-4">
-        {% block content %}{% endblock %}
-      </div>
-    </main>
-  </div>
-</div>
+  {% endif %}
+</aside>
+<main class="content">
+{% block content %}{% endblock %}
+</main>
 {% else %}
 {% block public %}{% endblock %}
 {% endif %}
-<script src="/static/js/bootstrap.bundle.min.js"></script>
 </body>
 </html>

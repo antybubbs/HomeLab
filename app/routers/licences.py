@@ -10,9 +10,37 @@ from app.db.session import get_db
 from app.models.models import Licence
 from app.routers.auth import require_editor, require_user
 from app.services.audit import write_audit
+from app.services.custom_fields import active_fields, field_values, option_list, save_custom_values, validate_custom_values
+from app.services.managed_lists import list_values
 
 router = APIRouter(prefix="/licences")
 templates = Jinja2Templates(directory="app/templates")
+MODULE = "licences"
+ENTITY_TYPE = "licence"
+
+
+def clean_list_value(value: str, allowed: list[str], current: str | None = None) -> str | None:
+    clean = value.strip()
+    if clean in allowed or (current and clean == current):
+        return clean
+    return None
+
+
+def form_context(db: Session, request: Request, user, licence=None, product_key="", error=None):
+    fields = active_fields(db, MODULE)
+    values = field_values(db, MODULE, ENTITY_TYPE, licence.id) if licence else {}
+    lists = list_values(db, MODULE)
+    return {
+        "user": user,
+        "licence": licence,
+        "product_key": product_key,
+        "licence_types": lists.get("licence_type", []),
+        "custom_fields": fields,
+        "custom_values": values,
+        "option_list": option_list,
+        "error": error,
+        **csrf_context(request),
+    }
 
 
 @router.get("")
@@ -21,25 +49,34 @@ def list_licences(request: Request, q: str = Query("", max_length=200), db: Sess
     clean_q = q.strip()
     if clean_q:
         like = f"%{clean_q}%"
-        query = query.filter(or_(Licence.product.ilike(like), Licence.organisation.ilike(like), Licence.licence_type.ilike(like), Licence.licence_id.ilike(like)))
+        query = query.filter(or_(Licence.product.ilike(like), Licence.licence_type.ilike(like), Licence.licence_id.ilike(like), Licence.vendor.ilike(like)))
     rows = query.order_by(Licence.product.asc()).limit(500).all()
     return templates.TemplateResponse(request, "licences.html", {"user": user, "rows": rows, "q": clean_q, "mask_key": lambda encrypted: mask_key(decrypt_secret(encrypted)), **csrf_context(request)})
 
 
 @router.get("/new")
-def new_licence(request: Request, user=Depends(require_editor)):
-    return templates.TemplateResponse(request, "licence_form.html", {"user": user, "licence": None, "product_key": "", "error": None, **csrf_context(request)})
+def new_licence(request: Request, db: Session = Depends(get_db), user=Depends(require_editor)):
+    return templates.TemplateResponse(request, "licence_form.html", form_context(db, request, user))
 
 
 @router.post("/new")
-def create_licence(request: Request, product: str = Form(..., max_length=500), product_key: str = Form(..., max_length=500), organisation: str = Form("", max_length=255), licence_type: str = Form("", max_length=120), seats: int = Form(0, ge=0, le=1000000), notes: str = Form("", max_length=10000), csrf_token: str = Form(...), db: Session = Depends(get_db), user=Depends(require_editor)):
+async def create_licence(request: Request, product: str = Form(..., max_length=500), product_key: str = Form(..., max_length=500), licence_type: str = Form("", max_length=120), seats: int = Form(0, ge=0, le=1000000), notes: str = Form("", max_length=10000), csrf_token: str = Form(...), db: Session = Depends(get_db), user=Depends(require_editor)):
     validate_csrf_token(request, csrf_token)
+    form = await request.form()
+    fields = active_fields(db, MODULE)
+    custom_error = validate_custom_values(fields, form)
+    if custom_error:
+        return templates.TemplateResponse(request, "licence_form.html", form_context(db, request, user, product_key=product_key, error=custom_error), status_code=400)
     product = product.strip()
     product_key = product_key.strip()
     if not product or not product_key:
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Product and product key are required")
-    row = Licence(product=product, encrypted_product_key=encrypt_secret(product_key), organisation=organisation.strip() or None, licence_type=licence_type.strip() or None, seats=seats, notes=notes.strip() or None)
+    lists = list_values(db, MODULE)
+    row = Licence(product=product, encrypted_product_key=encrypt_secret(product_key), organisation=None, licence_type=clean_list_value(licence_type, lists.get("licence_type", [])), seats=seats, notes=notes.strip() or None)
     db.add(row)
+    db.commit()
+    db.refresh(row)
+    save_custom_values(db, fields, form, ENTITY_TYPE, row.id)
     db.commit()
     write_audit(db, user, "create", "licence", str(row.id), request.client.host if request.client else None)
     return RedirectResponse("/licences", status_code=303)
@@ -50,25 +87,33 @@ def edit_licence(request: Request, licence_id: int, db: Session = Depends(get_db
     row = db.get(Licence, licence_id)
     if not row:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Licence not found")
-    return templates.TemplateResponse(request, "licence_form.html", {"user": user, "licence": row, "product_key": decrypt_secret(row.encrypted_product_key), "error": None, **csrf_context(request)})
+    return templates.TemplateResponse(request, "licence_form.html", form_context(db, request, user, licence=row, product_key=decrypt_secret(row.encrypted_product_key)))
 
 
 @router.post("/{licence_id}/edit")
-def update_licence(request: Request, licence_id: int, product: str = Form(..., max_length=500), product_key: str = Form(..., max_length=500), organisation: str = Form("", max_length=255), licence_type: str = Form("", max_length=120), seats: int = Form(0, ge=0, le=1000000), notes: str = Form("", max_length=10000), csrf_token: str = Form(...), db: Session = Depends(get_db), user=Depends(require_editor)):
+async def update_licence(request: Request, licence_id: int, product: str = Form(..., max_length=500), product_key: str = Form(..., max_length=500), licence_type: str = Form("", max_length=120), seats: int = Form(0, ge=0, le=1000000), notes: str = Form("", max_length=10000), csrf_token: str = Form(...), db: Session = Depends(get_db), user=Depends(require_editor)):
     validate_csrf_token(request, csrf_token)
     row = db.get(Licence, licence_id)
     if not row:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Licence not found")
+    form = await request.form()
+    fields = active_fields(db, MODULE)
+    custom_error = validate_custom_values(fields, form)
+    if custom_error:
+        return templates.TemplateResponse(request, "licence_form.html", form_context(db, request, user, licence=row, product_key=product_key, error=custom_error), status_code=400)
     product = product.strip()
     product_key = product_key.strip()
     if not product or not product_key:
-        return templates.TemplateResponse(request, "licence_form.html", {"user": user, "licence": row, "product_key": product_key, "error": "Product and product key are required.", **csrf_context(request)}, status_code=400)
+        return templates.TemplateResponse(request, "licence_form.html", form_context(db, request, user, licence=row, product_key=product_key, error="Product and product key are required."), status_code=400)
+    lists = list_values(db, MODULE)
     row.product = product
     row.encrypted_product_key = encrypt_secret(product_key)
-    row.organisation = organisation.strip() or None
-    row.licence_type = licence_type.strip() or None
+    row.organisation = None
+    row.licence_type = clean_list_value(licence_type, lists.get("licence_type", []), row.licence_type)
     row.seats = seats
     row.notes = notes.strip() or None
+    db.commit()
+    save_custom_values(db, fields, form, ENTITY_TYPE, row.id)
     db.commit()
     write_audit(db, user, "update", "licence", str(row.id), request.client.host if request.client else None, detail=product)
     return RedirectResponse(f"/licences/{row.id}", status_code=303)
@@ -79,7 +124,9 @@ def detail(request: Request, licence_id: int, db: Session = Depends(get_db), use
     row = db.get(Licence, licence_id)
     if not row:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Licence not found")
-    return templates.TemplateResponse(request, "licence_detail.html", {"user": user, "licence": row, "display_key": mask_key(decrypt_secret(row.encrypted_product_key)), "revealed": False, **csrf_context(request)})
+    fields = active_fields(db, MODULE)
+    values = field_values(db, MODULE, ENTITY_TYPE, row.id)
+    return templates.TemplateResponse(request, "licence_detail.html", {"user": user, "licence": row, "display_key": mask_key(decrypt_secret(row.encrypted_product_key)), "revealed": False, "custom_fields": fields, "custom_values": values, **csrf_context(request)})
 
 
 @router.post("/{licence_id}/reveal")
@@ -89,4 +136,6 @@ def reveal(request: Request, licence_id: int, csrf_token: str = Form(...), db: S
     if not row:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Licence not found")
     write_audit(db, user, "reveal", "licence", str(row.id), request.client.host if request.client else None)
-    return templates.TemplateResponse(request, "licence_detail.html", {"user": user, "licence": row, "display_key": decrypt_secret(row.encrypted_product_key), "revealed": True, **csrf_context(request)})
+    fields = active_fields(db, MODULE)
+    values = field_values(db, MODULE, ENTITY_TYPE, row.id)
+    return templates.TemplateResponse(request, "licence_detail.html", {"user": user, "licence": row, "display_key": decrypt_secret(row.encrypted_product_key), "revealed": True, "custom_fields": fields, "custom_values": values, **csrf_context(request)})

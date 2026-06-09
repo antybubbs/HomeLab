@@ -8,10 +8,10 @@ from app.models.models import CustomField, CustomFieldValue, IPAddress, Licence
 def export_licences_csv(db: Session) -> str:
     output = io.StringIO()
     writer = csv.writer(output)
+    custom_fields = db.query(CustomField).filter(CustomField.module == "licences", CustomField.is_active == True).order_by(CustomField.sort_order.asc(), CustomField.label.asc()).all()
     writer.writerow([
         "License ID",
         "Parent Program",
-        "Organization",
         "Product",
         "Product Key",
         "Type",
@@ -19,12 +19,13 @@ def export_licences_csv(db: Session) -> str:
         "Seats",
         "OSA Status",
         "Notes",
-    ])
+    ] + [f"Custom: {field.label}" for field in custom_fields])
     for row in db.query(Licence).order_by(Licence.product.asc()).all():
+        values = db.query(CustomFieldValue).filter(CustomFieldValue.entity_type == "licence", CustomFieldValue.entity_id == row.id).all()
+        value_map = {value.field_id: value.value or "" for value in values}
         writer.writerow([
             row.licence_id or "",
             row.parent_program or "",
-            row.organisation or "",
             row.product,
             decrypt_secret(row.encrypted_product_key),
             row.licence_type or "",
@@ -32,7 +33,7 @@ def export_licences_csv(db: Session) -> str:
             row.seats or "",
             row.osa_status or "",
             row.notes or "",
-        ])
+        ] + [value_map.get(field.id, "") for field in custom_fields])
     return output.getvalue()
 
 

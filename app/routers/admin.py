@@ -21,7 +21,7 @@ from app.services.managed_lists import MANAGED_LIST_MODULES, MANAGED_LISTS, list
 router = APIRouter(prefix="/admin")
 templates = Jinja2Templates(directory="app/templates")
 ROLES = {"admin", "editor", "viewer"}
-CUSTOM_FIELD_MODULES = {"ip_addresses": "IP Addresses", "hardware_assets": "Hardware Assets"}
+CUSTOM_FIELD_MODULES = {"ip_addresses": "IP Addresses", "hardware_assets": "Hardware Assets", "licences": "License Keys"}
 
 
 @router.get("")

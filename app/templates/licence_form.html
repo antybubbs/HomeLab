@@ -6,11 +6,23 @@
 <form method="post" class="form-grid">
   <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
   <label>Product<input name="product" value="{{ licence.product if licence else '' }}" required></label>
-  <label>Organisation<input name="organisation" value="{{ licence.organisation if licence and licence.organisation else '' }}"></label>
   <label>Product key<input name="product_key" autocomplete="off" value="{{ product_key }}" required></label>
-  <label>Licence type<input name="licence_type" value="{{ licence.licence_type if licence and licence.licence_type else '' }}"></label>
+  <label>License type<select name="licence_type"><option value=""></option>{% if licence and licence.licence_type and licence.licence_type not in licence_types %}<option value="{{ licence.licence_type }}" selected>{{ licence.licence_type }}</option>{% endif %}{% for option in licence_types %}<option value="{{ option }}" {% if licence and licence.licence_type == option %}selected{% endif %}>{{ option }}</option>{% endfor %}</select></label>
   <label>Seats<input name="seats" type="number" value="{{ licence.seats if licence and licence.seats is not none else 0 }}"></label>
   <label class="wide">Notes<textarea name="notes">{{ licence.notes if licence and licence.notes else '' }}</textarea></label>
+  <div class="wide"><h2>Custom Fields</h2></div>
+  {% for field in custom_fields %}
+  {% set current_value = custom_values.get(field.id, '') %}
+  {% if field.field_type == 'textarea' %}
+  <label class="wide">{{ field.label }}<textarea name="custom_{{ field.id }}" {% if field.is_required %}required{% endif %}>{{ current_value }}</textarea></label>
+  {% elif field.field_type == 'radio' %}
+  <div><label>{{ field.label }}</label>{% for option in option_list(field) %}<label><input name="custom_{{ field.id }}" type="radio" value="{{ option }}" {% if current_value == option %}checked{% endif %} {% if field.is_required %}required{% endif %}> {{ option }}</label>{% endfor %}</div>
+  {% elif field.field_type == 'select' %}
+  <label>{{ field.label }}<select name="custom_{{ field.id }}" {% if field.is_required %}required{% endif %}><option value=""></option>{% for option in option_list(field) %}<option value="{{ option }}" {% if current_value == option %}selected{% endif %}>{{ option }}</option>{% endfor %}</select></label>
+  {% else %}
+  <label>{{ field.label }}<input name="custom_{{ field.id }}" value="{{ current_value }}" {% if field.is_required %}required{% endif %}></label>
+  {% endif %}
+  {% endfor %}
   <button class="button secondary" type="reset">Reset</button>
   <button type="submit">Save</button>
 </form>

@@ -81,24 +81,25 @@ def import_csv(db: Session, user: User, path: str, ip_address: str | None = None
 
     count = 0
     try:
+        custom_fields = db.query(CustomField).filter(CustomField.module == "licences", CustomField.is_active == True).all()
+        custom_field_columns = {f"Custom: {field.label}": field for field in custom_fields}
         for _, row in df.iterrows():
             product = clean(row.get("Product"))
             product_key = clean(row.get("Product Key"))
             if not product or not product_key:
                 continue
             licence_id = clean(row.get("License ID"))
-            organisation = clean(row.get("Organization"))
             licence = None
             if licence_id:
                 licence = db.query(Licence).filter(Licence.licence_id == licence_id).first()
             if not licence:
-                licence = db.query(Licence).filter(Licence.product == product, Licence.organisation == organisation).first()
+                licence = db.query(Licence).filter(Licence.product == product).first()
             if not licence:
                 licence = Licence(product=product, encrypted_product_key=encrypt_secret(product_key))
                 db.add(licence)
             licence.licence_id = licence_id
             licence.parent_program = clean(row.get("Parent Program"))
-            licence.organisation = organisation
+            licence.organisation = None
             licence.product = product
             licence.vendor = clean(row.get("Vendor")) or "Microsoft"
             licence.encrypted_product_key = encrypt_secret(product_key)
@@ -107,6 +108,16 @@ def import_csv(db: Session, user: User, path: str, ip_address: str | None = None
             licence.seats = to_int(row.get("Seats"))
             licence.osa_status = clean(row.get("OSA Status"))
             licence.notes = clean(row.get("Notes"))
+            db.flush()
+            for column, field in custom_field_columns.items():
+                if column not in df.columns:
+                    continue
+                value = clean(row.get(column))
+                custom_value = db.query(CustomFieldValue).filter(CustomFieldValue.field_id == field.id, CustomFieldValue.entity_type == "licence", CustomFieldValue.entity_id == licence.id).first()
+                if not custom_value:
+                    custom_value = CustomFieldValue(field_id=field.id, entity_type="licence", entity_id=licence.id)
+                    db.add(custom_value)
+                custom_value.value = value
             count += 1
         db.commit()
     except InvalidConfigurationError as exc:

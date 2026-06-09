@@ -59,7 +59,7 @@
     link.addEventListener("click", clearState);
   });
 
-  const savedTheme = localStorage.getItem(themeKey) || "dark";
+  const savedTheme = localStorage.getItem(themeKey) || "light";
   applyTheme(savedTheme);
   if (themeToggle) {
     themeToggle.addEventListener("click", () => {

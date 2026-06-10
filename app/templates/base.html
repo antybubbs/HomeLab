@@ -59,34 +59,28 @@
       </div>
     </details>
     {% if user.role == 'admin' %}
-    <details class="nav-group admin-group" data-sidebar-menu="site-admin">
-      <summary><span class="nav-icon">A</span><span class="nav-label">Site Admin</span></summary>
+    <details class="nav-group admin-group" data-sidebar-menu="team">
+      <summary><span class="nav-icon">U</span><span class="nav-label">Team</span></summary>
       <div class="nav-children">
-        <a class="nav-link" href="/admin"><span class="nav-label">Overview</span></a>
-        <details class="nav-subgroup" data-sidebar-menu="team">
-          <summary><span class="nav-label">Team</span></summary>
-          <div class="nav-children">
-            <a class="nav-link" href="/admin/users"><span class="nav-label">Users</span></a>
-            <span class="nav-link disabled" title="Coming soon"><span class="nav-label">Groups</span></span>
-          </div>
-        </details>
-        <details class="nav-subgroup" data-sidebar-menu="security">
-          <summary><span class="nav-label">Security</span></summary>
-          <div class="nav-children">
-            <span class="nav-link disabled" title="Coming soon"><span class="nav-label">IDP Integration OIDC</span></span>
-            <a class="nav-link" href="/admin/audit"><span class="nav-label">Audit Logs</span></a>
-          </div>
-        </details>
-        <details class="nav-subgroup" data-sidebar-menu="data-management">
-          <summary><span class="nav-label">Data Management</span></summary>
-          <div class="nav-children">
-            <a class="nav-link" href="/admin/import"><span class="nav-label">Import/Export</span></a>
-            <a class="nav-link" href="/admin/custom-fields"><span class="nav-label">Custom Fields</span></a>
-            <a class="nav-link" href="/admin/categories"><span class="nav-label">Categories</span></a>
-            <span class="nav-link disabled" title="Coming soon"><span class="nav-label">Duplication check</span></span>
-            <span class="nav-link disabled" title="Coming soon"><span class="nav-label">Backups</span></span>
-          </div>
-        </details>
+        <a class="nav-link" href="/admin/users"><span class="nav-label">Users</span></a>
+        <span class="nav-link disabled" title="Coming soon"><span class="nav-label">Groups</span></span>
+      </div>
+    </details>
+    <details class="nav-group" data-sidebar-menu="security">
+      <summary><span class="nav-icon">S</span><span class="nav-label">Security</span></summary>
+      <div class="nav-children">
+        <span class="nav-link disabled" title="Coming soon"><span class="nav-label">IDP Integration OIDC</span></span>
+        <a class="nav-link" href="/admin/audit"><span class="nav-label">Audit Logs</span></a>
+      </div>
+    </details>
+    <details class="nav-group" data-sidebar-menu="data-management">
+      <summary><span class="nav-icon">M</span><span class="nav-label">Data Management</span></summary>
+      <div class="nav-children">
+        <a class="nav-link" href="/admin/import"><span class="nav-label">Import/Export</span></a>
+        <a class="nav-link" href="/admin/custom-fields"><span class="nav-label">Custom Fields</span></a>
+        <a class="nav-link" href="/admin/categories"><span class="nav-label">Categories</span></a>
+        <span class="nav-link disabled" title="Coming soon"><span class="nav-label">Duplication check</span></span>
+        <span class="nav-link disabled" title="Coming soon"><span class="nav-label">Backups</span></span>
       </div>
     </details>
     {% endif %}

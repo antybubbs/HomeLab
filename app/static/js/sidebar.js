@@ -3,15 +3,8 @@
   const dashboardPath = "/dashboard";
   const menus = Array.from(document.querySelectorAll("[data-sidebar-menu]"));
   const resetLinks = Array.from(document.querySelectorAll("[data-reset-sidebar]"));
-  const themeKey = "homelab.theme";
-  const themeToggle = document.querySelector("[data-theme-toggle]");
-
-  function applyTheme(theme) {
-    document.documentElement.dataset.theme = theme;
-    if (themeToggle) {
-      themeToggle.textContent = theme === "light" ? "Dark" : "Light";
-    }
-  }
+  document.documentElement.dataset.theme = "dark";
+  localStorage.removeItem("homelab.theme");
 
   function saveState() {
     const openMenus = menus
@@ -56,16 +49,6 @@
       link.closest(".nav-group")?.setAttribute("open", "");
     }
   });
-
-  const savedTheme = localStorage.getItem(themeKey) || "dark";
-  applyTheme(savedTheme);
-  if (themeToggle) {
-    themeToggle.addEventListener("click", () => {
-      const nextTheme = document.documentElement.dataset.theme === "light" ? "dark" : "light";
-      localStorage.setItem(themeKey, nextTheme);
-      applyTheme(nextTheme);
-    });
-  }
 
   document.addEventListener("click", (event) => {
     document.querySelectorAll(".account-menu[open]").forEach((menu) => {

@@ -12,7 +12,7 @@ WORKDIR /app
 RUN addgroup --system homelab \
     && adduser --system --ingroup homelab homelab \
     && apt-get update \
-    && apt-get install -y --no-install-recommends gosu \
+    && apt-get install -y --no-install-recommends gosu iputils-ping \
     && rm -rf /var/lib/apt/lists/*
 
 COPY requirements.txt .

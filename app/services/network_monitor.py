@@ -1,7 +1,6 @@
 import asyncio
-import os
-import socket
-import struct
+import re
+import subprocess
 import time
 from datetime import datetime, timedelta
 from ipaddress import ip_address
@@ -13,6 +12,7 @@ from app.models.models import IPAddress, NetworkMonitor, NetworkMonitorCheck
 
 CHECK_INTERVAL_SECONDS = 10
 MAX_CHECK_HISTORY = 1000
+PING_TIME_PATTERN = re.compile(r"time[=<]([0-9.]+)")
 
 
 def monitor_label(monitor: NetworkMonitor) -> str:
@@ -31,48 +31,33 @@ def clamp_timeout(value: int) -> int:
     return min(max(value, 500), 10000)
 
 
-def checksum(data: bytes) -> int:
-    if len(data) % 2:
-        data += b"\0"
-    total = sum(struct.unpack(f"!{len(data) // 2}H", data))
-    total = (total >> 16) + (total & 0xFFFF)
-    total += total >> 16
-    return ~total & 0xFFFF
-
-
 def ping_ipv4(address: str, timeout_ms: int) -> tuple[bool, int | None, str | None]:
     parsed = ip_address(address)
     if parsed.version != 4:
         return False, None, "IPv6 ping is not supported yet."
-    packet_id = os.getpid() & 0xFFFF
-    sequence = int(time.monotonic() * 1000) & 0xFFFF
-    header = struct.pack("!BBHHH", 8, 0, 0, packet_id, sequence)
-    payload = struct.pack("!d", time.monotonic()) + b"HomeLab"
-    packet = struct.pack("!BBHHH", 8, 0, checksum(header + payload), packet_id, sequence) + payload
-    timeout = timeout_ms / 1000
+    timeout_seconds = max(1, int((timeout_ms + 999) / 1000))
     started = time.monotonic()
     try:
-        with socket.socket(socket.AF_INET, socket.SOCK_RAW, socket.IPPROTO_ICMP) as sock:
-            sock.settimeout(timeout)
-            sock.sendto(packet, (address, 0))
-            while True:
-                remaining = timeout - (time.monotonic() - started)
-                if remaining <= 0:
-                    return False, None, "Timed out"
-                sock.settimeout(remaining)
-                response, _ = sock.recvfrom(1024)
-                header_length = (response[0] & 0x0F) * 4
-                icmp = response[header_length:header_length + 8]
-                if len(icmp) < 8:
-                    continue
-                icmp_type, _, _, response_id, response_sequence = struct.unpack("!BBHHH", icmp)
-                if icmp_type == 0 and response_id == packet_id and response_sequence == sequence:
-                    latency = int((time.monotonic() - started) * 1000)
-                    return True, latency, None
-    except PermissionError:
-        return False, None, "Ping needs NET_RAW capability in Docker."
+        result = subprocess.run(
+            ["ping", "-4", "-c", "1", "-W", str(timeout_seconds), address],
+            capture_output=True,
+            check=False,
+            text=True,
+            timeout=timeout_seconds + 1,
+        )
+    except FileNotFoundError:
+        return False, None, "Ping command is not installed in the container."
+    except subprocess.TimeoutExpired:
+        return False, None, "Timed out"
     except OSError as exc:
         return False, None, str(exc)
+    output = f"{result.stdout}\n{result.stderr}"
+    if result.returncode == 0:
+        match = PING_TIME_PATTERN.search(output)
+        latency = int(float(match.group(1))) if match else int((time.monotonic() - started) * 1000)
+        return True, latency, None
+    error = result.stderr.strip() or result.stdout.strip() or "Ping failed"
+    return False, None, error.splitlines()[-1][:500]
 
 
 def fallback_due_monitors(db: Session) -> list[NetworkMonitor]:

@@ -9,7 +9,7 @@
   function applyTheme(theme) {
     document.documentElement.dataset.theme = theme;
     if (themeToggle) {
-      themeToggle.textContent = theme === "light" ? "Dark mode" : "Light mode";
+      themeToggle.textContent = theme === "light" ? "Dark" : "Light";
     }
   }
 
@@ -57,4 +57,12 @@
       applyTheme(nextTheme);
     });
   }
+
+  document.addEventListener("click", (event) => {
+    document.querySelectorAll(".account-menu[open]").forEach((menu) => {
+      if (!menu.contains(event.target)) {
+        menu.open = false;
+      }
+    });
+  });
 })();

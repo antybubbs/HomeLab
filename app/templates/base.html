@@ -36,60 +36,60 @@
 <aside class="sidebar">
   <div class="brand"><span class="brand-mark">H</span><span>HomeLab</span></div>
   <nav class="nav-tree">
-    <a class="nav-link" href="/dashboard" data-reset-sidebar>Dashboard</a>
+    <a class="nav-link" href="/dashboard" data-reset-sidebar><span class="nav-icon">D</span><span class="nav-label">Dashboard</span></a>
     <details class="nav-group" data-sidebar-menu="my-lab">
-      <summary>My Lab</summary>
+      <summary><span class="nav-icon">L</span><span class="nav-label">My Lab</span></summary>
       <div class="nav-children">
         <details class="nav-subgroup" data-sidebar-menu="software">
-          <summary>Top Draw</summary>
+          <summary><span class="nav-label">Top Draw</span></summary>
           <div class="nav-children">
-            <span class="nav-link disabled" title="Coming soon">Certificates</span>
-            <a class="nav-link" href="/licences">License Keys</a>
+            <span class="nav-link disabled" title="Coming soon"><span class="nav-label">Certificates</span></span>
+            <a class="nav-link" href="/licences"><span class="nav-label">License Keys</span></a>
           </div>
         </details>
         <details class="nav-subgroup" data-sidebar-menu="hardware">
-          <summary>Hardware</summary>
+          <summary><span class="nav-label">Hardware</span></summary>
           <div class="nav-children">
-            <a class="nav-link" href="/hardware-assets">Assets</a>
-            <span class="nav-link disabled" title="Coming soon">Warranty Tracker</span>
+            <a class="nav-link" href="/hardware-assets"><span class="nav-label">Assets</span></a>
+            <span class="nav-link disabled" title="Coming soon"><span class="nav-label">Warranty Tracker</span></span>
           </div>
         </details>
         <details class="nav-subgroup" data-sidebar-menu="network">
-          <summary>Network</summary>
+          <summary><span class="nav-label">Network</span></summary>
           <div class="nav-children">
-            <a class="nav-link" href="/ip-addresses">IP Addresses</a>
-            <span class="nav-link disabled" title="Coming soon">Network Monitor</span>
+            <a class="nav-link" href="/ip-addresses"><span class="nav-label">IP Addresses</span></a>
+            <span class="nav-link disabled" title="Coming soon"><span class="nav-label">Network Monitor</span></span>
           </div>
         </details>
       </div>
     </details>
     {% if user.role == 'admin' %}
     <details class="nav-group admin-group" data-sidebar-menu="site-admin">
-      <summary>Site Admin</summary>
+      <summary><span class="nav-icon">A</span><span class="nav-label">Site Admin</span></summary>
       <div class="nav-children">
-        <a class="nav-link" href="/admin">Overview</a>
+        <a class="nav-link" href="/admin"><span class="nav-label">Overview</span></a>
         <details class="nav-subgroup" data-sidebar-menu="team">
-          <summary>Team</summary>
+          <summary><span class="nav-label">Team</span></summary>
           <div class="nav-children">
-            <a class="nav-link" href="/admin/users">Users</a>
-            <span class="nav-link disabled" title="Coming soon">Groups</span>
+            <a class="nav-link" href="/admin/users"><span class="nav-label">Users</span></a>
+            <span class="nav-link disabled" title="Coming soon"><span class="nav-label">Groups</span></span>
           </div>
         </details>
         <details class="nav-subgroup" data-sidebar-menu="security">
-          <summary>Security</summary>
+          <summary><span class="nav-label">Security</span></summary>
           <div class="nav-children">
-            <span class="nav-link disabled" title="Coming soon">IDP Integration OIDC</span>
-            <a class="nav-link" href="/admin/audit">Audit Logs</a>
+            <span class="nav-link disabled" title="Coming soon"><span class="nav-label">IDP Integration OIDC</span></span>
+            <a class="nav-link" href="/admin/audit"><span class="nav-label">Audit Logs</span></a>
           </div>
         </details>
         <details class="nav-subgroup" data-sidebar-menu="data-management">
-          <summary>Data Management</summary>
+          <summary><span class="nav-label">Data Management</span></summary>
           <div class="nav-children">
-            <a class="nav-link" href="/admin/import">Import/Export</a>
-            <a class="nav-link" href="/admin/custom-fields">Custom Fields</a>
-            <a class="nav-link" href="/admin/categories">Categories</a>
-            <span class="nav-link disabled" title="Coming soon">Duplication check</span>
-            <span class="nav-link disabled" title="Coming soon">Backups</span>
+            <a class="nav-link" href="/admin/import"><span class="nav-label">Import/Export</span></a>
+            <a class="nav-link" href="/admin/custom-fields"><span class="nav-label">Custom Fields</span></a>
+            <a class="nav-link" href="/admin/categories"><span class="nav-label">Categories</span></a>
+            <span class="nav-link disabled" title="Coming soon"><span class="nav-label">Duplication check</span></span>
+            <span class="nav-link disabled" title="Coming soon"><span class="nav-label">Backups</span></span>
           </div>
         </details>
       </div>

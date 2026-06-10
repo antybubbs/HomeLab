@@ -48,6 +48,15 @@
     link.addEventListener("click", clearState);
   });
 
+  document.querySelectorAll(".sidebar a.nav-link[href]").forEach((link) => {
+    const href = link.getAttribute("href");
+    if (href && (window.location.pathname === href || (!["/dashboard", "/admin"].includes(href) && window.location.pathname.startsWith(href + "/")))) {
+      link.classList.add("active");
+      link.closest("details")?.setAttribute("open", "");
+      link.closest(".nav-group")?.setAttribute("open", "");
+    }
+  });
+
   const savedTheme = localStorage.getItem(themeKey) || "dark";
   applyTheme(savedTheme);
   if (themeToggle) {

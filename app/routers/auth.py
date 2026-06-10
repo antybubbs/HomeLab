@@ -5,7 +5,7 @@ from fastapi.templating import Jinja2Templates
 from sqlalchemy.orm import Session
 from app.core.csrf import csrf_context, validate_csrf_token
 from app.core.security import hash_password, verify_password
-from app.core.totp import decrypted_totp_secret, encrypted_totp_secret, generate_totp_secret, provisioning_uri, verify_totp
+from app.core.totp import decrypted_totp_secret, encrypted_totp_secret, generate_totp_secret, provisioning_uri, qr_code_data_uri, verify_totp
 from app.db.session import get_db
 from app.models.models import User
 from app.services.audit import write_audit
@@ -116,7 +116,8 @@ def logout(request: Request, csrf_token: str = Form(...)):
 def profile(request: Request, user=Depends(require_user)):
     secret = decrypted_totp_secret(user.totp_secret) if user.totp_secret and not user.totp_enabled else None
     uri = provisioning_uri(user.email, secret) if secret else None
-    return templates.TemplateResponse(request, "profile.html", {"user": user, "setup_secret": secret, "setup_uri": uri, "error": None, "success": None, **csrf_context(request)})
+    qr_code = qr_code_data_uri(uri) if uri else None
+    return templates.TemplateResponse(request, "profile.html", {"user": user, "setup_secret": secret, "setup_uri": uri, "setup_qr_code": qr_code, "error": None, "success": None, **csrf_context(request)})
 
 
 @router.post("/profile/name")
@@ -133,15 +134,15 @@ def update_profile_name(request: Request, first_name: str = Form("", max_length=
 def update_profile_password(request: Request, current_password: str = Form("", max_length=255), new_password: str = Form("", max_length=255), confirm_password: str = Form("", max_length=255), csrf_token: str = Form(...), db: Session = Depends(get_db), user=Depends(require_user)):
     validate_csrf_token(request, csrf_token)
     if not verify_password(current_password, user.password_hash):
-        return templates.TemplateResponse(request, "profile.html", {"user": user, "setup_secret": None, "setup_uri": None, "error": "Current password is incorrect.", "success": None, **csrf_context(request)}, status_code=400)
+        return templates.TemplateResponse(request, "profile.html", {"user": user, "setup_secret": None, "setup_uri": None, "setup_qr_code": None, "error": "Current password is incorrect.", "success": None, **csrf_context(request)}, status_code=400)
     if len(new_password) < 12:
-        return templates.TemplateResponse(request, "profile.html", {"user": user, "setup_secret": None, "setup_uri": None, "error": "New password must be at least 12 characters.", "success": None, **csrf_context(request)}, status_code=400)
+        return templates.TemplateResponse(request, "profile.html", {"user": user, "setup_secret": None, "setup_uri": None, "setup_qr_code": None, "error": "New password must be at least 12 characters.", "success": None, **csrf_context(request)}, status_code=400)
     if new_password != confirm_password:
-        return templates.TemplateResponse(request, "profile.html", {"user": user, "setup_secret": None, "setup_uri": None, "error": "New passwords do not match.", "success": None, **csrf_context(request)}, status_code=400)
+        return templates.TemplateResponse(request, "profile.html", {"user": user, "setup_secret": None, "setup_uri": None, "setup_qr_code": None, "error": "New passwords do not match.", "success": None, **csrf_context(request)}, status_code=400)
     user.password_hash = hash_password(new_password)
     db.commit()
     write_audit(db, user, "change_password", "user", str(user.id), request.client.host if request.client else None)
-    return templates.TemplateResponse(request, "profile.html", {"user": user, "setup_secret": None, "setup_uri": None, "error": None, "success": "Password updated.", **csrf_context(request)})
+    return templates.TemplateResponse(request, "profile.html", {"user": user, "setup_secret": None, "setup_uri": None, "setup_qr_code": None, "error": None, "success": "Password updated.", **csrf_context(request)})
 
 
 @router.post("/profile/2fa/start")
@@ -161,7 +162,8 @@ def enable_profile_2fa(request: Request, code: str = Form(...), csrf_token: str 
     secret = decrypted_totp_secret(user.totp_secret)
     if not secret or not verify_totp(secret, code):
         uri = provisioning_uri(user.email, secret) if secret else None
-        return templates.TemplateResponse(request, "profile.html", {"user": user, "setup_secret": secret, "setup_uri": uri, "error": "Invalid authentication code.", "success": None, **csrf_context(request)}, status_code=400)
+        qr_code = qr_code_data_uri(uri) if uri else None
+        return templates.TemplateResponse(request, "profile.html", {"user": user, "setup_secret": secret, "setup_uri": uri, "setup_qr_code": qr_code, "error": "Invalid authentication code.", "success": None, **csrf_context(request)}, status_code=400)
     user.totp_enabled = True
     db.commit()
     write_audit(db, user, "enable_2fa", "user", str(user.id), request.client.host if request.client else None)
@@ -172,7 +174,7 @@ def enable_profile_2fa(request: Request, code: str = Form(...), csrf_token: str 
 def disable_profile_2fa(request: Request, current_password: str = Form("", max_length=255), csrf_token: str = Form(...), db: Session = Depends(get_db), user=Depends(require_user)):
     validate_csrf_token(request, csrf_token)
     if not verify_password(current_password, user.password_hash):
-        return templates.TemplateResponse(request, "profile.html", {"user": user, "setup_secret": None, "setup_uri": None, "error": "Current password is required to disable 2FA.", "success": None, **csrf_context(request)}, status_code=400)
+        return templates.TemplateResponse(request, "profile.html", {"user": user, "setup_secret": None, "setup_uri": None, "setup_qr_code": None, "error": "Current password is required to disable 2FA.", "success": None, **csrf_context(request)}, status_code=400)
     user.totp_secret = None
     user.totp_enabled = False
     db.commit()

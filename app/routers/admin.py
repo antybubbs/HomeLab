@@ -8,7 +8,7 @@ from starlette import status
 from app.core.config import get_settings
 from app.core.csrf import csrf_context, validate_csrf_token
 from app.core.security import hash_password
-from app.core.totp import decrypted_totp_secret, encrypted_totp_secret, generate_totp_secret, provisioning_uri, verify_totp
+from app.core.totp import decrypted_totp_secret, encrypted_totp_secret, generate_totp_secret, provisioning_uri, qr_code_data_uri, verify_totp
 from app.db.session import get_db
 from app.models.models import AuditLog, CustomField, ManagedListItem, User
 from app.routers.auth import require_admin
@@ -265,7 +265,8 @@ def edit_category(request: Request, item_id: int, value: str = Form(..., max_len
 def security(request: Request, user=Depends(require_admin)):
     secret = decrypted_totp_secret(user.totp_secret) if user.totp_secret and not user.totp_enabled else None
     uri = provisioning_uri(user.email, secret) if secret else None
-    return templates.TemplateResponse(request, "security.html", {"user": user, "setup_secret": secret, "setup_uri": uri, "error": None, **csrf_context(request)})
+    qr_code = qr_code_data_uri(uri) if uri else None
+    return templates.TemplateResponse(request, "security.html", {"user": user, "setup_secret": secret, "setup_uri": uri, "setup_qr_code": qr_code, "error": None, **csrf_context(request)})
 
 
 @router.post("/security/2fa/start")
@@ -285,7 +286,8 @@ def enable_2fa(request: Request, code: str = Form(...), csrf_token: str = Form(.
     secret = decrypted_totp_secret(user.totp_secret)
     if not secret or not verify_totp(secret, code):
         uri = provisioning_uri(user.email, secret) if secret else None
-        return templates.TemplateResponse(request, "security.html", {"user": user, "setup_secret": secret, "setup_uri": uri, "error": "Invalid authentication code.", **csrf_context(request)}, status_code=400)
+        qr_code = qr_code_data_uri(uri) if uri else None
+        return templates.TemplateResponse(request, "security.html", {"user": user, "setup_secret": secret, "setup_uri": uri, "setup_qr_code": qr_code, "error": "Invalid authentication code.", **csrf_context(request)}, status_code=400)
     user.totp_enabled = True
     db.commit()
     write_audit(db, user, "enable_2fa", "user", str(user.id), request.client.host if request.client else None)

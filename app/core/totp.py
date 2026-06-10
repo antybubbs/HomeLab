@@ -3,8 +3,10 @@ import hmac
 import secrets
 import struct
 import time
+from io import BytesIO
 from hashlib import sha1
 from urllib.parse import quote
+import qrcode
 from app.core.config import get_settings
 from app.core.security import decrypt_secret, encrypt_secret
 
@@ -48,3 +50,11 @@ def provisioning_uri(email: str, secret: str) -> str:
         "otpauth://totp/"
         f"{quote(label)}?secret={quote(secret)}&issuer={quote(issuer)}&algorithm=SHA1&digits=6&period=30"
     )
+
+
+def qr_code_data_uri(value: str) -> str:
+    image = qrcode.make(value)
+    buffer = BytesIO()
+    image.save(buffer, format="PNG")
+    encoded = base64.b64encode(buffer.getvalue()).decode("ascii")
+    return f"data:image/png;base64,{encoded}"

@@ -5,22 +5,31 @@
 {% if error %}<div class="alert">{{ error }}</div>{% endif %}
 {% if user.totp_enabled %}
   <div class="success">Two-factor authentication is enabled for {{ user.email }}.</div>
-  <form method="post" action="/admin/security/2fa/disable">
+  <form method="post" action="/admin/security/2fa/disable" class="form-actions">
     <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
     <button class="ghost" type="submit">Disable 2FA</button>
   </form>
 {% elif setup_secret %}
-  <p class="muted">Add this account to your authenticator app, then enter the 6-digit code to enable 2FA.</p>
-  <div class="secret mono">{{ setup_secret }}</div>
-  <label>Authenticator URI<textarea readonly>{{ setup_uri }}</textarea></label>
-  <form method="post" action="/admin/security/2fa/enable" class="stack">
-    <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
-    <label>Authentication code<input name="code" inputmode="numeric" pattern="[0-9]{6}" autocomplete="one-time-code" required></label>
-    <button type="submit">Enable 2FA</button>
-  </form>
+  <p class="muted">Scan this QR code in Google Authenticator, Microsoft Authenticator, 1Password, Bitwarden, or another authenticator app. Then enter the 6-digit code.</p>
+  <div class="twofa-setup">
+    {% if setup_qr_code %}
+    <div class="qr-card"><img src="{{ setup_qr_code }}" alt="2FA setup QR code"></div>
+    {% endif %}
+    <div class="stack">
+      <div>
+        <span class="field-label">Manual setup key</span>
+        <div class="secret mono">{{ setup_secret }}</div>
+      </div>
+      <form method="post" action="/admin/security/2fa/enable" class="stack compact-form">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+        <label>Authentication code<input name="code" inputmode="numeric" pattern="[0-9]{6}" autocomplete="one-time-code" required></label>
+        <div class="form-actions"><button type="submit">Enable 2FA</button></div>
+      </form>
+    </div>
+  </div>
 {% else %}
   <p class="muted">Start setup to generate a new authenticator secret for {{ user.email }}.</p>
-  <form method="post" action="/admin/security/2fa/start">
+  <form method="post" action="/admin/security/2fa/start" class="form-actions">
     <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
     <button type="submit">Start 2FA setup</button>
   </form>

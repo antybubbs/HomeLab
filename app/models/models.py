@@ -62,6 +62,36 @@ class VLAN(Base):
     updated_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
 
 
+class NetworkMonitor(Base):
+    __tablename__ = "network_monitors"
+    id: Mapped[int] = mapped_column(Integer, primary_key=True)
+    ip_address_id: Mapped[int] = mapped_column(ForeignKey("ip_addresses.id"), unique=True, index=True)
+    check_type: Mapped[str] = mapped_column(String(30), default="icmp")
+    display_name: Mapped[str | None] = mapped_column(String(255), nullable=True)
+    is_enabled: Mapped[bool] = mapped_column(Boolean, default=True, index=True)
+    interval_seconds: Mapped[int] = mapped_column(Integer, default=300)
+    timeout_ms: Mapped[int] = mapped_column(Integer, default=2000)
+    notify_enabled: Mapped[bool] = mapped_column(Boolean, default=False)
+    last_status: Mapped[str | None] = mapped_column(String(30), nullable=True, index=True)
+    last_latency_ms: Mapped[int | None] = mapped_column(Integer, nullable=True)
+    last_error: Mapped[str | None] = mapped_column(String(500), nullable=True)
+    last_checked_at: Mapped[datetime | None] = mapped_column(DateTime, nullable=True, index=True)
+    created_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow)
+    updated_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+    ip_address = relationship("IPAddress")
+
+
+class NetworkMonitorCheck(Base):
+    __tablename__ = "network_monitor_checks"
+    id: Mapped[int] = mapped_column(Integer, primary_key=True)
+    monitor_id: Mapped[int] = mapped_column(ForeignKey("network_monitors.id"), index=True)
+    status: Mapped[str] = mapped_column(String(30), index=True)
+    latency_ms: Mapped[int | None] = mapped_column(Integer, nullable=True)
+    error: Mapped[str | None] = mapped_column(String(500), nullable=True)
+    checked_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow, index=True)
+    monitor = relationship("NetworkMonitor")
+
+
 class HardwareAsset(Base):
     __tablename__ = "hardware_assets"
     id: Mapped[int] = mapped_column(Integer, primary_key=True)

@@ -1,0 +1,44 @@
+{% extends "base.html" %}
+{% block content %}
+<div class="topbar"><div><h1>Network Monitor</h1><p class="muted">Ping checks for IP addresses enabled from the IP address form.</p></div></div>
+<section class="cards">
+  <div class="card"><span>Monitors</span><strong>{{ total }}</strong></div>
+  <div class="card"><span>Up</span><strong>{{ up_count }}</strong></div>
+  <div class="card"><span>Down</span><strong>{{ down_count }}</strong></div>
+</section>
+{% if not rows %}
+<section class="panel"><p class="muted">No IP addresses are enabled for Network Monitor yet.</p></section>
+{% else %}
+<section class="monitor-grid">
+{% for row in rows %}
+  {% set monitor = row.monitor %}
+  <article class="monitor-card">
+    <div class="monitor-card-header">
+      <div>
+        <h2>{{ row.label }}</h2>
+        <p class="muted mono">{{ monitor.ip_address.address }}</p>
+      </div>
+      <span class="status-pill {{ monitor.last_status or 'pending' }}">{{ monitor.last_status|capitalize if monitor.last_status else 'Pending' }}</span>
+    </div>
+    <div class="monitor-meta">
+      <div><span>Latency</span><strong>{% if monitor.last_latency_ms is not none %}{{ monitor.last_latency_ms }} ms{% else %}-{% endif %}</strong></div>
+      <div><span>Uptime 24h</span><strong>{% if row.uptime is not none %}{{ row.uptime }}%{% else %}-{% endif %}</strong></div>
+      <div><span>Interval</span><strong>{{ monitor.interval_seconds }}s</strong></div>
+    </div>
+    <div class="uptime-strip" aria-label="Recent uptime history">
+      {% if row.history %}
+        {% for check in row.history %}
+        <span class="uptime-block {{ check.status }}" title="{{ check.checked_at }} - {{ check.status }}{% if check.latency_ms is not none %} - {{ check.latency_ms }} ms{% endif %}"></span>
+        {% endfor %}
+      {% else %}
+        <span class="muted">Waiting for first check</span>
+      {% endif %}
+    </div>
+    {% if monitor.last_error %}
+    <p class="monitor-error">{{ monitor.last_error }}</p>
+    {% endif %}
+  </article>
+{% endfor %}
+</section>
+{% endif %}
+{% endblock %}

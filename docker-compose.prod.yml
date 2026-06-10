@@ -21,6 +21,7 @@ services:
       - ALL
     cap_add:
       - CHOWN
+      - NET_RAW
       - SETGID
       - SETUID
     tmpfs:

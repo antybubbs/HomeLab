@@ -1,4 +1,5 @@
 from pathlib import Path
+import asyncio
 from fastapi import FastAPI, Request
 from fastapi.responses import PlainTextResponse, RedirectResponse
 from fastapi.staticfiles import StaticFiles
@@ -10,7 +11,8 @@ from app.core.config import get_settings, trusted_hosts
 from app.core.security import hash_password
 from app.db.session import Base, engine, SessionLocal
 from app.models.models import User, VLAN
-from app.routers import auth, dashboard, licences, admin, ip_addresses, hardware_assets
+from app.routers import auth, dashboard, licences, admin, ip_addresses, hardware_assets, network_monitor
+from app.services.network_monitor import monitor_loop
 
 settings = get_settings()
 app = FastAPI(
@@ -18,6 +20,7 @@ app = FastAPI(
     docs_url=None if settings.app_env == "production" else "/docs",
     root_path=settings.root_path,
 )
+monitor_task = None
 
 if settings.app_env == "production":
     app.add_middleware(
@@ -131,11 +134,32 @@ def migrate_existing_database():
             conn.execute(text("CREATE INDEX ix_managed_list_items_module ON managed_list_items (module)"))
             conn.execute(text("CREATE INDEX ix_managed_list_items_list_key ON managed_list_items (list_key)"))
             conn.execute(text("CREATE INDEX ix_managed_list_items_value ON managed_list_items (value)"))
+        monitor_columns = {row[1] for row in conn.execute(text("PRAGMA table_info(network_monitors)"))}
+        if not monitor_columns:
+            conn.execute(text("CREATE TABLE network_monitors (id INTEGER NOT NULL PRIMARY KEY, ip_address_id INTEGER NOT NULL UNIQUE REFERENCES ip_addresses(id), check_type VARCHAR(30) DEFAULT 'icmp' NOT NULL, display_name VARCHAR(255), is_enabled BOOLEAN DEFAULT 1 NOT NULL, interval_seconds INTEGER DEFAULT 300 NOT NULL, timeout_ms INTEGER DEFAULT 2000 NOT NULL, notify_enabled BOOLEAN DEFAULT 0 NOT NULL, last_status VARCHAR(30), last_latency_ms INTEGER, last_error VARCHAR(500), last_checked_at DATETIME, created_at DATETIME, updated_at DATETIME)"))
+            conn.execute(text("CREATE INDEX ix_network_monitors_ip_address_id ON network_monitors (ip_address_id)"))
+            conn.execute(text("CREATE INDEX ix_network_monitors_is_enabled ON network_monitors (is_enabled)"))
+            conn.execute(text("CREATE INDEX ix_network_monitors_last_status ON network_monitors (last_status)"))
+            conn.execute(text("CREATE INDEX ix_network_monitors_last_checked_at ON network_monitors (last_checked_at)"))
+        monitor_check_columns = {row[1] for row in conn.execute(text("PRAGMA table_info(network_monitor_checks)"))}
+        if not monitor_check_columns:
+            conn.execute(text("CREATE TABLE network_monitor_checks (id INTEGER NOT NULL PRIMARY KEY, monitor_id INTEGER NOT NULL REFERENCES network_monitors(id), status VARCHAR(30) NOT NULL, latency_ms INTEGER, error VARCHAR(500), checked_at DATETIME)"))
+            conn.execute(text("CREATE INDEX ix_network_monitor_checks_monitor_id ON network_monitor_checks (monitor_id)"))
+            conn.execute(text("CREATE INDEX ix_network_monitor_checks_status ON network_monitor_checks (status)"))
+            conn.execute(text("CREATE INDEX ix_network_monitor_checks_checked_at ON network_monitor_checks (checked_at)"))
 
 
 @app.on_event("startup")
 async def on_startup():
     bootstrap()
+    global monitor_task
+    monitor_task = asyncio.create_task(monitor_loop())
+
+
+@app.on_event("shutdown")
+async def on_shutdown():
+    if monitor_task:
+        monitor_task.cancel()
 
 
 app.include_router(auth.router)
@@ -143,6 +167,7 @@ app.include_router(dashboard.router)
 app.include_router(licences.router)
 app.include_router(ip_addresses.router)
 app.include_router(hardware_assets.router)
+app.include_router(network_monitor.router)
 app.include_router(admin.router)
 
 @app.get("/healthz", include_in_schema=False)

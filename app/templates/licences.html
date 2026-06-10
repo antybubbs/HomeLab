@@ -1,6 +1,10 @@
 {% extends "base.html" %}
 {% block content %}
-<div class="topbar"><div><h1>License Keys</h1></div>{% if user.role in ['admin','editor'] %}<a class="button" href="/licences/new">Add License Key</a>{% endif %}</div>
+<div class="topbar"><div><h1>License Keys</h1></div></div>
+<section class="cards">
+  <div class="card"><span>Total License Keys</span><strong>{{ total }}</strong></div>
+</section>
+{% if user.role in ['admin','editor'] %}<div class="list-actions"><a class="button" href="/licences/new">Add License Key</a></div>{% endif %}
 <form class="search" method="get"><input name="q" placeholder="Search license keys..." value="{{ q }}"><button>Search</button></form>
 <section class="panel">
 <table><thead><tr><th>Product</th><th>Type</th><th>Product Key</th><th>Seats</th><th></th></tr></thead><tbody>

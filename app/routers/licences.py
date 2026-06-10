@@ -51,7 +51,8 @@ def list_licences(request: Request, q: str = Query("", max_length=200), db: Sess
         like = f"%{clean_q}%"
         query = query.filter(or_(Licence.product.ilike(like), Licence.licence_type.ilike(like), Licence.licence_id.ilike(like), Licence.vendor.ilike(like)))
     rows = query.order_by(Licence.product.asc()).limit(500).all()
-    return templates.TemplateResponse(request, "licences.html", {"user": user, "rows": rows, "q": clean_q, "mask_key": lambda encrypted: mask_key(decrypt_secret(encrypted)), **csrf_context(request)})
+    total = db.query(Licence).count()
+    return templates.TemplateResponse(request, "licences.html", {"user": user, "rows": rows, "total": total, "q": clean_q, "mask_key": lambda encrypted: mask_key(decrypt_secret(encrypted)), **csrf_context(request)})
 
 
 @router.get("/new")

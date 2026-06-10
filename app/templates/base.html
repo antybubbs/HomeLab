@@ -37,30 +37,25 @@
   <div class="brand"><span class="brand-mark">H</span><span>HomeLab</span></div>
   <nav class="nav-tree">
     <a class="nav-link" href="/dashboard" data-reset-sidebar><span class="nav-icon">D</span><span class="nav-label">Dashboard</span></a>
-    <details class="nav-group" data-sidebar-menu="my-lab">
-      <summary><span class="nav-icon">L</span><span class="nav-label">My Lab</span></summary>
+    <details class="nav-group" data-sidebar-menu="software">
+      <summary><span class="nav-icon">T</span><span class="nav-label">Top Draw</span></summary>
       <div class="nav-children">
-        <details class="nav-subgroup" data-sidebar-menu="software">
-          <summary><span class="nav-label">Top Draw</span></summary>
-          <div class="nav-children">
-            <span class="nav-link disabled" title="Coming soon"><span class="nav-label">Certificates</span></span>
-            <a class="nav-link" href="/licences"><span class="nav-label">License Keys</span></a>
-          </div>
-        </details>
-        <details class="nav-subgroup" data-sidebar-menu="hardware">
-          <summary><span class="nav-label">Hardware</span></summary>
-          <div class="nav-children">
-            <a class="nav-link" href="/hardware-assets"><span class="nav-label">Assets</span></a>
-            <span class="nav-link disabled" title="Coming soon"><span class="nav-label">Warranty Tracker</span></span>
-          </div>
-        </details>
-        <details class="nav-subgroup" data-sidebar-menu="network">
-          <summary><span class="nav-label">Network</span></summary>
-          <div class="nav-children">
-            <a class="nav-link" href="/ip-addresses"><span class="nav-label">IP Addresses</span></a>
-            <span class="nav-link disabled" title="Coming soon"><span class="nav-label">Network Monitor</span></span>
-          </div>
-        </details>
+        <span class="nav-link disabled" title="Coming soon"><span class="nav-label">Certificates</span></span>
+        <a class="nav-link" href="/licences"><span class="nav-label">License Keys</span></a>
+      </div>
+    </details>
+    <details class="nav-group" data-sidebar-menu="hardware">
+      <summary><span class="nav-icon">H</span><span class="nav-label">Hardware</span></summary>
+      <div class="nav-children">
+        <a class="nav-link" href="/hardware-assets"><span class="nav-label">Assets</span></a>
+        <span class="nav-link disabled" title="Coming soon"><span class="nav-label">Warranty Tracker</span></span>
+      </div>
+    </details>
+    <details class="nav-group" data-sidebar-menu="network">
+      <summary><span class="nav-icon">N</span><span class="nav-label">Network</span></summary>
+      <div class="nav-children">
+        <a class="nav-link" href="/ip-addresses"><span class="nav-label">IP Addresses</span></a>
+        <span class="nav-link disabled" title="Coming soon"><span class="nav-label">Network Monitor</span></span>
       </div>
     </details>
     {% if user.role == 'admin' %}

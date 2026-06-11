@@ -6,6 +6,7 @@
   <title>{{ title or 'HomeLab' }}</title>
   <link rel="stylesheet" href="/static/css/app.css">
   <link rel="stylesheet" href="/static/css/imports.css">
+  <link rel="stylesheet" href="/static/css/remote.css">
   <script src="/static/js/sidebar.js" defer></script>
   <script src="/static/js/tables.js" defer></script>
 </head>
@@ -55,6 +56,13 @@
       <div class="nav-children">
         <a class="nav-link" href="/ip-addresses"><span class="nav-label">IP Addresses</span></a>
         <a class="nav-link" href="/network-monitor"><span class="nav-label">Network Monitor</span></a>
+      </div>
+    </details>
+    <details class="nav-group" data-sidebar-menu="remote-manager">
+      <summary><span class="nav-icon" aria-hidden="true"><svg viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="12" rx="2"></rect><path d="M8 20h8M12 16v4M8 9h4M8 12h8"></path></svg></span><span class="nav-label">Remote Manager</span></summary>
+      <div class="nav-children">
+        <a class="nav-link" href="/remote-manager"><span class="nav-label">Remote</span></a>
+        {% if user.role == 'admin' %}<a class="nav-link" href="/remote-manager/settings"><span class="nav-label">Remote Manager Settings</span></a>{% endif %}
       </div>
     </details>
     {% if user.role == 'admin' %}

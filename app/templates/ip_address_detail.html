@@ -12,6 +12,10 @@
   {% if monitor and monitor.is_enabled %}
   <div><label>Last Check</label><p>{% if monitor.last_checked_at %}{{ monitor.last_status|capitalize }}{% if monitor.last_latency_ms is not none %} - {{ monitor.last_latency_ms }} ms{% endif %}{% else %}Waiting for first check{% endif %}</p></div>
   {% endif %}
+  <div><label>Remote Manager</label><p>{% if remote and remote.is_enabled %}{{ remote.protocol|upper }} on port {{ remote.port }}{% else %}Disabled{% endif %}</p></div>
+  {% if remote and remote.is_enabled %}
+  <div><label>Remote Username</label><p>{{ remote.username or '-' }}</p></div>
+  {% endif %}
   <div class="wide"><label>Notes</label><p>{{ record.notes or '-' }}</p></div>
   {% for field in custom_fields %}
   <div><label>{{ field.label }}</label><p>{{ custom_values.get(field.id) or '-' }}</p></div>

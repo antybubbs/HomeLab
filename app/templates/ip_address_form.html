@@ -29,6 +29,18 @@
       </select></label>
     </div>
   </div>
+  <div class="wide monitor-settings">
+    <label class="checkbox-label"><input name="remote_enabled" type="checkbox" value="1" {% if remote and remote.is_enabled %}checked{% endif %}> Show in Remote Manager</label>
+    <div class="form-grid">
+      <label>Remote display name<input name="remote_display_name" placeholder="Uses name or IP address if blank" value="{{ remote.display_name if remote and remote.display_name else '' }}"></label>
+      <label>Protocol<select name="remote_protocol">
+        {% set selected_protocol = remote.protocol if remote else 'ssh' %}
+        {% for option in remote_protocols %}<option value="{{ option }}" {% if selected_protocol == option %}selected{% endif %}>{{ option|upper }}</option>{% endfor %}
+      </select></label>
+      <label>Port<input name="remote_port" type="number" min="1" max="65535" value="{{ remote.port if remote else 22 }}"></label>
+      <label>Username<input name="remote_username" autocomplete="username" value="{{ remote.username if remote and remote.username else '' }}"></label>
+    </div>
+  </div>
   <label class="wide">Notes<textarea name="notes">{{ record.notes if record and record.notes else '' }}</textarea></label>
   <div class="wide"><h2>Custom Fields</h2></div>
   {% for field in custom_fields %}

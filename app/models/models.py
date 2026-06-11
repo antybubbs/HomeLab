@@ -92,6 +92,30 @@ class NetworkMonitorCheck(Base):
     monitor = relationship("NetworkMonitor")
 
 
+class RemoteAccess(Base):
+    __tablename__ = "remote_access"
+    id: Mapped[int] = mapped_column(Integer, primary_key=True)
+    ip_address_id: Mapped[int] = mapped_column(ForeignKey("ip_addresses.id"), unique=True, index=True)
+    display_name: Mapped[str | None] = mapped_column(String(255), nullable=True)
+    is_enabled: Mapped[bool] = mapped_column(Boolean, default=True, index=True)
+    protocol: Mapped[str] = mapped_column(String(20), default="ssh", index=True)
+    port: Mapped[int] = mapped_column(Integer, default=22)
+    username: Mapped[str | None] = mapped_column(String(120), nullable=True)
+    host_key_fingerprint: Mapped[str | None] = mapped_column(String(120), nullable=True)
+    notes: Mapped[str | None] = mapped_column(Text, nullable=True)
+    created_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow)
+    updated_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+    ip_address = relationship("IPAddress")
+
+
+class RemoteManagerSetting(Base):
+    __tablename__ = "remote_manager_settings"
+    id: Mapped[int] = mapped_column(Integer, primary_key=True)
+    key: Mapped[str] = mapped_column(String(80), unique=True, index=True)
+    value: Mapped[str | None] = mapped_column(Text, nullable=True)
+    updated_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+
+
 class HardwareAsset(Base):
     __tablename__ = "hardware_assets"
     id: Mapped[int] = mapped_column(Integer, primary_key=True)

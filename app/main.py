@@ -11,7 +11,7 @@ from app.core.config import get_settings, trusted_hosts
 from app.core.security import hash_password
 from app.db.session import Base, engine, SessionLocal
 from app.models.models import User, VLAN
-from app.routers import auth, dashboard, licences, admin, ip_addresses, hardware_assets, network_monitor
+from app.routers import auth, dashboard, licences, admin, ip_addresses, hardware_assets, network_monitor, remote_manager
 from app.services.network_monitor import monitor_loop
 
 settings = get_settings()
@@ -49,7 +49,7 @@ async def security_headers(request: Request, call_next):
     response.headers["X-Frame-Options"] = "DENY"
     response.headers["Referrer-Policy"] = "no-referrer"
     response.headers["Permissions-Policy"] = "camera=(), microphone=(), geolocation=()"
-    response.headers["Content-Security-Policy"] = "default-src 'self'; img-src 'self' data:; style-src 'self'; script-src 'self'; object-src 'none'; base-uri 'self'; frame-ancestors 'none'; form-action 'self'"
+    response.headers["Content-Security-Policy"] = "default-src 'self'; connect-src 'self' ws: wss:; img-src 'self' data:; style-src 'self'; script-src 'self'; object-src 'none'; base-uri 'self'; frame-ancestors 'none'; form-action 'self'"
     response.headers["Cache-Control"] = "no-store"
     if settings.session_cookie_secure:
         response.headers["Strict-Transport-Security"] = "max-age=31536000; includeSubDomains"
@@ -147,6 +147,18 @@ def migrate_existing_database():
             conn.execute(text("CREATE INDEX ix_network_monitor_checks_monitor_id ON network_monitor_checks (monitor_id)"))
             conn.execute(text("CREATE INDEX ix_network_monitor_checks_status ON network_monitor_checks (status)"))
             conn.execute(text("CREATE INDEX ix_network_monitor_checks_checked_at ON network_monitor_checks (checked_at)"))
+        remote_access_columns = {row[1] for row in conn.execute(text("PRAGMA table_info(remote_access)"))}
+        if not remote_access_columns:
+            conn.execute(text("CREATE TABLE remote_access (id INTEGER NOT NULL PRIMARY KEY, ip_address_id INTEGER NOT NULL UNIQUE REFERENCES ip_addresses(id), display_name VARCHAR(255), is_enabled BOOLEAN DEFAULT 1 NOT NULL, protocol VARCHAR(20) DEFAULT 'ssh' NOT NULL, port INTEGER DEFAULT 22 NOT NULL, username VARCHAR(120), host_key_fingerprint VARCHAR(120), notes TEXT, created_at DATETIME, updated_at DATETIME)"))
+            conn.execute(text("CREATE INDEX ix_remote_access_ip_address_id ON remote_access (ip_address_id)"))
+            conn.execute(text("CREATE INDEX ix_remote_access_is_enabled ON remote_access (is_enabled)"))
+            conn.execute(text("CREATE INDEX ix_remote_access_protocol ON remote_access (protocol)"))
+        elif "host_key_fingerprint" not in remote_access_columns:
+            conn.execute(text("ALTER TABLE remote_access ADD COLUMN host_key_fingerprint VARCHAR(120)"))
+        remote_settings_columns = {row[1] for row in conn.execute(text("PRAGMA table_info(remote_manager_settings)"))}
+        if not remote_settings_columns:
+            conn.execute(text("CREATE TABLE remote_manager_settings (id INTEGER NOT NULL PRIMARY KEY, key VARCHAR(80) NOT NULL UNIQUE, value TEXT, updated_at DATETIME)"))
+            conn.execute(text("CREATE INDEX ix_remote_manager_settings_key ON remote_manager_settings (key)"))
 
 
 @app.on_event("startup")
@@ -168,6 +180,7 @@ app.include_router(licences.router)
 app.include_router(ip_addresses.router)
 app.include_router(hardware_assets.router)
 app.include_router(network_monitor.router)
+app.include_router(remote_manager.router)
 app.include_router(admin.router)
 
 @app.get("/healthz", include_in_schema=False)

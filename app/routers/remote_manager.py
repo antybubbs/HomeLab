@@ -1,6 +1,7 @@
 import asyncio
 
 from fastapi import APIRouter, Depends, Form, HTTPException, Request, WebSocket, WebSocketDisconnect
+from fastapi.responses import JSONResponse
 from fastapi.templating import Jinja2Templates
 from sqlalchemy.orm import Session
 from starlette import status
@@ -71,6 +72,16 @@ def require_remote_session(db: Session, remote_id: int) -> RemoteAccess:
     return row
 
 
+async def tcp_check(host: str, port: int, timeout: float = 5) -> tuple[bool, str]:
+    try:
+        reader, writer = await asyncio.wait_for(asyncio.open_connection(host, port), timeout=timeout)
+        writer.close()
+        await writer.wait_closed()
+        return True, "reachable"
+    except Exception as exc:
+        return False, str(exc)
+
+
 @router.get("")
 def remote_list(request: Request, db: Session = Depends(get_db), user=Depends(require_user)):
     rows = db.query(RemoteAccess).filter(RemoteAccess.is_enabled == True).order_by(RemoteAccess.protocol.asc(), RemoteAccess.display_name.asc(), RemoteAccess.id.asc()).all()
@@ -99,6 +110,45 @@ def remote_session(request: Request, remote_id: int, db: Session = Depends(get_d
     settings = settings_map(db)
     title = remote_label(row)
     return templates.TemplateResponse(request, "remote_session.html", {"user": user, "remote": row, "remote_label": title, "settings": settings, **csrf_context(request)})
+
+
+@router.post("/{remote_id}/rdp/check")
+async def rdp_check(request: Request, remote_id: int, db: Session = Depends(get_db), user=Depends(require_user)):
+    payload = await request.json()
+    validate_csrf_token(request, str(payload.get("csrf_token", "")))
+    row = require_remote_session(db, remote_id)
+    if row.protocol != "rdp":
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Remote entry is not configured for RDP")
+    settings = settings_map(db)
+    logs = []
+    logs.append(f"Starting RDP pre-flight for {row.ip_address.address}:{row.port}.")
+    if not payload.get("username"):
+        logs.append("No username was provided.")
+    if not payload.get("password"):
+        logs.append("No password was provided. It is not stored by HomeLab.")
+    if settings.get("guacamole_enabled") != "1":
+        logs.append("Guacamole is disabled in Remote Manager Settings.")
+        return JSONResponse({"ok": False, "logs": logs})
+    guacd_host = settings.get("guacd_host", "").strip()
+    if not guacd_host:
+        logs.append("No guacd host is configured.")
+        return JSONResponse({"ok": False, "logs": logs})
+    try:
+        raw_guacd_port = int(settings.get("guacd_port") or 4822)
+    except ValueError:
+        raw_guacd_port = 4822
+    guacd_port = clean_port(raw_guacd_port, "rdp")
+    logs.append(f"Checking guacd at {guacd_host}:{guacd_port}.")
+    guacd_ok, guacd_result = await tcp_check(guacd_host, guacd_port)
+    logs.append(f"guacd check: {guacd_result}.")
+    logs.append(f"Checking target RDP port at {row.ip_address.address}:{row.port}.")
+    target_ok, target_result = await tcp_check(row.ip_address.address, row.port)
+    logs.append(f"target RDP check: {target_result}.")
+    if guacd_ok and target_ok:
+        logs.append("Pre-flight checks passed. Browser RDP display transport is the next piece to wire in.")
+    else:
+        logs.append("Pre-flight checks failed. Fix the failed network check before the browser RDP display can connect.")
+    return JSONResponse({"ok": guacd_ok and target_ok, "logs": logs})
 
 
 @router.websocket("/{remote_id}/ssh/ws")

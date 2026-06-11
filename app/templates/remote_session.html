@@ -28,8 +28,9 @@
       {% endif %}
     </div>
     {% else %}
-    <div class="rdp-session" data-rdp-session>
+    <div class="rdp-session" data-rdp-session data-check-url="{{ request.scope.get('root_path', '') }}/remote-manager/{{ remote.id }}/rdp/check">
       <form class="remote-credential-form rdp-credential-form">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
         <label>Username
           <input name="rdp_username" autocomplete="username" value="{{ remote.username or '' }}">
         </label>
@@ -48,6 +49,10 @@
           {% endif %}
         </div>
       </div>
+      <section class="rdp-log-panel" aria-live="polite">
+        <header>Connection log</header>
+        <pre data-rdp-log>Waiting for RDP session start.</pre>
+      </section>
     </div>
     {% endif %}
   </section>
@@ -56,5 +61,7 @@
 <script src="/static/vendor/xterm/xterm.js" defer></script>
 <script src="/static/vendor/xterm/addon-fit.js" defer></script>
 <script src="/static/js/remote_session.js" defer></script>
+{% else %}
+<script src="/static/js/remote_rdp.js" defer></script>
 {% endif %}
 {% endblock %}

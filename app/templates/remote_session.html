@@ -11,7 +11,7 @@
       {% if not remote.username %}
       <div class="alert">Add a username to this remote host before starting an SSH session.</div>
       {% else %}
-      <form class="ssh-password-form" data-ssh-password-form>
+      <form class="remote-credential-form ssh-password-form" data-ssh-password-form>
         <label>Password for {{ remote.username }}@{{ remote.ip_address.address }}
           <input data-ssh-password type="password" autocomplete="current-password" required>
         </label>
@@ -22,14 +22,25 @@
       {% endif %}
     </div>
     {% else %}
-    <div class="rdp-session-placeholder">
-      <div>
-        <h2>RDP session</h2>
-        {% if settings.guacamole_enabled == '1' and settings.guacd_host %}
-        <p class="muted">Guacamole is configured at {{ settings.guacd_host }}:{{ settings.guacd_port }}. The browser session area is ready for the guacd display transport.</p>
-        {% else %}
-        <p class="muted">Enable Guacamole in Remote Manager Settings before using browser RDP sessions.</p>
-        {% endif %}
+    <div class="rdp-session" data-rdp-session>
+      <form class="remote-credential-form rdp-credential-form">
+        <label>Username
+          <input name="rdp_username" autocomplete="username" value="{{ remote.username or '' }}">
+        </label>
+        <label>Password
+          <input name="rdp_password" type="password" autocomplete="current-password">
+        </label>
+        <button type="button">Start RDP session</button>
+      </form>
+      <div class="rdp-session-placeholder">
+        <div>
+          <h2>RDP session</h2>
+          {% if settings.guacamole_enabled == '1' and settings.guacd_host %}
+          <p class="muted">Guacamole is configured at {{ settings.guacd_host }}:{{ settings.guacd_port }}. Passwords are used for the browser session only.</p>
+          {% else %}
+          <p class="muted">Enable Guacamole in Remote Manager Settings before using browser RDP sessions.</p>
+          {% endif %}
+        </div>
       </div>
     </div>
     {% endif %}

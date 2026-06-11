@@ -45,7 +45,7 @@ def clean_port(value: int, protocol: str) -> int:
 
 
 def fingerprint_for(host_key) -> str:
-    return ":".join(f"{byte:02x}" for byte in host_key.get_fingerprint())
+    return host_key.get_fingerprint("sha256")
 
 
 def settings_map(db: Session) -> dict[str, str]:
@@ -128,20 +128,20 @@ async def ssh_websocket(websocket: WebSocket, remote_id: int):
             await websocket.send_text("\r\nPassword is required.\r\n")
             await websocket.close(code=1008)
             return
-        import socket
-        import paramiko
+        try:
+            import asyncssh
 
-        client = paramiko.SSHClient()
-        client.set_missing_host_key_policy(paramiko.AutoAddPolicy())
-
-        def connect():
-            client.connect(hostname=host, port=port, username=username, password=password, look_for_keys=False, allow_agent=False, timeout=10, banner_timeout=10, auth_timeout=10)
-            transport = client.get_transport()
-            if not transport:
-                raise RuntimeError("SSH transport was not established")
-            current_fingerprint = fingerprint_for(transport.get_remote_server_key())
+            client = await asyncio.wait_for(
+                asyncssh.connect(host, port=port, username=username, password=password, known_hosts=None),
+                timeout=10,
+            )
+            current_fingerprint = fingerprint_for(client.get_server_host_key())
             if expected_fingerprint and expected_fingerprint != current_fingerprint:
-                raise RuntimeError("SSH host key fingerprint has changed. Connection refused.")
+                client.close()
+                await client.wait_closed()
+                await websocket.send_text("\r\nSSH host key fingerprint has changed. Connection refused.\r\n")
+                await websocket.close(code=1011)
+                return
             if not expected_fingerprint:
                 update_db = SessionLocal()
                 try:
@@ -151,12 +151,7 @@ async def ssh_websocket(websocket: WebSocket, remote_id: int):
                         update_db.commit()
                 finally:
                     update_db.close()
-            channel = client.invoke_shell(term="xterm", width=120, height=32)
-            channel.settimeout(0.2)
-            return channel
-
-        try:
-            channel = await asyncio.to_thread(connect)
+            process = await client.create_process(term_type="xterm", term_size=(120, 32))
         except Exception as exc:
             await websocket.send_text(f"\r\nSSH connection failed: {exc}\r\n")
             await websocket.close(code=1011)
@@ -165,14 +160,10 @@ async def ssh_websocket(websocket: WebSocket, remote_id: int):
         async def read_loop():
             try:
                 while True:
-                    try:
-                        data = await asyncio.to_thread(channel.recv, 4096)
-                    except socket.timeout:
-                        await asyncio.sleep(0.05)
-                        continue
+                    data = await process.stdout.read(4096)
                     if not data:
                         break
-                    await websocket.send_text(data.decode("utf-8", errors="replace"))
+                    await websocket.send_text(data)
             except Exception:
                 pass
 
@@ -180,7 +171,7 @@ async def ssh_websocket(websocket: WebSocket, remote_id: int):
             try:
                 while True:
                     text = await websocket.receive_text()
-                    await asyncio.to_thread(channel.send, text)
+                    process.stdin.write(text)
             except WebSocketDisconnect:
                 pass
 
@@ -193,5 +184,6 @@ async def ssh_websocket(websocket: WebSocket, remote_id: int):
         if client:
             try:
                 client.close()
+                await client.wait_closed()
             except Exception:
                 pass

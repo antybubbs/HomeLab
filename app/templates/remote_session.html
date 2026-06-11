@@ -1,36 +1,24 @@
 {% extends "base.html" %}
+{% block topbar_session %}
+<span class="session-tab active">{{ remote_label }}</span>
+<a class="session-tab close-tab" href="/remote-manager">Close</a>
+{% endblock %}
 {% block content %}
 <div class="remote-session-page">
-  <div class="remote-session-tabs">
-    <span class="session-tab active">{{ remote_label }}</span>
-    <a class="session-tab close-tab" href="/remote-manager">Close</a>
-  </div>
-
   <section class="remote-session-frame">
-    <header class="remote-session-header">
-      <div>
-        <h1>{{ remote_label }}</h1>
-        <p class="muted mono">{{ remote.protocol|upper }} {{ remote.ip_address.address }}:{{ remote.port }}{% if remote.username %} as {{ remote.username }}{% endif %}</p>
-      </div>
-    </header>
-
     {% if remote.protocol == 'ssh' %}
     <div class="ssh-session" data-ssh-session data-ws-url="{{ request.scope.get('root_path', '') }}/remote-manager/{{ remote.id }}/ssh/ws">
       {% if not remote.username %}
       <div class="alert">Add a username to this remote host before starting an SSH session.</div>
       {% else %}
       <form class="ssh-password-form" data-ssh-password-form>
-        <label>Session password
+        <label>Password for {{ remote.username }}@{{ remote.ip_address.address }}
           <input data-ssh-password type="password" autocomplete="current-password" required>
         </label>
         <button type="submit">Start SSH session</button>
       </form>
-      <pre class="ssh-terminal mono" data-ssh-output>Session not connected.</pre>
-      <form class="ssh-command-row" data-ssh-command-form>
-        <input data-ssh-command class="mono" autocomplete="off" placeholder="Type a command and press Enter" disabled>
-        <button type="submit" disabled>Send</button>
-      </form>
-      <p class="muted">Password is used for this browser session only. The first successful connection pins the SSH host fingerprint and future changes are refused.</p>
+      <div class="ssh-terminal mono" data-ssh-output tabindex="0" role="textbox" aria-label="SSH terminal">Session not connected.</div>
+      <p class="muted terminal-note">Password is used for this browser session only. The first successful connection pins the SSH host fingerprint and future changes are refused.</p>
       {% endif %}
     </div>
     {% else %}

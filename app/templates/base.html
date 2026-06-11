@@ -13,6 +13,7 @@
 <body>
 {% if user %}
 <header class="app-topbar">
+  <div class="topbar-session-tabs">{% block topbar_session %}{% endblock %}</div>
   <div class="app-topbar-spacer"></div>
   <div class="topbar-actions">
     <details class="account-menu">

@@ -12,7 +12,9 @@ if (root) {
   let client = null;
   let tunnel = null;
   let keyboard = null;
+  let displayViewport = null;
   let resizeTimer = null;
+  let resizeObserver = null;
 
   const writeLog = (lines) => {
     if (!log) return;
@@ -42,14 +44,17 @@ if (root) {
   };
 
   const fitDisplay = () => {
-    if (!client || !displayTarget) return;
+    if (!client || !displayTarget || !displayViewport) return;
     const display = client.getDisplay();
     const width = display.getWidth();
     const height = display.getHeight();
     if (!width || !height) return;
     const rect = displayTarget.getBoundingClientRect();
     const scale = Math.min(rect.width / width, rect.height / height);
-    display.scale(Math.max(0.1, Math.min(scale, 1.5)));
+    const safeScale = Math.max(0.1, Math.min(scale, 1.5));
+    display.scale(safeScale);
+    displayViewport.style.width = `${Math.ceil(width * safeScale)}px`;
+    displayViewport.style.height = `${Math.ceil(height * safeScale)}px`;
   };
 
   const sendDisplaySize = () => {
@@ -74,6 +79,7 @@ if (root) {
       client.disconnect();
       client = null;
     }
+    displayViewport = null;
     tunnel = null;
   };
 
@@ -103,7 +109,10 @@ if (root) {
     tunnel = new Guacamole.WebSocketTunnel(root.dataset.tunnelUrl);
     client = new Guacamole.Client(tunnel);
     const displayEl = client.getDisplay().getElement();
-    displayTarget.appendChild(displayEl);
+    displayViewport = document.createElement("div");
+    displayViewport.className = "rdp-display-viewport";
+    displayViewport.appendChild(displayEl);
+    displayTarget.appendChild(displayViewport);
     attachInput();
     client.onerror = (error) => {
       writeLog([`RDP display error: ${error.message || "Unknown error"}`]);
@@ -128,6 +137,10 @@ if (root) {
   };
 
   window.addEventListener("resize", scheduleResize);
+  if (window.ResizeObserver && displayTarget) {
+    resizeObserver = new ResizeObserver(scheduleResize);
+    resizeObserver.observe(displayTarget);
+  }
   window.addEventListener("beforeunload", stopSession);
 
   form.addEventListener("submit", (event) => event.preventDefault());

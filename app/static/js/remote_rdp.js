@@ -9,6 +9,7 @@ if (root) {
   const displayTarget = root.querySelector("[data-rdp-display]");
   const placeholder = root.querySelector("[data-rdp-placeholder]");
   const statusPanel = root.querySelector("[data-rdp-status]");
+  const logPanel = root.querySelector("[data-rdp-log-panel]");
   let client = null;
   let tunnel = null;
   let keyboard = null;
@@ -31,6 +32,11 @@ if (root) {
     heading.textContent = title;
     detail.textContent = message;
     statusPanel.append(heading, detail);
+  };
+
+  const setOverlayVisible = (visible) => {
+    if (statusPanel) statusPanel.hidden = !visible;
+    if (logPanel) logPanel.hidden = !visible;
   };
 
   const displaySize = () => {
@@ -107,6 +113,7 @@ if (root) {
     stopSession();
     displayTarget.replaceChildren();
     placeholder.hidden = true;
+    setOverlayVisible(true);
     setStatus("Connecting", "Opening browser display tunnel.");
     tunnel = new Guacamole.WebSocketTunnel(root.dataset.tunnelUrl);
     client = new Guacamole.Client(tunnel);
@@ -118,6 +125,7 @@ if (root) {
     displayTarget.appendChild(displayEl);
     attachInput();
     client.onerror = (error) => {
+      setOverlayVisible(true);
       writeLog([`RDP display error: ${error.message || "Unknown error"}`]);
       setStatus("Connection error", error.message || "The RDP session could not be opened.");
       form.hidden = false;
@@ -126,10 +134,12 @@ if (root) {
     client.onstatechange = (state) => {
       if (state === Guacamole.Client.State.CONNECTED) {
         setStatus("Connected", "RDP session is active.");
+        setOverlayVisible(false);
         displayElement.focus({ preventScroll: true });
         fitDisplay();
       }
       if (state === Guacamole.Client.State.DISCONNECTED) {
+        setOverlayVisible(true);
         setStatus("Disconnected", "The RDP session has ended.");
         form.hidden = false;
         button.disabled = false;
@@ -145,6 +155,7 @@ if (root) {
   form.addEventListener("submit", (event) => event.preventDefault());
   button.addEventListener("click", async () => {
     button.disabled = true;
+    setOverlayVisible(true);
     writeLog(["Creating RDP session. Password is not stored."]);
     const formData = new FormData(form);
     const size = displaySize();

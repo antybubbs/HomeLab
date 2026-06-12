@@ -18,7 +18,7 @@ from cryptography.hazmat.primitives import padding
 from app.core.config import get_settings
 from app.core.csrf import csrf_context, validate_csrf_token
 from app.db.session import SessionLocal, get_db
-from app.models.models import RemoteAccess, RemoteManagerSetting
+from app.models.models import RemoteAccess, RemoteManagerSetting, User
 from app.routers.auth import require_admin, require_user
 from app.services.audit import write_audit
 from app.services.guacamole_bridge import restart_guacamole_bridge
@@ -345,6 +345,15 @@ async def rdp_start(request: Request, remote_id: int, db: Session = Depends(get_
         user_id=user.id,
         created_at=time.time(),
     )
+    write_audit(
+        db,
+        user,
+        "start",
+        "remote_rdp_session",
+        entity_id=str(row.id),
+        ip_address=request.client.host if request.client else None,
+        detail=f"Prepared RDP session for {remote_label(row)} ({row.ip_address.address}:{row.port}) as {username}",
+    )
     logs.append("Session token created. Opening browser display tunnel.")
     return JSONResponse({"ok": True, "token": token, "logs": logs})
 
@@ -457,17 +466,23 @@ async def rdp_websocket(websocket: WebSocket, remote_id: int):
         await websocket.close(code=1008)
         return
     db = SessionLocal()
+    remote_label_text = "Remote host"
+    remote_address = ""
+    remote_port = 3389
     try:
         remote = db.get(RemoteAccess, remote_id)
         if not remote or not remote.is_enabled or remote.protocol != "rdp":
             await websocket.close(code=1008)
             return
-        _ = remote.ip_address.address
+        remote_label_text = remote_label(remote)
+        remote_address = remote.ip_address.address
+        remote_port = remote.port
     finally:
         db.close()
 
     await websocket.accept(subprotocol="guacamole")
     upstream = None
+    connected = False
     try:
         import websockets
 
@@ -475,9 +490,38 @@ async def rdp_websocket(websocket: WebSocket, remote_id: int):
         try:
             upstream = await websockets.connect(upstream_url, subprotocols=["guacamole"], open_timeout=10)
         except Exception as exc:
+            audit_db = SessionLocal()
+            try:
+                audit_user = audit_db.get(User, user_id)
+                write_audit(
+                    audit_db,
+                    audit_user,
+                    "error",
+                    "remote_rdp_session",
+                    entity_id=str(remote_id),
+                    ip_address=websocket.client.host if websocket.client else None,
+                    detail=f"RDP connection failed for {remote_label_text} ({remote_address}:{remote_port}): {exc}",
+                )
+            finally:
+                audit_db.close()
             await websocket.send_text(guac_instruction("error", f"RDP connection failed: {exc}", 512))
             await websocket.close(code=1011)
             return
+        audit_db = SessionLocal()
+        try:
+            audit_user = audit_db.get(User, user_id)
+            write_audit(
+                audit_db,
+                audit_user,
+                "connect",
+                "remote_rdp_session",
+                entity_id=str(remote_id),
+                ip_address=websocket.client.host if websocket.client else None,
+                detail=f"RDP session connected for {remote_label_text} ({remote_address}:{remote_port})",
+            )
+        finally:
+            audit_db.close()
+        connected = True
 
         async def upstream_to_browser():
             try:
@@ -515,3 +559,18 @@ async def rdp_websocket(websocket: WebSocket, remote_id: int):
                 await upstream.close()
             except Exception:
                 pass
+        if connected:
+            audit_db = SessionLocal()
+            try:
+                audit_user = audit_db.get(User, user_id)
+                write_audit(
+                    audit_db,
+                    audit_user,
+                    "disconnect",
+                    "remote_rdp_session",
+                    entity_id=str(remote_id),
+                    ip_address=websocket.client.host if websocket.client else None,
+                    detail=f"RDP session disconnected for {remote_label_text} ({remote_address}:{remote_port})",
+                )
+            finally:
+                audit_db.close()

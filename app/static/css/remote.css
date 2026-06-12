@@ -40,8 +40,14 @@
 .ssh-terminal{background:#050706;height:100%;min-height:0;overflow:hidden}
 .ssh-terminal .xterm{height:100%;padding:12px}
 .ssh-terminal .xterm-viewport{background:#050706!important}
-.rdp-session-placeholder{align-items:center;background:radial-gradient(circle at center,rgba(56,189,248,.08),transparent 42%),#050a12;display:flex;height:100%;justify-content:center;min-height:360px;padding:24px;text-align:center}
+.rdp-display-shell{background:#050706;height:100%;min-height:0;outline:none;overflow:hidden;position:relative}
+.rdp-display{align-items:center;display:flex;height:100%;justify-content:center;min-height:0;overflow:hidden;width:100%}
+.rdp-display .guac-display{cursor:none;transform-origin:center center}
+.rdp-session-placeholder{align-items:center;background:radial-gradient(circle at center,rgba(56,189,248,.08),transparent 42%),#050a12;display:flex;height:100%;inset:0;justify-content:center;min-height:360px;padding:24px;position:absolute;text-align:center;z-index:1}
 .rdp-session-placeholder h2{margin-bottom:8px}
+.rdp-status{background:rgba(5,7,6,.78);border:1px solid var(--line);border-radius:10px;bottom:18px;left:18px;max-width:min(420px,calc(100% - 36px));padding:10px 12px;position:absolute;z-index:3}
+.rdp-status h2{font-size:14px;margin:0 0 4px}
+.rdp-status p{font-size:12px;margin:0}
 .rdp-log-panel{background:rgba(5,7,6,.92);border:1px solid var(--line);border-radius:10px;bottom:18px;left:50%;max-width:min(760px,calc(100% - 32px));overflow:hidden;position:absolute;transform:translateX(-50%);width:760px}
 .rdp-log-panel header{border-bottom:1px solid var(--line);font-size:12px;font-weight:800;padding:8px 10px}
 .rdp-log-panel pre{color:#d1fae5;font-size:12px;line-height:1.45;margin:0;max-height:170px;overflow:auto;padding:10px;white-space:pre-wrap}

@@ -1,0 +1,10 @@
+{
+  "name": "homelab-guacamole",
+  "private": true,
+  "version": "0.0.0",
+  "description": "HomeLab Guacamole websocket bridge",
+  "main": "scripts/guacamole-server.cjs",
+  "dependencies": {
+    "guacamole-lite": "^1.2.0"
+  }
+}

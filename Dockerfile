@@ -12,11 +12,14 @@ WORKDIR /app
 RUN addgroup --system homelab \
     && adduser --system --ingroup homelab homelab \
     && apt-get update \
-    && apt-get install -y --no-install-recommends gosu iputils-ping \
+    && apt-get install -y --no-install-recommends gosu iputils-ping nodejs npm \
     && rm -rf /var/lib/apt/lists/*
 
 COPY requirements.txt .
 RUN pip install --no-cache-dir -r requirements.txt
+
+COPY package.json .
+RUN npm install --omit=dev --no-audit --no-fund
 
 COPY app ./app
 COPY scripts ./scripts

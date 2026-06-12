@@ -24,6 +24,8 @@ class Settings(BaseSettings):
     max_upload_mb: int = 25
     allowed_hosts: str = ""
     github_repo: str = "antybubbs/HomeLab"
+    guacd_host: str = ""
+    guacd_port: str = ""
 
     class Config:
         env_file = ".env"

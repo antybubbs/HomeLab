@@ -1,19 +1,27 @@
 import asyncio
+import base64
+import hashlib
+import json
 import secrets
 import time
 from dataclasses import dataclass
+from urllib.parse import urlencode
 
 from fastapi import APIRouter, Depends, Form, HTTPException, Request, WebSocket, WebSocketDisconnect
 from fastapi.responses import JSONResponse
 from fastapi.templating import Jinja2Templates
 from sqlalchemy.orm import Session
 from starlette import status
+from cryptography.hazmat.primitives.ciphers import Cipher, algorithms, modes
+from cryptography.hazmat.primitives import padding
 
+from app.core.config import get_settings
 from app.core.csrf import csrf_context, validate_csrf_token
 from app.db.session import SessionLocal, get_db
 from app.models.models import RemoteAccess, RemoteManagerSetting
 from app.routers.auth import require_admin, require_user
 from app.services.audit import write_audit
+from app.services.guacamole_bridge import restart_guacamole_bridge
 
 router = APIRouter(prefix="/remote-manager")
 templates = Jinja2Templates(directory="app/templates")
@@ -24,18 +32,13 @@ SETTINGS = {
     "guacd_port": "4822",
 }
 RDP_TOKEN_TTL_SECONDS = 60
+GUACAMOLE_LITE_URL = "ws://127.0.0.1:30008"
 
 
 @dataclass
 class RDPSessionToken:
     remote_id: int
     user_id: int
-    username: str
-    password: str
-    width: int
-    height: int
-    dpi: int
-    timezone: str
     created_at: float
 
 
@@ -87,6 +90,14 @@ def settings_map(db: Session) -> dict[str, str]:
     for row in db.query(RemoteManagerSetting).all():
         if row.key in values:
             values[row.key] = row.value or ""
+    app_settings = get_settings()
+    env_guacd_host = getattr(app_settings, "guacd_host", "")
+    env_guacd_port = getattr(app_settings, "guacd_port", "")
+    if env_guacd_host:
+        values["guacamole_enabled"] = "1"
+        values["guacd_host"] = env_guacd_host
+    if env_guacd_port:
+        values["guacd_port"] = str(env_guacd_port)
     return values
 
 
@@ -172,66 +183,51 @@ async def read_guac_instruction(reader: asyncio.StreamReader) -> tuple[str, list
             return instructions[0]
 
 
-def rdp_argument_value(name: str, row: RemoteAccess, session: RDPSessionToken) -> str:
-    values = {
-        "hostname": row.ip_address.address,
-        "port": str(row.port),
-        "username": session.username,
-        "password": session.password,
-        "domain": "",
-        "width": str(session.width),
-        "height": str(session.height),
-        "dpi": str(session.dpi),
-        "resize-method": "display-update",
-        "security": "any",
-        "ignore-cert": "true",
-        "enable-wallpaper": "false",
-        "enable-theming": "true",
-        "enable-font-smoothing": "true",
-        "enable-full-window-drag": "false",
-        "enable-desktop-composition": "false",
-        "disable-audio": "false",
-        "server-layout": "en-gb-qwerty",
-        "timezone": session.timezone,
+def guacamole_key() -> bytes:
+    app_settings = get_settings()
+    return hashlib.sha256(f"{app_settings.secret_key}_guacamole".encode("utf-8")).digest()
+
+
+def encrypt_guacamole_token(token_object: dict[str, object]) -> str:
+    iv = secrets.token_bytes(16)
+    padder = padding.PKCS7(128).padder()
+    plaintext = json.dumps(token_object, separators=(",", ":")).encode("utf-8")
+    padded = padder.update(plaintext) + padder.finalize()
+    encryptor = Cipher(algorithms.AES(guacamole_key()), modes.CBC(iv)).encryptor()
+    encrypted = encryptor.update(padded) + encryptor.finalize()
+    payload = {
+        "iv": base64.b64encode(iv).decode("ascii"),
+        "value": base64.b64encode(encrypted).decode("ascii"),
     }
-    return values.get(name, "")
+    return base64.b64encode(json.dumps(payload, separators=(",", ":")).encode("utf-8")).decode("ascii")
 
 
-async def connect_guacd(row: RemoteAccess, settings: dict[str, str], session: RDPSessionToken) -> tuple[asyncio.StreamReader, asyncio.StreamWriter]:
-    guacd_host = settings.get("guacd_host", "").strip()
-    if not guacd_host or settings.get("guacamole_enabled") != "1":
-        raise ConnectionError("Guacamole is not enabled or guacd is not configured")
-    try:
-        raw_guacd_port = int(settings.get("guacd_port") or 4822)
-    except ValueError:
-        raw_guacd_port = 4822
-    guacd_port = clean_port(raw_guacd_port, "rdp")
-    reader, writer = await asyncio.wait_for(asyncio.open_connection(guacd_host, guacd_port), timeout=10)
-    try:
-        writer.write(guac_instruction("select", "rdp").encode("utf-8"))
-        await writer.drain()
-        opcode, args = await read_guac_instruction(reader)
-        if opcode != "args" or not args:
-            raise ConnectionError("guacd did not return RDP connection arguments")
-        protocol_version = args[0] if args[0].startswith("VERSION_") else ""
-        argument_names = args[1:] if protocol_version else args
-        writer.write(guac_instruction("size", session.width, session.height, session.dpi).encode("utf-8"))
-        writer.write(guac_instruction("audio", "audio/L16").encode("utf-8"))
-        writer.write(guac_instruction("video").encode("utf-8"))
-        writer.write(guac_instruction("image", "image/png", "image/jpeg").encode("utf-8"))
-        if session.timezone:
-            writer.write(guac_instruction("timezone", session.timezone).encode("utf-8"))
-        writer.write(guac_instruction("name", session.username or "HomeLab").encode("utf-8"))
-        connect_args = [rdp_argument_value(name, row, session) for name in argument_names]
-        if protocol_version:
-            connect_args.insert(0, protocol_version)
-        writer.write(guac_instruction("connect", *connect_args).encode("utf-8"))
-        await writer.drain()
-        return reader, writer
-    except Exception:
-        writer.close()
-        await writer.wait_closed()
-        raise
+def create_rdp_guacamole_token(row: RemoteAccess, username: str, password: str, width: int, height: int, dpi: int, timezone: str) -> str:
+    return encrypt_guacamole_token(
+        {
+            "connection": {
+                "type": "rdp",
+                "settings": {
+                    "hostname": row.ip_address.address,
+                    "port": row.port,
+                    "username": username,
+                    "password": password,
+                    "width": width,
+                    "height": height,
+                    "dpi": dpi,
+                    "timezone": timezone,
+                    "security": "any",
+                    "ignore-cert": True,
+                    "enable-wallpaper": False,
+                    "enable-font-smoothing": True,
+                    "enable-desktop-composition": False,
+                    "disable-audio": False,
+                    "enable-drive": False,
+                    "resize-method": "display-update",
+                },
+            }
+        }
+    )
 
 
 def require_remote_session(db: Session, remote_id: int) -> RemoteAccess:
@@ -269,6 +265,7 @@ def save_remote_settings(request: Request, csrf_token: str = Form(...), guacamol
     set_setting(db, "guacd_host", guacd_host.strip())
     set_setting(db, "guacd_port", str(clean_port(guacd_port, "rdp")))
     db.commit()
+    restart_guacamole_bridge()
     write_audit(db, user, "update", "remote_manager_settings", ip_address=request.client.host if request.client else None, detail="Updated Remote Manager settings")
     return templates.TemplateResponse(request, "remote_manager_settings.html", {"user": user, "settings": settings_map(db), "message": "Settings saved.", **csrf_context(request)})
 
@@ -338,16 +335,14 @@ async def rdp_start(request: Request, remote_id: int, db: Session = Depends(get_
         logs.append("Guacamole is not enabled or guacd is not configured.")
         return JSONResponse({"ok": False, "logs": logs}, status_code=400)
     cleanup_rdp_tokens()
-    token = secrets.token_urlsafe(32)
+    width = clean_dimension(int_payload(payload, "width", 1280), 1280, 640, 7680)
+    height = clean_dimension(int_payload(payload, "height", 720), 720, 480, 4320)
+    dpi = clean_dimension(int_payload(payload, "dpi", 96), 96, 72, 240)
+    timezone = str(payload.get("timezone", ""))[:80]
+    token = create_rdp_guacamole_token(row, username, password, width, height, dpi, timezone)
     rdp_tokens[token] = RDPSessionToken(
         remote_id=row.id,
         user_id=user.id,
-        username=username,
-        password=password,
-        width=clean_dimension(int_payload(payload, "width", 1280), 1280, 640, 7680),
-        height=clean_dimension(int_payload(payload, "height", 720), 720, 480, 4320),
-        dpi=clean_dimension(int_payload(payload, "dpi", 96), 96, 72, 240),
-        timezone=str(payload.get("timezone", ""))[:80],
         created_at=time.time(),
     )
     logs.append("Session token created. Opening browser display tunnel.")
@@ -468,52 +463,55 @@ async def rdp_websocket(websocket: WebSocket, remote_id: int):
             await websocket.close(code=1008)
             return
         _ = remote.ip_address.address
-        settings = settings_map(db)
     finally:
         db.close()
 
     await websocket.accept(subprotocol="guacamole")
-    guacd_writer = None
+    upstream = None
     try:
+        import websockets
+
+        upstream_url = f"{GUACAMOLE_LITE_URL}?{urlencode({'token': token})}"
         try:
-            guacd_reader, guacd_writer = await connect_guacd(remote, settings, session)
+            upstream = await websockets.connect(upstream_url, subprotocols=["guacamole"], open_timeout=10)
         except Exception as exc:
             await websocket.send_text(guac_instruction("error", f"RDP connection failed: {exc}", 512))
             await websocket.close(code=1011)
             return
-        finally:
-            session.password = ""
 
-        async def guacd_to_browser():
+        async def upstream_to_browser():
             try:
-                while True:
-                    data = await guacd_reader.read(16384)
-                    if not data:
-                        break
-                    await websocket.send_text(data.decode("utf-8", errors="replace"))
+                async for message in upstream:
+                    if isinstance(message, bytes):
+                        await websocket.send_bytes(message)
+                    else:
+                        await websocket.send_text(message)
             except Exception:
                 pass
 
-        async def browser_to_guacd():
+        async def browser_to_upstream():
             try:
                 while True:
-                    data = await websocket.receive_text()
-                    guacd_writer.write(data.encode("utf-8"))
-                    await guacd_writer.drain()
+                    message = await websocket.receive()
+                    if message.get("text") is not None:
+                        await upstream.send(message["text"])
+                    elif message.get("bytes") is not None:
+                        await upstream.send(message["bytes"])
+                    else:
+                        break
             except WebSocketDisconnect:
                 pass
             except Exception:
                 pass
 
-        tasks = {asyncio.create_task(guacd_to_browser()), asyncio.create_task(browser_to_guacd())}
+        tasks = {asyncio.create_task(upstream_to_browser()), asyncio.create_task(browser_to_upstream())}
         await asyncio.wait(tasks, return_when=asyncio.FIRST_COMPLETED)
         for task in tasks:
             if not task.done():
                 task.cancel()
     finally:
-        if guacd_writer:
+        if upstream:
             try:
-                guacd_writer.close()
-                await guacd_writer.wait_closed()
+                await upstream.close()
             except Exception:
                 pass

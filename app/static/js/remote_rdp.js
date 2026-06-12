@@ -57,16 +57,9 @@ if (root) {
     displayViewport.style.height = `${Math.ceil(height * safeScale)}px`;
   };
 
-  const sendDisplaySize = () => {
-    if (!client) return;
-    const size = displaySize();
-    client.sendSize(size.width, size.height);
-    fitDisplay();
-  };
-
   const scheduleResize = () => {
     window.clearTimeout(resizeTimer);
-    resizeTimer = window.setTimeout(sendDisplaySize, 200);
+    resizeTimer = window.setTimeout(fitDisplay, 150);
   };
 
   const stopSession = () => {
@@ -109,6 +102,7 @@ if (root) {
     tunnel = new Guacamole.WebSocketTunnel(root.dataset.tunnelUrl);
     client = new Guacamole.Client(tunnel);
     const displayEl = client.getDisplay().getElement();
+    displayEl.classList.add("rdp-guac-display");
     displayViewport = document.createElement("div");
     displayViewport.className = "rdp-display-viewport";
     displayViewport.appendChild(displayEl);

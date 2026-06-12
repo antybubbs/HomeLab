@@ -1,44 +1,18 @@
 {% extends "base.html" %}
+{% block main_class %}remote-main{% endblock %}
 {% block content %}
-<div class="topbar">
-  <div>
-    <h1>Remote Manager</h1>
-    <p class="muted">Connect to enabled IP address records using SSH or RDP.</p>
-  </div>
+<div class="remote-workspace">
+  {% include "_remote_host_rail.html" %}
+  <section class="remote-console-empty">
+    <div>
+      <h1>Remote Manager</h1>
+      <p class="muted">Select a host from the left to open an SSH or RDP session.</p>
+      <div class="remote-summary-strip">
+        <span>Total {{ rows|length }}</span>
+        <span>SSH {{ rows|selectattr('protocol', 'equalto', 'ssh')|list|length }}</span>
+        <span>RDP {{ rows|selectattr('protocol', 'equalto', 'rdp')|list|length }}</span>
+      </div>
+    </div>
+  </section>
 </div>
-
-<section class="cards">
-  <div class="card"><span>Total remotes</span><strong>{{ rows|length }}</strong></div>
-  <div class="card"><span>SSH</span><strong>{{ rows|selectattr('protocol', 'equalto', 'ssh')|list|length }}</strong></div>
-  <div class="card"><span>RDP</span><strong>{{ rows|selectattr('protocol', 'equalto', 'rdp')|list|length }}</strong></div>
-</section>
-
-<section class="panel">
-  <table>
-    <thead>
-      <tr>
-        <th>Name</th>
-        <th>IP address</th>
-        <th>Protocol</th>
-        <th>Port</th>
-        <th>Username</th>
-        <th></th>
-      </tr>
-    </thead>
-    <tbody>
-      {% for row in rows %}
-      <tr>
-        <td>{{ remote_label(row) }}</td>
-        <td class="mono">{{ row.ip_address.address }}</td>
-        <td>{{ row.protocol|upper }}</td>
-        <td>{{ row.port }}</td>
-        <td>{{ row.username or '-' }}</td>
-        <td><a class="button small secondary" href="/remote-manager/{{ row.id }}/session">Connect</a></td>
-      </tr>
-      {% else %}
-      <tr><td colspan="6" class="muted">No remote hosts are enabled yet. Open an IP address record, edit it, and turn on Remote Manager.</td></tr>
-      {% endfor %}
-    </tbody>
-  </table>
-</section>
 {% endblock %}

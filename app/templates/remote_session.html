@@ -10,7 +10,8 @@
 {% endif %}
 {% endblock %}
 {% block content %}
-<div class="remote-session-page">
+<div class="remote-workspace">
+  {% include "_remote_host_rail.html" %}
   <section class="remote-session-frame">
     {% if remote.protocol == 'ssh' %}
     <div class="ssh-session" data-ssh-session data-ws-url="{{ request.scope.get('root_path', '') }}/remote-manager/{{ remote.id }}/ssh/ws">

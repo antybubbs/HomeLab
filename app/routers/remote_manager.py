@@ -186,11 +186,11 @@ def rdp_argument_value(name: str, row: RemoteAccess, session: RDPSessionToken) -
         "security": "any",
         "ignore-cert": "true",
         "enable-wallpaper": "false",
-        "enable-theming": "false",
+        "enable-theming": "true",
         "enable-font-smoothing": "true",
         "enable-full-window-drag": "false",
         "enable-desktop-composition": "false",
-        "disable-audio": "true",
+        "disable-audio": "false",
         "server-layout": "en-gb-qwerty",
         "timezone": session.timezone,
     }
@@ -216,9 +216,9 @@ async def connect_guacd(row: RemoteAccess, settings: dict[str, str], session: RD
         protocol_version = args[0] if args[0].startswith("VERSION_") else ""
         argument_names = args[1:] if protocol_version else args
         writer.write(guac_instruction("size", session.width, session.height, session.dpi).encode("utf-8"))
-        writer.write(guac_instruction("audio").encode("utf-8"))
+        writer.write(guac_instruction("audio", "audio/L16").encode("utf-8"))
         writer.write(guac_instruction("video").encode("utf-8"))
-        writer.write(guac_instruction("image", "image/png", "image/jpeg", "image/webp").encode("utf-8"))
+        writer.write(guac_instruction("image", "image/png", "image/jpeg").encode("utf-8"))
         if session.timezone:
             writer.write(guac_instruction("timezone", session.timezone).encode("utf-8"))
         writer.write(guac_instruction("name", session.username or "HomeLab").encode("utf-8"))

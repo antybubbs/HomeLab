@@ -12,8 +12,9 @@ if (root) {
   let client = null;
   let tunnel = null;
   let keyboard = null;
-  let displayViewport = null;
+  let displayElement = null;
   let resizeTimer = null;
+  let currentScale = 1;
 
   const writeLog = (lines) => {
     if (!log) return;
@@ -43,17 +44,15 @@ if (root) {
   };
 
   const fitDisplay = () => {
-    if (!client || !displayTarget || !displayViewport) return;
+    if (!client || !displayTarget) return;
     const display = client.getDisplay();
     const width = display.getWidth();
     const height = display.getHeight();
     if (!width || !height) return;
     const rect = displayTarget.getBoundingClientRect();
     const scale = Math.min(rect.width / width, rect.height / height);
-    const safeScale = Math.max(0.1, Math.min(scale, 1.5));
-    display.scale(safeScale);
-    displayViewport.style.width = `${Math.ceil(width * safeScale)}px`;
-    displayViewport.style.height = `${Math.ceil(height * safeScale)}px`;
+    currentScale = Math.max(0.1, Math.min(scale, 1.5));
+    display.scale(currentScale);
   };
 
   const scheduleResize = () => {
@@ -72,18 +71,28 @@ if (root) {
       client.disconnect();
       client = null;
     }
-    displayViewport = null;
+    displayElement = null;
     tunnel = null;
+    currentScale = 1;
   };
 
   const attachInput = () => {
     const displayEl = client.getDisplay().getElement();
     const mouse = new Guacamole.Mouse(displayEl);
     mouse.onmousedown = mouse.onmouseup = mouse.onmousemove = (state) => {
-      shell.focus();
-      client.sendMouseState(state, true);
+      displayEl.focus({ preventScroll: true });
+      const adjustedState = new Guacamole.Mouse.State(
+        Math.round(state.x / currentScale),
+        Math.round(state.y / currentScale),
+        state.left,
+        state.middle,
+        state.right,
+        state.up,
+        state.down,
+      );
+      client.sendMouseState(adjustedState);
     };
-    keyboard = new Guacamole.Keyboard(shell);
+    keyboard = new Guacamole.Keyboard(displayEl);
     keyboard.onkeydown = (keysym) => {
       client.sendKeyEvent(1, keysym);
       return false;
@@ -103,10 +112,10 @@ if (root) {
     client = new Guacamole.Client(tunnel);
     const displayEl = client.getDisplay().getElement();
     displayEl.classList.add("rdp-guac-display");
-    displayViewport = document.createElement("div");
-    displayViewport.className = "rdp-display-viewport";
-    displayViewport.appendChild(displayEl);
-    displayTarget.appendChild(displayViewport);
+    displayEl.setAttribute("tabindex", "0");
+    displayEl.style.outline = "none";
+    displayElement = displayEl;
+    displayTarget.appendChild(displayEl);
     attachInput();
     client.onerror = (error) => {
       writeLog([`RDP display error: ${error.message || "Unknown error"}`]);
@@ -117,7 +126,7 @@ if (root) {
     client.onstatechange = (state) => {
       if (state === Guacamole.Client.State.CONNECTED) {
         setStatus("Connected", "RDP session is active.");
-        shell.focus();
+        displayElement.focus({ preventScroll: true });
         fitDisplay();
       }
       if (state === Guacamole.Client.State.DISCONNECTED) {

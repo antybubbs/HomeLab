@@ -7,11 +7,6 @@
     <div>
       <h1>Remote Manager</h1>
       <p class="muted">Select a host from the left to open an SSH or RDP session.</p>
-      <div class="remote-summary-strip">
-        <span>Total {{ rows|length }}</span>
-        <span>SSH {{ rows|selectattr('protocol', 'equalto', 'ssh')|list|length }}</span>
-        <span>RDP {{ rows|selectattr('protocol', 'equalto', 'rdp')|list|length }}</span>
-      </div>
     </div>
   </section>
 </div>

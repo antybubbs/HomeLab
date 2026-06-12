@@ -4,7 +4,6 @@
       <strong>Hosts</strong>
       <span>{{ rows|length }}</span>
     </div>
-    {% if user.role == 'admin' %}<a class="remote-host-settings" href="/remote-manager/settings" title="Remote Manager Settings">Settings</a>{% endif %}
   </header>
   <div class="remote-host-list">
     {% for row in rows %}
@@ -18,7 +17,7 @@
         </div>
       </div>
       <div class="remote-host-actions">
-        <span class="remote-protocol-icon" title="{{ row.protocol|upper }}">{% if row.protocol == 'rdp' %}▣{% else %}&gt;_{% endif %}</span>
+        <span class="remote-protocol-icon" title="{{ row.protocol|upper }}">{% if row.protocol == 'rdp' %}RDP{% else %}&gt;_{% endif %}</span>
         <details class="remote-connect-menu">
           <summary>Connect</summary>
           <div>

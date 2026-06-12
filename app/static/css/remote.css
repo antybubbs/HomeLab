@@ -42,10 +42,9 @@
 .ssh-terminal .xterm{height:100%;padding:12px}
 .ssh-terminal .xterm-viewport{background:#050706!important}
 .rdp-display-shell{background:#050706;height:100%;min-height:0;outline:none;overflow:hidden;position:relative}
-.rdp-display{align-items:center;display:flex;height:100%;justify-content:center;min-height:0;overflow:hidden;width:100%}
-.rdp-display-viewport{flex:none;overflow:hidden}
-.rdp-display .rdp-guac-display{cursor:none;overflow:hidden;position:relative}
-.rdp-display .rdp-guac-display>div,.rdp-display .rdp-guac-display canvas,.rdp-display .rdp-guac-display img{left:0;position:absolute;top:0}
+.rdp-display{height:100%;min-height:0;overflow:hidden;position:relative;width:100%}
+.rdp-display-viewport{left:50%;overflow:hidden;position:absolute;top:50%;transform:translate(-50%,-50%)}
+.rdp-display .rdp-guac-display{cursor:none}
 .rdp-session-placeholder{align-items:center;background:radial-gradient(circle at center,rgba(56,189,248,.08),transparent 42%),#050a12;display:flex;height:100%;inset:0;justify-content:center;min-height:360px;padding:24px;position:absolute;text-align:center;z-index:1}
 .rdp-session-placeholder h2{margin-bottom:8px}
 .rdp-status{background:rgba(5,7,6,.78);border:1px solid var(--line);border-radius:10px;bottom:18px;left:18px;max-width:min(420px,calc(100% - 36px));padding:10px 12px;position:absolute;z-index:3}

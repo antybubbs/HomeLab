@@ -14,7 +14,6 @@ if (root) {
   let keyboard = null;
   let displayViewport = null;
   let resizeTimer = null;
-  let resizeObserver = null;
 
   const writeLog = (lines) => {
     if (!log) return;
@@ -63,6 +62,7 @@ if (root) {
   };
 
   const stopSession = () => {
+    window.clearTimeout(resizeTimer);
     if (keyboard) {
       keyboard.onkeydown = null;
       keyboard.onkeyup = null;
@@ -131,10 +131,6 @@ if (root) {
   };
 
   window.addEventListener("resize", scheduleResize);
-  if (window.ResizeObserver && displayTarget) {
-    resizeObserver = new ResizeObserver(scheduleResize);
-    resizeObserver.observe(displayTarget);
-  }
   window.addEventListener("beforeunload", stopSession);
 
   form.addEventListener("submit", (event) => event.preventDefault());

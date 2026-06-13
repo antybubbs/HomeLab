@@ -1,6 +1,6 @@
 {% extends "base.html" %}
 {% block content %}
-<div class="topbar"><div><h1>2FA</h1><p class="muted">Protect your admin account with an authenticator app.</p></div><a class="button secondary" href="/admin">Back</a></div>
+<div class="topbar"><div><h1>2FA</h1><p class="muted">Protect your admin account with an authenticator app.</p></div></div>
 <section class="panel stack">
 {% if error %}<div class="alert">{{ error }}</div>{% endif %}
 {% if user.totp_enabled %}

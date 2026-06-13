@@ -1,6 +1,6 @@
 {% extends "base.html" %}
 {% block content %}
-<div class="topbar"><div><h1>{{ licence.product }}</h1><p class="muted">License record #{{ licence.id }}</p></div><div>{% if user.role in ['admin','editor'] %}<a class="button" href="/licences/{{ licence.id }}/edit">Edit</a> {% endif %}<a class="button secondary" href="/licences">Back</a></div></div>
+<div class="topbar"><div><h1>{{ licence.product }}</h1><p class="muted">License record #{{ licence.id }}</p></div>{% if user.role in ['admin','editor'] %}<div><a class="button" href="/licences/{{ licence.id }}/edit">Edit</a></div>{% endif %}</div>
 <section class="panel detail-grid">
   <div><label>Product key</label><div class="secret mono">{{ display_key }}</div>{% if user.role in ['admin','editor'] and not revealed %}<form method="post" action="/licences/{{ licence.id }}/reveal"><input type="hidden" name="csrf_token" value="{{ csrf_token }}"><button class="button small" type="submit">Reveal key</button></form>{% endif %}</div>
   <div><label>License type</label><p>{{ licence.licence_type or '-' }}</p></div>

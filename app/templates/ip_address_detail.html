@@ -1,6 +1,6 @@
 {% extends "base.html" %}
 {% block content %}
-<div class="topbar"><div><h1>{{ record.address }}</h1><p class="muted">IP address record #{{ record.id }}</p></div><div>{% if user.role in ['admin','editor'] %}<a class="button" href="/ip-addresses/{{ record.id }}/edit">Edit</a> {% endif %}<a class="button secondary" href="/ip-addresses">Back</a></div></div>
+<div class="topbar"><div><h1>{{ record.address }}</h1><p class="muted">IP address record #{{ record.id }}</p></div>{% if user.role in ['admin','editor'] %}<div><a class="button" href="/ip-addresses/{{ record.id }}/edit">Edit</a></div>{% endif %}</div>
 <section class="panel">
 <section class="detail-grid">
   <div><label>IP Address</label><p class="mono">{{ record.address }}</p></div>

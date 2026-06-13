@@ -1,6 +1,6 @@
 {% extends "base.html" %}
 {% block content %}
-<div class="topbar"><div><h1>User Management</h1><p class="muted">Control local accounts and access roles.</p></div><div><a class="button secondary" href="/admin">Back</a> <a class="button" href="/admin/users/new">Add user</a></div></div>
+<div class="topbar"><div><h1>User Management</h1><p class="muted">Control local accounts and access roles.</p></div><div><a class="button" href="/admin/users/new">Add user</a></div></div>
 <section class="panel">
 <table><thead><tr><th>Name</th><th>Email</th><th>Role</th><th>Status</th><th>2FA</th><th>Created</th><th></th></tr></thead><tbody>
 {% for row in rows %}

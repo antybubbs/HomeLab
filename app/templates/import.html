@@ -1,6 +1,6 @@
 {% extends "base.html" %}
 {% block content %}
-<div class="topbar"><div><h1>Imports and exports</h1><p class="muted">Export first to get the correct CSV structure, then import using the same columns. Imports overwrite matching records.</p></div><a class="button secondary" href="/admin">Back</a></div>
+<div class="topbar"><div><h1>Imports and exports</h1><p class="muted">Export first to get the correct CSV structure, then import using the same columns. Imports overwrite matching records.</p></div></div>
 {% if message %}<div class="success">{{ message }}</div>{% endif %}
 {% if error %}<div class="alert">{{ error }}</div>{% endif %}
 <div class="tabs">

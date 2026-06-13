@@ -1,6 +1,6 @@
 {% extends "base.html" %}
 {% block content %}
-<div class="topbar"><div><h1>{{ record.name }}</h1><p class="muted">Hardware asset #{{ record.id }}</p></div><div>{% if user.role in ['admin','editor'] %}<a class="button" href="/hardware-assets/{{ record.id }}/edit">Edit</a> {% endif %}<a class="button secondary" href="/hardware-assets">Back</a></div></div>
+<div class="topbar"><div><h1>{{ record.name }}</h1><p class="muted">Hardware asset #{{ record.id }}</p></div>{% if user.role in ['admin','editor'] %}<div><a class="button" href="/hardware-assets/{{ record.id }}/edit">Edit</a></div>{% endif %}</div>
 <section class="panel asset-detail">
   {% if record.photo_filename %}
   <div class="asset-photo-wrap"><img class="asset-photo" src="/hardware-assets/{{ record.id }}/photo" alt="{{ record.name }}"></div>

@@ -1,6 +1,6 @@
 {% extends "base.html" %}
 {% block content %}
-<div class="topbar"><div><h1>{% if licence %}Edit License Key{% else %}Add License Key{% endif %}</h1><p class="muted">Keys are encrypted before being saved.</p></div><a class="button secondary" href="{% if licence %}/licences/{{ licence.id }}{% else %}/licences{% endif %}">Back</a></div>
+<div class="topbar"><div><h1>{% if licence %}Edit License Key{% else %}Add License Key{% endif %}</h1><p class="muted">Keys are encrypted before being saved.</p></div></div>
 {% if error %}<div class="alert">{{ error }}</div>{% endif %}
 <section class="panel">
 <form method="post" class="form-grid">

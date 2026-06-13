@@ -388,8 +388,16 @@ async def ssh_websocket(websocket: WebSocket, remote_id: int):
         try:
             import asyncssh
 
+            cols = clean_dimension(int_payload(payload, "cols", 120), 120, 40, 500)
+            rows = clean_dimension(int_payload(payload, "rows", 34), 34, 10, 200)
             client = await asyncio.wait_for(
-                asyncssh.connect(host, port=port, username=username, password=password, known_hosts=None),
+                asyncssh.connect(
+                    host,
+                    port=port,
+                    username=username,
+                    password=password,
+                    known_hosts=None,
+                ),
                 timeout=10,
             )
             current_fingerprint = fingerprint_for(client.get_server_host_key())
@@ -408,23 +416,22 @@ async def ssh_websocket(websocket: WebSocket, remote_id: int):
                         update_db.commit()
                 finally:
                     update_db.close()
-            process = await client.create_process(term_type="xterm-256color", term_size=(160, 48))
-
-            async def apply_terminal_theme():
-                await asyncio.sleep(1.2)
-                try:
-                    process.stdin.write(
-                        "export TERM=xterm-256color COLORTERM=truecolor; "
-                        "export PS1=$'\\[\\e[01;32m\\]\\u@\\h\\[\\e[00m\\]:\\[\\e[01;34m\\]\\w\\[\\e[00m\\]\\$ '; "
-                        "export PROMPT='%F{green}%n@%m%f:%F{blue}%~%f%# '; "
-                        "alias ls='ls --color=auto' 2>/dev/null; "
-                        "alias grep='grep --color=auto' 2>/dev/null; "
-                        "clear\n"
-                    )
-                except Exception:
-                    pass
-
-            asyncio.create_task(apply_terminal_theme())
+            process = await client.create_process(
+                term_type="xterm-256color",
+                term_size=(cols, rows),
+                env={
+                    "TERM": "xterm-256color",
+                    "LANG": "en_US.UTF-8",
+                    "LC_ALL": "en_US.UTF-8",
+                    "LC_CTYPE": "en_US.UTF-8",
+                    "LC_MESSAGES": "en_US.UTF-8",
+                    "LC_MONETARY": "en_US.UTF-8",
+                    "LC_NUMERIC": "en_US.UTF-8",
+                    "LC_TIME": "en_US.UTF-8",
+                    "LC_COLLATE": "en_US.UTF-8",
+                    "COLORTERM": "truecolor",
+                },
+            )
         except Exception as exc:
             await websocket.send_text(f"\r\nSSH connection failed: {exc}\r\n")
             await websocket.close(code=1011)

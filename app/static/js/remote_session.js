@@ -18,7 +18,12 @@
     fontWeightBold: 700,
     lineHeight: 1.0,
     letterSpacing: 0,
-    scrollback: 6000,
+    scrollback: 10000,
+    bellStyle: "none",
+    rightClickSelectsWord: false,
+    fastScrollModifier: "alt",
+    fastScrollSensitivity: 5,
+    minimumContrastRatio: 1,
     theme: {
       background: "#0c0d0b",
       foreground: "#f7f7f7",
@@ -77,7 +82,7 @@
     socket = new WebSocket(wsUrl);
 
     socket.addEventListener("open", () => {
-      socket.send(JSON.stringify({ password: passwordInput.value }));
+      socket.send(JSON.stringify({ password: passwordInput.value, cols: term.cols, rows: term.rows }));
       passwordInput.value = "";
       passwordForm.hidden = true;
       connected = true;

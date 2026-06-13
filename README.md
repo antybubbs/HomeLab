@@ -18,7 +18,7 @@ HomeLab currently stores, searches and maintains software licence records secure
 - Key masking with audited reveal
 - Audit log for sensitive actions
 - Site administration with local user management
-- TOTP two-factor authentication for admin accounts
+- TOTP two-factor authentication for user accounts
 - CSV export for admin users
 
 ## Local development quick start

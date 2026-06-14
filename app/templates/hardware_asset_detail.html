@@ -21,33 +21,33 @@
   {% endif %}
   <section class="panel record-panel {% if not record.photo_filename %}wide{% endif %}">
     <h2>Overview</h2>
-    <div class="record-fields">
-      <div><label>Asset Tag</label><p class="mono">{{ record.asset_tag or '-' }}</p></div>
-      <div><label>Status</label><p>{{ record.status }}</p></div>
-      <div><label>Category</label><p>{{ record.category or '-' }}</p></div>
-      <div><label>Location</label><p>{{ record.location or '-' }}</p></div>
-      <div><label>Manufacturer</label><p>{{ record.manufacturer or '-' }}</p></div>
-      <div><label>Model</label><p>{{ record.model or '-' }}</p></div>
-      <div><label>Serial Number</label><p>{{ record.serial_number or '-' }}</p></div>
-      <div><label>Supplier</label><p>{{ record.supplier or '-' }}</p></div>
-    </div>
+    <dl class="record-kv-list">
+      <div><dt>Asset Tag</dt><dd class="mono">{{ record.asset_tag or '-' }}</dd></div>
+      <div><dt>Status</dt><dd><span class="table-chip muted-chip">{{ record.status }}</span></dd></div>
+      <div><dt>Category</dt><dd>{% if record.category %}<span class="table-chip">{{ record.category }}</span>{% else %}-{% endif %}</dd></div>
+      <div><dt>Location</dt><dd>{{ record.location or '-' }}</dd></div>
+      <div><dt>Manufacturer</dt><dd>{{ record.manufacturer or '-' }}</dd></div>
+      <div><dt>Model</dt><dd>{{ record.model or '-' }}</dd></div>
+      <div><dt>Serial Number</dt><dd>{{ record.serial_number or '-' }}</dd></div>
+      <div><dt>Supplier</dt><dd>{{ record.supplier or '-' }}</dd></div>
+    </dl>
   </section>
   <section class="panel record-panel wide">
     <h2>Purchase and Warranty</h2>
-    <div class="record-fields">
-      <div><label>Purchase Date</label><p>{{ record.purchase_date or '-' }}</p></div>
-      <div><label>Purchase Cost</label><p>{{ record.purchase_cost or '-' }}</p></div>
-      <div><label>Warranty Expires</label><p>{{ record.warranty_expires or '-' }}</p></div>
-    </div>
+    <dl class="record-kv-list full">
+      <div><dt>Purchase Date</dt><dd>{{ record.purchase_date or '-' }}</dd></div>
+      <div><dt>Purchase Cost</dt><dd>{{ record.purchase_cost or '-' }}</dd></div>
+      <div><dt>Warranty Expires</dt><dd>{{ record.warranty_expires or '-' }}</dd></div>
+    </dl>
   </section>
   <section class="panel record-panel wide">
     <h2>Notes and Custom Fields</h2>
-    <div class="record-fields">
-      <div class="wide"><label>Notes</label><p>{{ record.notes or '-' }}</p></div>
+    <dl class="record-kv-list full">
+      <div><dt>Notes</dt><dd>{{ record.notes or '-' }}</dd></div>
       {% for field in custom_fields %}
-      <div><label>{{ field.label }}</label><p>{{ custom_values.get(field.id) or '-' }}</p></div>
+      <div><dt>{{ field.label }}</dt><dd>{{ custom_values.get(field.id) or '-' }}</dd></div>
       {% endfor %}
-    </div>
+    </dl>
   </section>
 </section>
 <section class="panel section-gap">

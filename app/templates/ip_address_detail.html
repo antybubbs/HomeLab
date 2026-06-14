@@ -17,35 +17,56 @@
 <section class="record-layout">
   <section class="panel record-panel">
     <h2>Overview</h2>
-    <div class="record-fields">
-      <div><label>IP Address</label><p class="mono">{{ record.address }}</p></div>
-      <div><label>Name</label><p>{{ record.name or '-' }}</p></div>
-      <div><label>Description</label><p>{{ record.description or '-' }}</p></div>
-      <div><label>Category</label><p>{{ record.category or '-' }}</p></div>
-      <div><label>Static/Dynamic</label><p>{{ record.assignment_type }}</p></div>
+    <div class="record-overview-split">
+      <dl class="record-kv-list">
+        <div><dt>IP Address</dt><dd class="mono">{{ record.address }}</dd></div>
+        <div><dt>Name</dt><dd>{{ record.name or '-' }}</dd></div>
+        <div><dt>Description</dt><dd>{{ record.description or '-' }}</dd></div>
+        <div><dt>Category</dt><dd>{% if record.category %}<span class="table-chip">{{ record.category }}</span>{% else %}-{% endif %}</dd></div>
+        <div><dt>Static/Dynamic</dt><dd>{{ record.assignment_type }}</dd></div>
+      </dl>
+      {% if user.role in ['admin','editor'] %}
+      <div class="inline-edit-preview" aria-hidden="true">
+        <div class="preview-heading">Edit opens fields in place</div>
+        <label>Name<span>{{ record.name or '-' }}</span></label>
+        <label>Description<span>{{ record.description or '-' }}</span></label>
+        <label>Category<span>{{ record.category or '-' }}</span></label>
+        <label>Static / Dynamic<span>{{ record.assignment_type }}</span></label>
+      </div>
+      {% endif %}
     </div>
   </section>
   <section class="panel record-panel">
     <h2>Services</h2>
-    <div class="record-fields">
-      <div><label>Network Monitor</label><p>{% if monitor and monitor.is_enabled %}Enabled{% else %}Disabled{% endif %}</p></div>
+    <div class="service-card-list">
+      <div class="service-card">
+        <div><strong>Network Monitor</strong><span>Monitors uptime and latency for this IP address.</span></div>
+        <span class="service-pill {% if monitor and monitor.is_enabled %}on{% endif %}">{% if monitor and monitor.is_enabled %}Enabled{% else %}Disabled{% endif %}</span>
+      </div>
       {% if monitor and monitor.is_enabled %}
-      <div><label>Last Check</label><p>{% if monitor.last_checked_at %}{{ monitor.last_status|capitalize }}{% if monitor.last_latency_ms is not none %} - {{ monitor.last_latency_ms }} ms{% endif %}{% else %}Waiting for first check{% endif %}</p></div>
+      <div class="service-card compact">
+        <div><strong>Last Check</strong><span>{% if monitor.last_checked_at %}{{ monitor.last_status|capitalize }}{% if monitor.last_latency_ms is not none %} - {{ monitor.last_latency_ms }} ms{% endif %}{% else %}Waiting for first check{% endif %}</span></div>
+      </div>
       {% endif %}
-      <div><label>Remote Manager</label><p>{% if remote and remote.is_enabled %}{{ remote.protocol|upper }} on port {{ remote.port }}{% else %}Disabled{% endif %}</p></div>
+      <div class="service-card">
+        <div><strong>Remote Manager</strong><span>Allows remote access via SSH or RDP.</span></div>
+        <span class="service-pill {% if remote and remote.is_enabled %}on{% endif %}">{% if remote and remote.is_enabled %}{{ remote.protocol|upper }}:{{ remote.port }}{% else %}Disabled{% endif %}</span>
+      </div>
       {% if remote and remote.is_enabled %}
-      <div><label>Remote Username</label><p>{{ remote.username or '-' }}</p></div>
+      <div class="service-card compact">
+        <div><strong>Remote Username</strong><span>{{ remote.username or '-' }}</span></div>
+      </div>
       {% endif %}
     </div>
   </section>
   <section class="panel record-panel wide">
     <h2>Notes and Custom Fields</h2>
-    <div class="record-fields">
-      <div class="wide"><label>Notes</label><p>{{ record.notes or '-' }}</p></div>
+    <dl class="record-kv-list full">
+      <div><dt>Notes</dt><dd>{{ record.notes or '-' }}</dd></div>
       {% for field in custom_fields %}
-      <div><label>{{ field.label }}</label><p>{{ custom_values.get(field.id) or '-' }}</p></div>
+      <div><dt>{{ field.label }}</dt><dd>{{ custom_values.get(field.id) or '-' }}</dd></div>
       {% endfor %}
-    </div>
+    </dl>
   </section>
 </section>
 {% endblock %}

@@ -7,7 +7,7 @@ from urllib.error import URLError
 from urllib.request import Request, urlopen
 from app.core.config import get_settings
 
-CACHE_SECONDS = 6 * 60 * 60
+CACHE_SECONDS = get_settings().version_check_interval_seconds
 
 
 @dataclass

@@ -17,8 +17,31 @@
   {% endfor %}
 </nav>
 <section class="panel">
-<table data-table-key="ip-addresses"><thead><tr><th class="action-col" data-col="actions">View</th><th data-col="ip" data-sort>IP</th><th data-col="category" data-sort>Category</th><th data-col="name" data-sort>Name</th><th data-col="description" data-sort>Description</th><th data-col="assignment" data-sort>Static/Dynamic</th><th data-col="notes" data-sort>Notes</th></tr></thead><tbody>
-{% for row in rows %}<tr><td class="action-col"><a class="button secondary" href="/ip-addresses/{{ row.id }}">View</a></td><td class="mono">{{ row.address }}</td><td>{% if row.category %}<span class="table-chip">{{ row.category }}</span>{% else %}-{% endif %}</td><td>{{ row.name or '-' }}</td><td>{{ row.description or '-' }}</td><td>{{ row.assignment_type }}</td><td>{{ row.notes or '-' }}</td></tr>{% endfor %}
-</tbody></table>
+<form method="post" action="/ip-addresses/bulk-update" data-ip-bulk-form>
+  <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+  <div class="bulk-action-bar" data-bulk-bar hidden>
+    <strong><span data-selected-count>0</span> selected</strong>
+    <label>Category
+      <select name="category">
+        <option value="__no_change__">No change</option>
+        <option value="__clear__">Clear category</option>
+        {% for category in categories %}<option value="{{ category }}">{{ category }}</option>{% endfor %}
+      </select>
+    </label>
+    <label>Static/Dynamic
+      <select name="assignment_type">
+        <option value="__no_change__">No change</option>
+        <option value="Static">Static</option>
+        <option value="Dynamic">Dynamic</option>
+      </select>
+    </label>
+    <button type="submit">Apply</button>
+    <button class="button secondary" type="button" data-clear-selection>Clear</button>
+  </div>
+  <table data-table-key="ip-addresses"><thead><tr><th class="select-col" data-col="select"><label class="table-check"><input type="checkbox" data-select-all><span>Select</span></label></th><th class="action-col" data-col="actions">View</th><th data-col="ip" data-sort>IP</th><th data-col="category" data-sort>Category</th><th data-col="name" data-sort>Name</th><th data-col="description" data-sort>Description</th><th data-col="assignment" data-sort>Static/Dynamic</th><th data-col="notes" data-sort>Notes</th></tr></thead><tbody>
+  {% for row in rows %}<tr><td class="select-col"><input class="row-select" type="checkbox" name="selected_ids" value="{{ row.id }}"></td><td class="action-col"><a class="button secondary" href="/ip-addresses/{{ row.id }}">View</a></td><td class="mono">{{ row.address }}</td><td>{% if row.category %}<span class="table-chip">{{ row.category }}</span>{% else %}-{% endif %}</td><td>{{ row.name or '-' }}</td><td>{{ row.description or '-' }}</td><td>{{ row.assignment_type }}</td><td>{{ row.notes or '-' }}</td></tr>{% endfor %}
+  </tbody></table>
+</form>
 </section>
+<script src="/static/js/ip_addresses.js?v={{ asset_version }}" defer></script>
 {% endblock %}

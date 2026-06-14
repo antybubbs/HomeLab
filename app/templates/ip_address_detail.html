@@ -51,6 +51,10 @@
         <div><strong>Last Check</strong><span>{% if monitor.last_checked_at %}{{ monitor.last_status|capitalize }}{% if monitor.last_latency_ms is not none %} - {{ monitor.last_latency_ms }} ms{% endif %}{% else %}Waiting for first check{% endif %}</span></div>
       </div>
       {% endif %}
+      <div class="service-card" data-ping-card>
+        <div><strong>Ping</strong><span data-ping-message>Allows a quick ping to see if this device is up.</span></div>
+        <button class="button secondary" type="button" data-ping-url="/ip-addresses/{{ record.id }}/ping" data-csrf-token="{{ csrf_token }}">Ping</button>
+      </div>
       <div class="service-card">
         <div><strong>Remote Manager</strong><span>Allows remote access via SSH or RDP.</span></div>
         <span data-view class="service-pill {% if remote and remote.is_enabled %}on{% endif %}">{% if remote and remote.is_enabled %}{{ remote.protocol|upper }}:{{ remote.port }}{% else %}Disabled{% endif %}</span>
@@ -89,4 +93,5 @@
   </section>
 </section>
 </form>
+<script src="/static/js/ip_addresses.js?v={{ asset_version }}" defer></script>
 {% endblock %}

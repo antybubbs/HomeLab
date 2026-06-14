@@ -1,25 +1,51 @@
 {% extends "base.html" %}
 {% block content %}
-<div class="topbar"><div><h1>{{ record.address }}</h1><p class="muted">IP address record #{{ record.id }}</p></div>{% if user.role in ['admin','editor'] %}<div><a class="button" href="/ip-addresses/{{ record.id }}/edit">Edit</a></div>{% endif %}</div>
-<section class="panel">
-<section class="detail-grid">
-  <div><label>IP Address</label><p class="mono">{{ record.address }}</p></div>
-  <div><label>Category</label><p>{{ record.category or '-' }}</p></div>
-  <div><label>Name</label><p>{{ record.name or '-' }}</p></div>
-  <div><label>Description</label><p>{{ record.description or '-' }}</p></div>
-  <div><label>Static/Dynamic</label><p>{{ record.assignment_type }}</p></div>
-  <div><label>Network Monitor</label><p>{% if monitor and monitor.is_enabled %}Enabled{% else %}Disabled{% endif %}</p></div>
-  {% if monitor and monitor.is_enabled %}
-  <div><label>Last Check</label><p>{% if monitor.last_checked_at %}{{ monitor.last_status|capitalize }}{% if monitor.last_latency_ms is not none %} - {{ monitor.last_latency_ms }} ms{% endif %}{% else %}Waiting for first check{% endif %}</p></div>
-  {% endif %}
-  <div><label>Remote Manager</label><p>{% if remote and remote.is_enabled %}{{ remote.protocol|upper }} on port {{ remote.port }}{% else %}Disabled{% endif %}</p></div>
-  {% if remote and remote.is_enabled %}
-  <div><label>Remote Username</label><p>{{ remote.username or '-' }}</p></div>
-  {% endif %}
-  <div class="wide"><label>Notes</label><p>{{ record.notes or '-' }}</p></div>
-  {% for field in custom_fields %}
-  <div><label>{{ field.label }}</label><p>{{ custom_values.get(field.id) or '-' }}</p></div>
-  {% endfor %}
-</section>
+{% set record_title = record.name or record.description or record.address %}
+<div class="record-hero">
+  <div>
+    <h1>{{ record_title }}</h1>
+    <p class="record-identifier mono">{{ record.address }}</p>
+    <div class="record-chips">
+      <span class="table-chip muted-chip">{{ record.assignment_type }}</span>
+      {% if record.category %}<span class="table-chip">Category: {{ record.category }}</span>{% endif %}
+      <span class="table-chip muted-chip">Network Monitor {% if monitor and monitor.is_enabled %}On{% else %}Off{% endif %}</span>
+      <span class="table-chip muted-chip">Remote Manager {% if remote and remote.is_enabled %}On{% else %}Off{% endif %}</span>
+    </div>
+  </div>
+  {% if user.role in ['admin','editor'] %}<a class="button" href="/ip-addresses/{{ record.id }}/edit">Edit</a>{% endif %}
+</div>
+<section class="record-layout">
+  <section class="panel record-panel">
+    <h2>Overview</h2>
+    <div class="record-fields">
+      <div><label>IP Address</label><p class="mono">{{ record.address }}</p></div>
+      <div><label>Name</label><p>{{ record.name or '-' }}</p></div>
+      <div><label>Description</label><p>{{ record.description or '-' }}</p></div>
+      <div><label>Category</label><p>{{ record.category or '-' }}</p></div>
+      <div><label>Static/Dynamic</label><p>{{ record.assignment_type }}</p></div>
+    </div>
+  </section>
+  <section class="panel record-panel">
+    <h2>Services</h2>
+    <div class="record-fields">
+      <div><label>Network Monitor</label><p>{% if monitor and monitor.is_enabled %}Enabled{% else %}Disabled{% endif %}</p></div>
+      {% if monitor and monitor.is_enabled %}
+      <div><label>Last Check</label><p>{% if monitor.last_checked_at %}{{ monitor.last_status|capitalize }}{% if monitor.last_latency_ms is not none %} - {{ monitor.last_latency_ms }} ms{% endif %}{% else %}Waiting for first check{% endif %}</p></div>
+      {% endif %}
+      <div><label>Remote Manager</label><p>{% if remote and remote.is_enabled %}{{ remote.protocol|upper }} on port {{ remote.port }}{% else %}Disabled{% endif %}</p></div>
+      {% if remote and remote.is_enabled %}
+      <div><label>Remote Username</label><p>{{ remote.username or '-' }}</p></div>
+      {% endif %}
+    </div>
+  </section>
+  <section class="panel record-panel wide">
+    <h2>Notes and Custom Fields</h2>
+    <div class="record-fields">
+      <div class="wide"><label>Notes</label><p>{{ record.notes or '-' }}</p></div>
+      {% for field in custom_fields %}
+      <div><label>{{ field.label }}</label><p>{{ custom_values.get(field.id) or '-' }}</p></div>
+      {% endfor %}
+    </div>
+  </section>
 </section>
 {% endblock %}

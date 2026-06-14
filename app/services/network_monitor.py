@@ -10,7 +10,7 @@ from sqlalchemy.orm import Session
 from app.db.session import SessionLocal
 from app.models.models import IPAddress, NetworkMonitor, NetworkMonitorCheck
 
-CHECK_INTERVAL_SECONDS = 10
+CHECK_INTERVAL_SECONDS = 30
 STARTUP_DELAY_SECONDS = 45
 MAX_CONCURRENT_CHECKS = 5
 MAX_CHECK_HISTORY = 1000

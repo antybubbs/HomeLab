@@ -26,6 +26,7 @@ class Settings(BaseSettings):
     github_repo: str = "antybubbs/HomeLab"
     guacd_host: str = ""
     guacd_port: str = ""
+    version_check_interval_seconds: int = 1800
 
     class Config:
         env_file = ".env"

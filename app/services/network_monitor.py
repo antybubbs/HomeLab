@@ -10,7 +10,8 @@ from sqlalchemy.orm import Session
 from app.db.session import SessionLocal
 from app.models.models import IPAddress, NetworkMonitor, NetworkMonitorCheck
 
-CHECK_INTERVAL_SECONDS = 10
+CHECK_INTERVAL_SECONDS = 30
+STARTUP_DELAY_SECONDS = 45
 MAX_CONCURRENT_CHECKS = 5
 MAX_CHECK_HISTORY = 1000
 PING_TIME_PATTERN = re.compile(r"time[=<]([0-9.]+)")
@@ -112,6 +113,7 @@ def run_monitor_check_by_id(monitor_id: int) -> None:
 
 
 async def monitor_loop() -> None:
+    await asyncio.sleep(STARTUP_DELAY_SECONDS)
     while True:
         db = SessionLocal()
         try:

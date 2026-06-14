@@ -7,7 +7,7 @@ from urllib.error import URLError
 from urllib.request import Request, urlopen
 from app.core.config import get_settings
 
-CACHE_SECONDS = 6 * 60 * 60
+CACHE_SECONDS = get_settings().version_check_interval_seconds
 
 
 @dataclass
@@ -21,7 +21,7 @@ _cache = VersionCache()
 _cache_lock = threading.Lock()
 _refreshing = False
 SHA_PATTERN = re.compile(r"^[0-9a-f]{7,40}$")
-DEV_PATTERN = re.compile(r"^dev[0-9A-Za-z_.-]*$")
+DEV_PATTERN = re.compile(r"^dev\d+\.\d+\.\d+$", re.IGNORECASE)
 
 
 def normalize_version(version: str) -> tuple[int, ...]:
@@ -91,8 +91,11 @@ def version_status() -> dict[str, str | bool | None]:
     is_dev = bool(DEV_PATTERN.match(installed.strip()) or SHA_PATTERN.match(installed.strip().lower()))
     latest, release_url = latest_release()
     update_available = False
-    if latest and not is_dev and normalize_version(latest) and normalize_version(installed):
+    if latest and is_dev:
+        update_available = True
+    elif latest and normalize_version(latest) and normalize_version(installed):
         update_available = normalize_version(latest) > normalize_version(installed)
+    release_url = release_url or f"https://github.com/{settings.github_repo}/releases/latest"
     return {
         "installed": installed,
         "installed_display": display_version(installed),

@@ -1,25 +1,12 @@
 # HomeLab
 
-Self-hosted home lab management for software licences, certificates, IP addresses, assets, users and audit history.
+Self-hosted home lab management solution.
+<img width="2454" height="1227" alt="image" src="https://github.com/user-attachments/assets/f584720d-59df-4f40-a67a-42464bec5c2b" />
 
-HomeLab currently stores, searches and maintains software licence records securely. It supports CSV import/export, role-based access, key masking, audit logging, two-factor authentication, Docker deployment and GitHub-hosted container releases.
 
-## What is included
+## FEATURES
 
-- FastAPI web application
-- Polished dark UI
-- Docker and Docker Compose deployment
-- GitHub Actions workflow for container publishing
-- SQLite database by default
-- CSV import for Microsoft Volume Licensing style exports
-- Local user authentication
-- Argon2 password hashing
-- Product key encryption at rest
-- Key masking with audited reveal
-- Audit log for sensitive actions
-- Site administration with local user management
-- TOTP two-factor authentication for admin accounts
-- CSV export for admin users
+TBC
 
 ## Local development quick start
 

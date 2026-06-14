@@ -1,7 +1,8 @@
 # HomeLab
 
 Self-hosted home lab management solution.
-<img width="2443" height="1232" alt="image" src="https://github.com/user-attachments/assets/65577434-d6a5-49a4-9fde-3165666bfa10" />
+<img width="2454" height="1227" alt="image" src="https://github.com/user-attachments/assets/f584720d-59df-4f40-a67a-42464bec5c2b" />
+
 
 ## FEATURES
 

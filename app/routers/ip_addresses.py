@@ -168,7 +168,8 @@ def detail_ip_address(request: Request, record_id: int, db: Session = Depends(ge
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="IP address not found")
     fields = active_fields(db, MODULE)
     values = field_values(db, MODULE, ENTITY_TYPE, row.id)
-    return templates.TemplateResponse(request, "ip_address_detail.html", {"user": user, "record": row, "monitor": monitor_for(db, row.id), "remote": remote_for(db, row.id), "custom_fields": fields, "custom_values": values, **csrf_context(request)})
+    categories = list_values(db, MODULE).get("category", [])
+    return templates.TemplateResponse(request, "ip_address_detail.html", {"user": user, "record": row, "monitor": monitor_for(db, row.id), "remote": remote_for(db, row.id), "categories": categories, "assignment_types": sorted(ASSIGNMENT_TYPES), "remote_protocols": sorted(REMOTE_PROTOCOLS), "custom_fields": fields, "custom_values": values, "option_list": option_list, **csrf_context(request)})
 
 
 @router.get("/{record_id}/edit")

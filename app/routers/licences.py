@@ -96,7 +96,7 @@ def edit_licence(request: Request, licence_id: int, db: Session = Depends(get_db
 
 
 @router.post("/{licence_id}/edit")
-async def update_licence(request: Request, licence_id: int, product: str = Form(..., max_length=500), product_key: str = Form(..., max_length=500), licence_type: str = Form("", max_length=120), seats: int = Form(0, ge=0, le=1000000), notes: str = Form("", max_length=10000), csrf_token: str = Form(...), db: Session = Depends(get_db), user=Depends(require_editor)):
+async def update_licence(request: Request, licence_id: int, product: str = Form(..., max_length=500), product_key: str = Form("", max_length=500), licence_type: str = Form("", max_length=120), seats: int = Form(0, ge=0, le=1000000), notes: str = Form("", max_length=10000), csrf_token: str = Form(...), db: Session = Depends(get_db), user=Depends(require_editor)):
     validate_csrf_token(request, csrf_token)
     row = db.get(Licence, licence_id)
     if not row:
@@ -108,11 +108,12 @@ async def update_licence(request: Request, licence_id: int, product: str = Form(
         return templates.TemplateResponse(request, "licence_form.html", form_context(db, request, user, licence=row, product_key=product_key, error=custom_error), status_code=400)
     product = product.strip()
     product_key = product_key.strip()
-    if not product or not product_key:
-        return templates.TemplateResponse(request, "licence_form.html", form_context(db, request, user, licence=row, product_key=product_key, error="Product and product key are required."), status_code=400)
+    if not product:
+        return templates.TemplateResponse(request, "licence_form.html", form_context(db, request, user, licence=row, product_key=product_key, error="Product is required."), status_code=400)
     lists = list_values(db, MODULE)
     row.product = product
-    row.encrypted_product_key = encrypt_secret(product_key)
+    if product_key:
+        row.encrypted_product_key = encrypt_secret(product_key)
     row.organisation = None
     row.licence_type = clean_list_value(licence_type, lists.get("licence_type", []), row.licence_type)
     row.seats = seats
@@ -131,7 +132,8 @@ def detail(request: Request, licence_id: int, db: Session = Depends(get_db), use
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Licence not found")
     fields = active_fields(db, MODULE)
     values = field_values(db, MODULE, ENTITY_TYPE, row.id)
-    return templates.TemplateResponse(request, "licence_detail.html", {"user": user, "licence": row, "display_key": mask_key(decrypt_secret(row.encrypted_product_key)), "revealed": False, "custom_fields": fields, "custom_values": values, **csrf_context(request)})
+    lists = list_values(db, MODULE)
+    return templates.TemplateResponse(request, "licence_detail.html", {"user": user, "licence": row, "display_key": mask_key(decrypt_secret(row.encrypted_product_key)), "product_key_edit": "", "revealed": False, "licence_types": lists.get("licence_type", []), "custom_fields": fields, "custom_values": values, "option_list": option_list, **csrf_context(request)})
 
 
 @router.post("/{licence_id}/reveal")
@@ -143,4 +145,6 @@ def reveal(request: Request, licence_id: int, csrf_token: str = Form(...), db: S
     write_audit(db, user, "reveal", "licence", str(row.id), request.client.host if request.client else None)
     fields = active_fields(db, MODULE)
     values = field_values(db, MODULE, ENTITY_TYPE, row.id)
-    return templates.TemplateResponse(request, "licence_detail.html", {"user": user, "licence": row, "display_key": decrypt_secret(row.encrypted_product_key), "revealed": True, "custom_fields": fields, "custom_values": values, **csrf_context(request)})
+    lists = list_values(db, MODULE)
+    product_key = decrypt_secret(row.encrypted_product_key)
+    return templates.TemplateResponse(request, "licence_detail.html", {"user": user, "licence": row, "display_key": product_key, "product_key_edit": product_key, "revealed": True, "licence_types": lists.get("licence_type", []), "custom_fields": fields, "custom_values": values, "option_list": option_list, **csrf_context(request)})

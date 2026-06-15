@@ -49,8 +49,11 @@
     });
   }
 
-  document.querySelectorAll("table[data-table-key]").forEach((table) => {
-    const key = table.dataset.tableKey;
+  document.querySelectorAll(".panel table").forEach((table, tableIndex) => {
+    if (!table.tHead || !table.tBodies.length) {
+      return;
+    }
+    const key = table.dataset.tableKey || `${location.pathname}.${tableIndex}`;
     const storageKey = storagePrefix + key;
     const headers = Array.from(table.tHead.rows[0].cells);
     const parent = table.parentNode;

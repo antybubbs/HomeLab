@@ -7,7 +7,7 @@ from sqlalchemy.orm import Session
 from starlette import status
 from app.core.config import get_settings
 from app.core.csrf import csrf_context, validate_csrf_token
-from app.core.security import hash_password
+from app.core.security import hash_password, verify_password
 from app.core.totp import decrypted_totp_secret, encrypted_totp_secret, generate_totp_secret, provisioning_uri, qr_code_data_uri, verify_totp
 from app.db.session import get_db
 from app.models.models import AuditLog, CustomField, ManagedListItem, User
@@ -295,8 +295,10 @@ def enable_2fa(request: Request, code: str = Form(...), csrf_token: str = Form(.
 
 
 @router.post("/security/2fa/disable")
-def disable_2fa(request: Request, csrf_token: str = Form(...), db: Session = Depends(get_db), user=Depends(require_admin)):
+def disable_2fa(request: Request, current_password: str = Form("", max_length=255), csrf_token: str = Form(...), db: Session = Depends(get_db), user=Depends(require_admin)):
     validate_csrf_token(request, csrf_token)
+    if not verify_password(current_password, user.password_hash):
+        return templates.TemplateResponse(request, "security.html", {"user": user, "setup_secret": None, "setup_uri": None, "setup_qr_code": None, "error": "Current password is required to disable 2FA.", **csrf_context(request)}, status_code=400)
     user.totp_secret = None
     user.totp_enabled = False
     db.commit()

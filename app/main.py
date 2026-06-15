@@ -51,7 +51,8 @@ async def security_headers(request: Request, call_next):
     response.headers["X-Frame-Options"] = "DENY"
     response.headers["Referrer-Policy"] = "no-referrer"
     response.headers["Permissions-Policy"] = "camera=(), microphone=(), geolocation=()"
-    response.headers["Content-Security-Policy"] = "default-src 'self'; connect-src 'self' ws: wss:; img-src 'self' data:; style-src 'self'; style-src-attr 'unsafe-inline'; script-src 'self'; object-src 'none'; base-uri 'self'; frame-ancestors 'none'; form-action 'self'"
+    ws_scheme = "wss" if request.url.scheme == "https" else "ws"
+    response.headers["Content-Security-Policy"] = f"default-src 'self'; connect-src 'self' {ws_scheme}://{request.url.netloc}; img-src 'self' data:; style-src 'self'; style-src-attr 'unsafe-inline'; script-src 'self'; object-src 'none'; base-uri 'self'; frame-ancestors 'none'; form-action 'self'"
     if is_static_asset:
         response.headers["Cache-Control"] = "public, max-age=604800, immutable"
     else:

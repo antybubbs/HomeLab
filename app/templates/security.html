@@ -5,9 +5,10 @@
 {% if error %}<div class="alert">{{ error }}</div>{% endif %}
 {% if user.totp_enabled %}
   <div class="success">Two-factor authentication is enabled for {{ user.email }}.</div>
-  <form method="post" action="/admin/security/2fa/disable" class="form-actions">
+  <form method="post" action="/admin/security/2fa/disable" class="stack compact-form">
     <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
-    <button class="ghost" type="submit">Disable 2FA</button>
+    <label>Current password<input name="current_password" type="password" autocomplete="current-password" required></label>
+    <div class="form-actions"><button class="ghost" type="submit">Disable 2FA</button></div>
   </form>
 {% elif setup_secret %}
   <p class="muted">Scan this QR code in Google Authenticator, Microsoft Authenticator, 1Password, Bitwarden, or another authenticator app. Then enter the 6-digit code.</p>

@@ -6,9 +6,6 @@
       <h1>IP Addresses</h1>
       <span class="module-stat">Total <strong>{{ total }}</strong></span>
     </div>
-    <div class="module-actions">
-      {% if user.role in ['admin','editor'] %}<a class="button" href="/ip-addresses/new">Add IP</a>{% endif %}
-    </div>
   </div>
   <div class="module-toolbar">
     <form class="search list-search" method="get">
@@ -16,6 +13,9 @@
       <input name="q" placeholder="Search IP addresses..." value="{{ q }}">
       <button>Search</button>
     </form>
+    <div class="module-actions">
+      {% if user.role in ['admin','editor'] %}<a class="button" href="/ip-addresses/new">Add IP</a>{% endif %}
+    </div>
     <nav class="category-tabs" aria-label="IP address categories">
       <a class="{% if not active_category %}active{% endif %}" href="/ip-addresses{% if q %}?q={{ q|urlencode }}{% endif %}">All</a>
       {% for category in categories %}

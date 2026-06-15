@@ -6,6 +6,13 @@
       <h1>License Keys</h1>
       <span class="module-stat">Total <strong>{{ total }}</strong></span>
     </div>
+  </div>
+  <div class="module-toolbar">
+    <form class="search list-search" method="get">
+      {% if active_licence_type %}<input type="hidden" name="licence_type" value="{{ active_licence_type }}">{% endif %}
+      <input name="q" placeholder="Search license keys..." value="{{ q }}">
+      <button>Search</button>
+    </form>
     <div class="module-actions">
       <details class="favourites-menu">
         <summary>Favourites{% if favourites %} <span>{{ favourites|length }}</span>{% endif %}</summary>
@@ -21,13 +28,6 @@
       </details>
       {% if user.role in ['admin','editor'] %}<a class="button" href="/licences/new">Add License Key</a>{% endif %}
     </div>
-  </div>
-  <div class="module-toolbar">
-    <form class="search list-search" method="get">
-      {% if active_licence_type %}<input type="hidden" name="licence_type" value="{{ active_licence_type }}">{% endif %}
-      <input name="q" placeholder="Search license keys..." value="{{ q }}">
-      <button>Search</button>
-    </form>
     <nav class="category-tabs" aria-label="License key types">
       <a class="{% if not active_licence_type %}active{% endif %}" href="/licences{% if q %}?q={{ q|urlencode }}{% endif %}">All</a>
       {% for licence_type in licence_types %}

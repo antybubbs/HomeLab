@@ -5,6 +5,7 @@ import json
 import secrets
 import time
 from dataclasses import dataclass
+from urllib.parse import urlparse
 from urllib.parse import urlencode
 
 from fastapi import APIRouter, Depends, Form, HTTPException, Request, WebSocket, WebSocketDisconnect
@@ -237,6 +238,28 @@ def require_remote_session(db: Session, remote_id: int) -> RemoteAccess:
     return row
 
 
+def websocket_origin_allowed(websocket: WebSocket) -> bool:
+    origin = websocket.headers.get("origin")
+    if not origin:
+        return False
+    parsed = urlparse(origin)
+    origin_host = parsed.hostname or ""
+    request_host = websocket.headers.get("host", "").split(":", 1)[0]
+    allowed_hosts = {request_host, "localhost", "127.0.0.1", "::1"}
+    app_settings = get_settings()
+    base_host = urlparse(app_settings.base_url).hostname
+    if base_host:
+        allowed_hosts.add(base_host)
+    allowed_hosts.update(host.strip() for host in app_settings.allowed_hosts.split(",") if host.strip())
+    for allowed_host in allowed_hosts:
+        normalized = allowed_host.split(":", 1)[0].lower()
+        if normalized.startswith("*.") and origin_host.lower().endswith(normalized[1:]):
+            return True
+        if origin_host.lower() == normalized:
+            return True
+    return False
+
+
 async def tcp_check(host: str, port: int, timeout: float = 5) -> tuple[bool, str]:
     try:
         reader, writer = await asyncio.wait_for(asyncio.open_connection(host, port), timeout=timeout)
@@ -361,6 +384,9 @@ async def rdp_start(request: Request, remote_id: int, db: Session = Depends(get_
 
 @router.websocket("/{remote_id}/ssh/ws")
 async def ssh_websocket(websocket: WebSocket, remote_id: int):
+    if not websocket_origin_allowed(websocket):
+        await websocket.close(code=1008)
+        return
     user_id = websocket.session.get("user_id") if hasattr(websocket, "session") else None
     if not user_id:
         await websocket.close(code=1008)
@@ -479,6 +505,9 @@ async def ssh_websocket(websocket: WebSocket, remote_id: int):
 
 @router.websocket("/{remote_id}/rdp/ws")
 async def rdp_websocket(websocket: WebSocket, remote_id: int):
+    if not websocket_origin_allowed(websocket):
+        await websocket.close(code=1008)
+        return
     user_id = websocket.session.get("user_id") if hasattr(websocket, "session") else None
     if not user_id:
         await websocket.close(code=1008)

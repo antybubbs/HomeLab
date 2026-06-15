@@ -20,6 +20,27 @@ router = APIRouter(prefix="/hardware-assets")
 templates = Jinja2Templates(directory="app/templates")
 MODULE = "hardware_assets"
 ENTITY_TYPE = "hardware_asset"
+ALLOWED_PHOTO_TYPES = {
+    ".gif": ("image/gif", (b"GIF87a", b"GIF89a")),
+    ".jpg": ("image/jpeg", (b"\xff\xd8\xff",)),
+    ".jpeg": ("image/jpeg", (b"\xff\xd8\xff",)),
+    ".png": ("image/png", (b"\x89PNG\r\n\x1a\n",)),
+    ".webp": ("image/webp", (b"RIFF",)),
+}
+
+
+def validate_photo_upload(filename: str, data: bytes) -> str:
+    suffix = Path(filename).suffix.lower()
+    allowed = ALLOWED_PHOTO_TYPES.get(suffix)
+    if not allowed:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Photo must be a PNG, JPEG, GIF, or WebP image.")
+    content_type, signatures = allowed
+    if suffix == ".webp":
+        if len(data) < 12 or not data.startswith(b"RIFF") or data[8:12] != b"WEBP":
+            raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Photo file content does not match its image type.")
+    elif not any(data.startswith(signature) for signature in signatures):
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Photo file content does not match its image type.")
+    return content_type
 
 
 def parse_date(value: str):
@@ -42,12 +63,12 @@ async def save_upload(upload: UploadFile | None, asset_id: int, prefix: str, ima
     if not upload or not upload.filename:
         return None
     content_type = upload.content_type or "application/octet-stream"
-    if image_only and not content_type.startswith("image/"):
-        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Photo must be an image file.")
     data = await upload.read(get_settings().max_upload_mb * 1024 * 1024 + 1)
     if len(data) > get_settings().max_upload_mb * 1024 * 1024:
         raise HTTPException(status_code=status.HTTP_413_REQUEST_ENTITY_TOO_LARGE, detail=f"File is larger than {get_settings().max_upload_mb} MB.")
     suffix = Path(upload.filename).suffix.lower()
+    if image_only:
+        content_type = validate_photo_upload(upload.filename, data)
     stored = f"{prefix}-{uuid4().hex}{suffix}"
     path = asset_upload_dir(asset_id) / stored
     path.write_bytes(data)
@@ -231,4 +252,4 @@ def download_attachment(asset_id: int, attachment_id: int, db: Session = Depends
     path = asset_upload_dir(asset_id) / row.stored_filename
     if not path.exists():
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Attachment not found")
-    return FileResponse(path, media_type=row.content_type or "application/octet-stream", filename=row.original_filename)
+    return FileResponse(path, media_type="application/octet-stream", filename=row.original_filename)

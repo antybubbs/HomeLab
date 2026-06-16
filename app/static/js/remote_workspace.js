@@ -23,10 +23,8 @@
     window.sessionStorage.setItem(storageKey, JSON.stringify({ tabs, activeId }));
   };
 
-  const tabKey = (remoteId) => `remote-${remoteId}`;
-
   const hostFromCard = (card) => ({
-    id: tabKey(card.dataset.remoteId),
+    id: `remote-${card.dataset.remoteId}-${Date.now()}-${Math.random().toString(16).slice(2)}`,
     remoteId: card.dataset.remoteId,
     label: card.dataset.remoteLabel || "Remote host",
     protocol: (card.dataset.remoteProtocol || "ssh").toLowerCase(),
@@ -145,14 +143,14 @@
     });
 
     root.querySelectorAll(".remote-host-card").forEach((card) => {
-      card.classList.toggle("active", tabKey(card.dataset.remoteId) === activeId);
+      const activeTab = tabs.find((tab) => tab.id === activeId);
+      card.classList.toggle("active", activeTab && activeTab.remoteId === card.dataset.remoteId);
     });
   };
 
   const openTab = (session) => {
     if (!session.url) return;
-    const existing = tabs.find((tab) => tab.id === session.id);
-    if (!existing) tabs.push(session);
+    tabs.push(session);
     activeId = session.id;
     render();
     save();

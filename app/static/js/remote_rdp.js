@@ -19,6 +19,7 @@ if (root) {
   let manuallyStopped = false;
   let connected = false;
   let displayReady = false;
+  let resizeObserver = null;
 
   const writeLog = (lines) => {
     if (!log) return;
@@ -79,6 +80,10 @@ if (root) {
 
   const disconnectCurrentSession = () => {
     window.clearTimeout(resizeTimer);
+    if (resizeObserver) {
+      resizeObserver.disconnect();
+      resizeObserver = null;
+    }
     if (keyboard) {
       keyboard.onkeydown = null;
       keyboard.onkeyup = null;
@@ -127,6 +132,13 @@ if (root) {
     };
   };
 
+  const markDisplayReady = () => {
+    if (displayReady) return;
+    displayReady = true;
+    setOverlayVisible(false);
+    if (displayElement) displayElement.focus({ preventScroll: true });
+  };
+
   const waitForLayout = () =>
     new Promise((resolve) => {
       window.requestAnimationFrame(() => window.requestAnimationFrame(resolve));
@@ -170,6 +182,7 @@ if (root) {
         setStatus("Connected", "RDP session is active.");
         connected = true;
         refreshDisplay();
+        markDisplayReady();
       }
       if (state === Guacamole.Client.State.DISCONNECTED) {
         setOverlayVisible(true);
@@ -182,12 +195,12 @@ if (root) {
     };
     client.getDisplay().onresize = () => {
       fitDisplay();
-      if (!displayReady) {
-        displayReady = true;
-        setOverlayVisible(false);
-        displayElement.focus({ preventScroll: true });
-      }
+      markDisplayReady();
     };
+    if (window.ResizeObserver) {
+      resizeObserver = new ResizeObserver(scheduleResize);
+      resizeObserver.observe(shell);
+    }
     client.connect(params.toString());
   };
 

@@ -406,6 +406,33 @@ def highlight_ssh_output(text: str) -> str:
     return "".join(parts)
 
 
+def termix_shell_command() -> str:
+    rc_lines = [
+        "export TERM=xterm-256color",
+        "export COLORTERM=truecolor",
+        "export FORCE_COLOR=1",
+        "export CLICOLOR=1",
+        "export CLICOLOR_FORCE=1",
+        "export LS_COLORS='di=01;34:ln=01;36:ex=01;32:*.sh=01;32:*.py=01;32:*.js=01;32:*.json=01;33'",
+        "alias ls='ls --color=auto'",
+        "alias ll='ls -la --color=auto'",
+        r"PS1='\[\033[01;32m\]\u@\h\[\033[00m\]:\[\033[01;34m\]\w\[\033[00m\]\$ '",
+        "rm -f \"$HOMELAB_TERMIX_RC\"",
+    ]
+    rc_body = "\n".join(rc_lines)
+    return (
+        "if command -v bash >/dev/null 2>&1; then "
+        "HOMELAB_TERMIX_RC=$(mktemp /tmp/homelab-termix.XXXXXX) && "
+        f"cat > \"$HOMELAB_TERMIX_RC\" <<'HOMELAB_TERMIX_RC'\n{rc_body}\nHOMELAB_TERMIX_RC\n"
+        "exec env HOMELAB_TERMIX_RC=\"$HOMELAB_TERMIX_RC\" bash --rcfile \"$HOMELAB_TERMIX_RC\" -i; "
+        "else "
+        "export TERM=xterm-256color COLORTERM=truecolor FORCE_COLOR=1 CLICOLOR=1 CLICOLOR_FORCE=1; "
+        "export PS1='$USER@$(hostname):$PWD$ '; "
+        "exec ${SHELL:-/bin/sh} -i; "
+        "fi"
+    )
+
+
 def encrypt_guacamole_token(token_object: dict[str, object]) -> str:
     iv = secrets.token_bytes(16)
     padder = padding.PKCS7(128).padder()
@@ -688,6 +715,7 @@ async def ssh_websocket(websocket: WebSocket, remote_id: int):
                 finally:
                     update_db.close()
             process = await client.create_process(
+                termix_shell_command(),
                 term_type="xterm-256color",
                 term_size=(cols, rows),
                 env={

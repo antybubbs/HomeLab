@@ -29,7 +29,21 @@
 .remote-connect-menu a{border-radius:6px;color:var(--text);font-size:12px;padding:7px 8px}
 .remote-connect-menu a:hover{background:var(--panel2)}
 .remote-host-empty{color:var(--muted);font-size:12px;padding:10px}
-.remote-console-empty{align-items:center;background:#050706;display:flex;justify-content:center;min-width:0;text-align:center}
+.remote-tab-workspace{background:#050706;display:grid;grid-template-rows:42px minmax(0,1fr);min-width:0;min-height:0}
+.remote-tabbar{align-items:end;background:#151712;border-bottom:1px solid #2b3027;display:flex;min-width:0;overflow-x:auto;scrollbar-width:thin}
+.remote-session-tab{align-items:center;background:#171a15;border-right:1px solid #2b3027;border-bottom:2px solid transparent;color:#aeb7a5;cursor:pointer;display:flex;gap:9px;height:42px;min-width:150px;max-width:280px;padding:0 10px;position:relative;user-select:none}
+.remote-session-tab:hover{background:#1d211b;color:#f7f7f7}
+.remote-session-tab.active{background:#0c0d0b;border-bottom-color:#f39044;color:#fff}
+.remote-tab-icon{color:#8fb8ff;font-family:"Caskaydia Cove Nerd Font Mono",Consolas,monospace;font-size:11px;font-weight:900;min-width:24px;text-align:center}
+.remote-tab-title{font-size:13px;font-weight:850;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.remote-tab-protocol{color:#7f8977;font-size:10px;font-weight:900;margin-left:auto}
+.remote-tab-tools{align-items:center;display:flex;gap:2px;margin-left:3px}
+.remote-tab-tool{background:transparent;border:0;border-radius:4px;color:#8c9686;font-size:12px;font-weight:900;height:22px;min-height:22px;padding:0;text-transform:uppercase;width:22px}
+.remote-tab-tool:hover{background:#2b3027;color:#fff}
+.remote-tab-panels{height:100%;min-height:0;position:relative}
+.remote-tab-panel{height:100%;inset:0;position:absolute;width:100%}
+.remote-tab-panel iframe{background:#050706;border:0;display:block;height:100%;width:100%}
+.remote-console-empty{align-items:center;background:#050706;display:flex;height:100%;justify-content:center;min-width:0;text-align:center}
 .remote-console-empty h1{font-size:22px}
 .remote-session-frame{background:#050706;border:0;border-radius:0;display:grid;height:100%;min-height:0;overflow:hidden;position:relative}
 .ssh-session,.rdp-session{display:grid;height:100%;min-height:0;position:relative}
@@ -38,14 +52,16 @@
 .remote-credential-form{align-items:end;background:rgba(8,12,16,.96);border:1px solid var(--line);border-radius:10px;box-shadow:0 18px 45px rgba(0,0,0,.38);display:grid;gap:8px;grid-template-columns:minmax(220px,320px) auto;left:50%;max-width:min(620px,calc(100% - 32px));padding:12px;position:absolute;top:18px;transform:translateX(-50%);width:max-content;z-index:5}
 .remote-credential-form p{grid-column:1/-1;margin:0}
 .rdp-credential-form{grid-template-columns:minmax(180px,260px) minmax(180px,260px) auto}
-.ssh-terminal{background:#0c0d0b;height:100%;min-height:0;overflow:hidden}
-.ssh-terminal .xterm{font-feature-settings:"liga" 0,"calt" 0;height:100%;padding:6px 10px;text-rendering:optimizeLegibility;-webkit-font-smoothing:antialiased;-moz-osx-font-smoothing:grayscale}
-.ssh-terminal .xterm-screen{font-family:"Caskaydia Cove Nerd Font Mono","SF Mono",Consolas,"Liberation Mono",monospace!important;font-variant-ligatures:none}
+.ssh-terminal{background:#0c0d0b;height:100%;min-height:0;overflow:hidden;position:relative}
+.ssh-terminal .xterm{font-feature-settings:"liga" 0,"calt" 0;height:100%;padding:4px 6px;text-rendering:optimizeLegibility;-webkit-font-smoothing:antialiased;-moz-osx-font-smoothing:grayscale}
+.ssh-terminal .xterm-screen{font-family:"Caskaydia Cove Nerd Font Mono","Cascadia Mono","SF Mono",Consolas,"Liberation Mono",monospace!important;font-variant-ligatures:none}
 .ssh-terminal .xterm-viewport{background:#0c0d0b!important;scrollbar-color:rgba(255,255,255,.3) transparent;scrollbar-width:thin}
 .ssh-terminal .xterm-viewport::-webkit-scrollbar{background:transparent;width:8px}
 .ssh-terminal .xterm-viewport::-webkit-scrollbar-thumb{background:rgba(255,255,255,.3);border-radius:4px}
 .ssh-terminal .xterm-viewport::-webkit-scrollbar-thumb:hover{background:rgba(255,255,255,.5)}
 .ssh-terminal .xterm-cursor-layer{z-index:4}
+.remote-panel-body{background:#050706;margin:0;min-height:100vh;overflow:hidden}
+.remote-panel-body .remote-session-frame{height:100vh}
 .rdp-display-shell{background:#050706;height:100%;min-height:0;outline:none;overflow:hidden;position:relative}
 .rdp-display{align-items:center;display:flex;height:100%;justify-content:center;min-height:0;overflow:hidden;position:relative;width:100%}
 .rdp-display .rdp-guac-display{cursor:none}

@@ -302,6 +302,14 @@ def remote_session(request: Request, remote_id: int, db: Session = Depends(get_d
     return templates.TemplateResponse(request, "remote_session.html", {"user": user, "remote": row, "rows": rows, "remote_label": title, "remote_label_fn": remote_label, "settings": settings, **csrf_context(request)})
 
 
+@router.get("/{remote_id}/panel")
+def remote_session_panel(request: Request, remote_id: int, db: Session = Depends(get_db), user=Depends(require_user)):
+    row = require_remote_session(db, remote_id)
+    settings = settings_map(db)
+    title = remote_label(row)
+    return templates.TemplateResponse(request, "remote_session_panel.html", {"user": user, "remote": row, "remote_label": title, "settings": settings, **csrf_context(request)})
+
+
 @router.post("/{remote_id}/rdp/check")
 async def rdp_check(request: Request, remote_id: int, db: Session = Depends(get_db), user=Depends(require_user)):
     payload = await request.json()

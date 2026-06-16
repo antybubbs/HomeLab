@@ -11,10 +11,10 @@
     allowTransparency: false,
     convertEol: true,
     cursorBlink: true,
-    cursorStyle: "bar",
+    cursorStyle: "block",
     fontFamily: "Caskaydia Cove Nerd Font Mono, Cascadia Mono, Consolas, ui-monospace, SFMono-Regular, Menlo, monospace",
-    fontSize: 14,
-    fontWeight: 400,
+    fontSize: 13,
+    fontWeight: 600,
     fontWeightBold: 700,
     lineHeight: 1.0,
     letterSpacing: 0,
@@ -26,26 +26,26 @@
     minimumContrastRatio: 1,
     theme: {
       background: "#0c0d0b",
-      foreground: "#f7f7f7",
-      cursor: "#f7f7f7",
+      foreground: "#fafafa",
+      cursor: "#fafafa",
       cursorAccent: "#0c0d0b",
-      selectionBackground: "#3a3a3d",
+      selectionBackground: "#334155",
       black: "#2e3436",
-      red: "#cc0000",
-      green: "#4e9a06",
-      yellow: "#c4a000",
-      blue: "#3465a4",
-      magenta: "#75507b",
-      cyan: "#06989a",
-      white: "#d3d7cf",
-      brightBlack: "#555753",
-      brightRed: "#ef2929",
-      brightGreen: "#8ae234",
-      brightYellow: "#fce94f",
-      brightBlue: "#729fcf",
-      brightMagenta: "#ad7fa8",
-      brightCyan: "#34e2e2",
-      brightWhite: "#eeeeec",
+      red: "#ef4444",
+      green: "#22c55e",
+      yellow: "#f59e0b",
+      blue: "#3b82f6",
+      magenta: "#a855f7",
+      cyan: "#06b6d4",
+      white: "#e5e7eb",
+      brightBlack: "#64748b",
+      brightRed: "#f87171",
+      brightGreen: "#86efac",
+      brightYellow: "#facc15",
+      brightBlue: "#60a5fa",
+      brightMagenta: "#c084fc",
+      brightCyan: "#67e8f9",
+      brightWhite: "#ffffff",
     },
   });
   const fitAddon = window.FitAddon ? new window.FitAddon.FitAddon() : null;
@@ -65,6 +65,26 @@
   };
 
   window.addEventListener("resize", fit);
+  document.addEventListener("visibilitychange", () => {
+    if (document.visibilityState === "visible") {
+      window.setTimeout(fit, 50);
+      if (connected) term.focus();
+    }
+  });
+  window.addEventListener("message", (event) => {
+    if (event.origin !== window.location.origin) return;
+    if (event.data && event.data.type === "homelab:remote-tab-active") {
+      window.setTimeout(fit, 50);
+      if (connected) term.focus();
+    }
+  });
+  terminalEl.addEventListener("click", () => term.focus());
+  terminalEl.addEventListener("paste", (event) => {
+    const text = event.clipboardData ? event.clipboardData.getData("text/plain") : "";
+    if (!text || !connected || !socket || socket.readyState !== WebSocket.OPEN) return;
+    event.preventDefault();
+    socket.send(text);
+  });
 
   term.onData((data) => {
     if (!connected || !socket || socket.readyState !== WebSocket.OPEN) return;
@@ -94,6 +114,7 @@
     socket.addEventListener("close", () => {
       connected = false;
       term.write("\r\nSession closed.\r\n");
+      passwordForm.hidden = false;
     });
     socket.addEventListener("error", () => term.write("\r\nSession error.\r\n"));
   });

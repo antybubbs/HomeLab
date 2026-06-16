@@ -193,6 +193,13 @@ if (root) {
 
   window.addEventListener("resize", scheduleResize);
   window.addEventListener("focus", refreshDisplay);
+  window.addEventListener("message", (event) => {
+    if (event.origin !== window.location.origin) return;
+    if (event.data && event.data.type === "homelab:remote-tab-active") {
+      window.setTimeout(refreshDisplay, 50);
+      if (displayElement) displayElement.focus({ preventScroll: true });
+    }
+  });
   document.addEventListener("visibilitychange", () => {
     if (document.visibilityState === "visible" && connected) {
       refreshDisplay();

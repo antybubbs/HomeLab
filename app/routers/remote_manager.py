@@ -614,6 +614,9 @@ async def ssh_websocket(websocket: WebSocket, remote_id: int):
                 env={
                     "TERM": "xterm-256color",
                     "COLORTERM": "truecolor",
+                    "FORCE_COLOR": "1",
+                    "CLICOLOR": "1",
+                    "CLICOLOR_FORCE": "1",
                     "LANG": "en_US.UTF-8",
                     "LC_ALL": "en_US.UTF-8",
                     "LC_CTYPE": "en_US.UTF-8",
@@ -622,6 +625,8 @@ async def ssh_websocket(websocket: WebSocket, remote_id: int):
                     "LC_NUMERIC": "en_US.UTF-8",
                     "LC_TIME": "en_US.UTF-8",
                     "LC_COLLATE": "en_US.UTF-8",
+                    "PS1": r"\[\e[92m\]\u@\h\[\e[0m\]:\[\e[94m\]\w\[\e[0m\]\$ ",
+                    "LS_COLORS": "di=01;34:ln=01;36:so=01;35:pi=33:ex=01;32:bd=33;01:cd=33;01:su=37;41:sg=30;43:tw=30;42:ow=34;42",
                 },
             )
             await websocket.send_json({"type": "connected", "message": "Connected"})

@@ -328,15 +328,15 @@
 
   const highlightPatterns = [
     {
-      regex: /(^|[\r\n])([a-zA-Z_][a-zA-Z0-9_.-]*@[a-zA-Z0-9_.-]+)(:)(~|\/[^\s#$]*)([$#])(?=\s|$)/g,
-      ansiCode: (_match, prefix, userHost, colon, path, marker) =>
-        `${prefix}${ansiCodes.colors.brightGreen}${userHost}${ansiCodes.reset}${colon}${ansiCodes.colors.brightBlue}${path}${ansiCodes.reset}${marker}`,
+      regex: /([a-zA-Z_][a-zA-Z0-9_.-]*@[a-zA-Z0-9_.-]+)(:)(~|\/[^\s#$]*)([$#])(?=\s|$)/g,
+      ansiCode: (_match, userHost, colon, path, marker) =>
+        `${ansiCodes.colors.brightGreen}${userHost}${ansiCodes.reset}${colon}${ansiCodes.colors.brightBlue}${path}${ansiCodes.reset}${marker}`,
       priority: 12,
     },
     {
-      regex: /(^|[\r\n])([a-zA-Z_][a-zA-Z0-9_.-]*@[a-zA-Z0-9_.-]+)([$#])(?=\s|$)/g,
-      ansiCode: (_match, prefix, userHost, marker) =>
-        `${prefix}${ansiCodes.colors.brightGreen}${userHost}${ansiCodes.reset}${marker}`,
+      regex: /([a-zA-Z_][a-zA-Z0-9_.-]*@[a-zA-Z0-9_.-]+)([$#])(?=\s|$)/g,
+      ansiCode: (_match, userHost, marker) =>
+        `${ansiCodes.colors.brightGreen}${userHost}${ansiCodes.reset}${marker}`,
       priority: 12,
     },
     {
@@ -534,7 +534,7 @@
     cursorBlink: terminalSettings.cursorBlink,
     cursorInactiveStyle: "block",
     cursorStyle: terminalSettings.cursorStyle,
-    cursorWidth: terminalSettings.cursorStyle === "bar" ? 2 : 1,
+    cursorWidth: terminalSettings.cursorStyle === "bar" ? 3 : 1,
     drawBoldTextInBrightColors: true,
     fontFamily: terminalSettings.fontFamily,
     fontSize: terminalSettings.fontSize,

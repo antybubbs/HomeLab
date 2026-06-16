@@ -8,7 +8,7 @@
   <div class="remote-host-list">
     {% for row in rows %}
     {% set label = remote_label_fn(row) if remote_label_fn is defined else remote_label(row) %}
-    <article class="remote-host-card {% if remote and remote.id == row.id %}active{% endif %}" data-remote-id="{{ row.id }}" data-remote-label="{{ label }}" data-remote-protocol="{{ row.protocol }}" data-remote-panel-url="/remote-manager/{{ row.id }}/panel">
+    <article class="remote-host-card {% if remote and remote.id == row.id %}active{% endif %}" data-remote-id="{{ row.id }}" data-remote-label="{{ label }}" data-remote-protocol="{{ row.protocol }}" data-remote-panel-url="/remote-manager/{{ row.id }}/panel?ssh=homelab-rewrite-2">
       <div class="remote-host-main">
         <span class="remote-status-dot {{ row.protocol }}"></span>
         <div>

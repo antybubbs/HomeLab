@@ -5,7 +5,8 @@
   const tabbar = root.querySelector("[data-remote-tabbar]");
   const panels = root.querySelector("[data-remote-tab-panels]");
   const empty = root.querySelector("[data-remote-empty]");
-  const storageKey = "homelab.remote.tabs.v1";
+  const sessionVersion = root.dataset.remoteSessionVersion || "1";
+  const storageKey = `homelab.remote.tabs.${sessionVersion}`;
   if (!tabbar || !panels || !empty) return;
 
   let tabs = [];

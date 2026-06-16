@@ -2,7 +2,7 @@
 {% block extra_head %}<link rel="stylesheet" href="/static/css/remote.css?v={{ asset_version }}">{% endblock %}
 {% block main_class %}remote-main{% endblock %}
 {% block content %}
-<div class="remote-workspace" data-remote-tabs>
+<div class="remote-workspace" data-remote-tabs data-remote-session-version="homelab-ssh-rewrite-2">
   {% include "_remote_host_rail.html" %}
   <section class="remote-tab-workspace">
     <div class="remote-tabbar" data-remote-tabbar aria-label="Remote sessions"></div>
@@ -16,5 +16,5 @@
     </div>
   </section>
 </div>
-<script src="/static/js/remote_workspace.js?v={{ asset_version }}" defer></script>
+<script src="/static/js/remote_workspace.js?v={{ asset_version }}&ssh=homelab-rewrite-2" defer></script>
 {% endblock %}

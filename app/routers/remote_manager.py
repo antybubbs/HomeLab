@@ -214,23 +214,6 @@ def effective_remote_settings(row: RemoteAccess, global_settings: dict[str, str]
     return {"terminal": terminal, "rdp": rdp}
 
 
-def fingerprint_for(host_key) -> str:
-    return host_key.get_fingerprint("sha256")
-
-
-def colour_ssh_prompt(data: str) -> str:
-    if not data or "\x1b[" in data:
-        return data
-    import re
-
-    prompt = re.compile(r"([A-Za-z_][A-Za-z0-9_.-]*@[A-Za-z0-9_.-]+)(:)(~|/[^\s#$]*)([$#])(?=\s|$)")
-
-    def replace(match: re.Match) -> str:
-        return f"\x1b[92m{match.group(1)}\x1b[0m{match.group(2)}\x1b[94m{match.group(3)}\x1b[0m{match.group(4)}"
-
-    return prompt.sub(replace, data)
-
-
 def settings_map(db: Session) -> dict[str, str]:
     values = SETTINGS.copy()
     for row in db.query(RemoteManagerSetting).all():
@@ -574,11 +557,10 @@ async def ssh_websocket(websocket: WebSocket, remote_id: int):
         host = remote.ip_address.address
         port = remote.port
         username = remote.username
-        expected_fingerprint = remote.host_key_fingerprint
     finally:
         db.close()
     await websocket.accept()
-    client = None
+    upstream = None
     try:
         payload = await websocket.receive_json()
         if payload.get("type") == "connectToHost":
@@ -591,58 +573,22 @@ async def ssh_websocket(websocket: WebSocket, remote_id: int):
             await websocket.close(code=1008)
             return
         try:
-            import asyncssh
-
             cols = clean_dimension(int_payload(connect_data, "cols", 120), 120, 40, 500)
             rows = clean_dimension(int_payload(connect_data, "rows", 34), 34, 10, 200)
-            client = await asyncio.wait_for(
-                asyncssh.connect(
-                    host,
-                    port=port,
-                    username=username,
-                    password=password,
-                    known_hosts=None,
-                ),
-                timeout=10,
-            )
-            current_fingerprint = fingerprint_for(client.get_server_host_key())
-            if expected_fingerprint and expected_fingerprint != current_fingerprint:
-                client.close()
-                await client.wait_closed()
-                await websocket.send_json({"type": "error", "message": "SSH host key fingerprint has changed. Connection refused."})
-                await websocket.close(code=1011)
-                return
-            if not expected_fingerprint:
-                update_db = SessionLocal()
-                try:
-                    update_row = update_db.get(RemoteAccess, remote_id)
-                    if update_row and not update_row.host_key_fingerprint:
-                        update_row.host_key_fingerprint = current_fingerprint
-                        update_db.commit()
-                finally:
-                    update_db.close()
-            process = await client.create_process(
-                term_type="xterm-256color",
-                term_size=(cols, rows),
-                env={
-                    "TERM": "xterm-256color",
-                    "COLORTERM": "truecolor",
-                    "FORCE_COLOR": "1",
-                    "CLICOLOR": "1",
-                    "CLICOLOR_FORCE": "1",
-                    "LANG": "en_US.UTF-8",
-                    "LC_ALL": "en_US.UTF-8",
-                    "LC_CTYPE": "en_US.UTF-8",
-                    "LC_MESSAGES": "en_US.UTF-8",
-                    "LC_MONETARY": "en_US.UTF-8",
-                    "LC_NUMERIC": "en_US.UTF-8",
-                    "LC_TIME": "en_US.UTF-8",
-                    "LC_COLLATE": "en_US.UTF-8",
-                    "PS1": r"\[\e[92m\]\u@\h\[\e[0m\]:\[\e[94m\]\w\[\e[0m\]\$ ",
-                    "LS_COLORS": "di=01;34:ln=01;36:so=01;35:pi=33:ex=01;32:bd=33;01:cd=33;01:su=37;41:sg=30;43:tw=30;42:ow=34;42",
+            import websockets
+
+            upstream = await websockets.connect("ws://127.0.0.1:30009", open_timeout=10)
+            await upstream.send(json.dumps({
+                "type": "connectToHost",
+                "data": {
+                    "host": host,
+                    "port": port,
+                    "username": username,
+                    "password": password,
+                    "cols": cols,
+                    "rows": rows,
                 },
-            )
-            await websocket.send_json({"type": "connected", "message": "Connected"})
+            }))
         except Exception as exc:
             await websocket.send_json({"type": "error", "message": f"SSH connection failed: {exc}"})
             await websocket.close(code=1011)
@@ -651,10 +597,8 @@ async def ssh_websocket(websocket: WebSocket, remote_id: int):
         async def read_loop():
             try:
                 while True:
-                    data = await process.stdout.read(4096)
-                    if not data:
-                        break
-                    await websocket.send_json({"type": "data", "data": colour_ssh_prompt(data)})
+                    message = await upstream.recv()
+                    await websocket.send_text(message)
             except Exception:
                 pass
 
@@ -662,21 +606,7 @@ async def ssh_websocket(websocket: WebSocket, remote_id: int):
             try:
                 while True:
                     payload = await websocket.receive_json()
-                    message_type = payload.get("type")
-                    data = payload.get("data")
-                    if message_type == "resize":
-                        if isinstance(data, dict):
-                            try:
-                                process.change_terminal_size(int(data.get("cols", cols)), int(data.get("rows", rows)))
-                            except Exception:
-                                pass
-                        continue
-                    if message_type == "disconnect":
-                        break
-                    if message_type == "input":
-                        if isinstance(data, str):
-                            process.stdin.write(data)
-                        continue
+                    await upstream.send(json.dumps(payload))
             except WebSocketDisconnect:
                 pass
 
@@ -686,10 +616,9 @@ async def ssh_websocket(websocket: WebSocket, remote_id: int):
             if not task.done():
                 task.cancel()
     finally:
-        if client:
+        if upstream:
             try:
-                client.close()
-                await client.wait_closed()
+                await upstream.close()
             except Exception:
                 pass
 

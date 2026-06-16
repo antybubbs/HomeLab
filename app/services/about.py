@@ -23,7 +23,6 @@ PACKAGE_NAMES = [
     "cryptography",
     "pandas",
     "openpyxl",
-    "asyncssh",
     "qrcode",
 ]
 

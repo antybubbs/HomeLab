@@ -13,6 +13,7 @@ from app.db.session import Base, engine, SessionLocal
 from app.models.models import User, VLAN
 from app.routers import auth, dashboard, licences, admin, ip_addresses, hardware_assets, network_monitor, remote_manager
 from app.services.guacamole_bridge import stop_guacamole_bridge
+from app.services.homelab_remote_service import start_homelab_remote_service, stop_homelab_remote_service
 from app.services.network_monitor import monitor_loop
 
 settings = get_settings()
@@ -183,6 +184,7 @@ def migrate_existing_database():
 @app.on_event("startup")
 async def on_startup():
     bootstrap()
+    start_homelab_remote_service()
     global monitor_task
     monitor_task = asyncio.create_task(monitor_loop())
 
@@ -191,6 +193,7 @@ async def on_startup():
 async def on_shutdown():
     if monitor_task:
         monitor_task.cancel()
+    stop_homelab_remote_service()
     stop_guacamole_bridge()
 
 

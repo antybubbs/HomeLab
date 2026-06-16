@@ -33,7 +33,6 @@ SETTINGS = {
     "guacd_port": "4822",
 }
 RDP_TOKEN_TTL_SECONDS = 60
-RDP_ACTIVE_TOKEN_TTL_SECONDS = 8 * 60 * 60
 GUACAMOLE_LITE_URL = "ws://127.0.0.1:30008"
 
 
@@ -42,8 +41,6 @@ class RDPSessionToken:
     remote_id: int
     user_id: int
     created_at: float
-    last_seen_at: float
-    used: bool = False
 
 
 rdp_tokens: dict[str, RDPSessionToken] = {}
@@ -115,16 +112,7 @@ def set_setting(db: Session, key: str, value: str) -> None:
 
 def cleanup_rdp_tokens() -> None:
     now = time.time()
-    expired = [
-        token
-        for token, session in rdp_tokens.items()
-        if not session.used and now - session.created_at > RDP_TOKEN_TTL_SECONDS
-    ]
-    expired.extend(
-        token
-        for token, session in rdp_tokens.items()
-        if session.used and now - session.last_seen_at > RDP_ACTIVE_TOKEN_TTL_SECONDS
-    )
+    expired = [token for token, session in rdp_tokens.items() if now - session.created_at > RDP_TOKEN_TTL_SECONDS]
     for token in expired:
         rdp_tokens.pop(token, None)
 
@@ -381,7 +369,6 @@ async def rdp_start(request: Request, remote_id: int, db: Session = Depends(get_
         remote_id=row.id,
         user_id=user.id,
         created_at=now,
-        last_seen_at=now,
     )
     write_audit(
         db,
@@ -528,12 +515,10 @@ async def rdp_websocket(websocket: WebSocket, remote_id: int):
         return
     token = websocket.query_params.get("token", "")
     cleanup_rdp_tokens()
-    session = rdp_tokens.get(token)
+    session = rdp_tokens.pop(token, None)
     if not session or session.user_id != user_id or session.remote_id != remote_id:
         await websocket.close(code=1008)
         return
-    session.used = True
-    session.last_seen_at = time.time()
     db = SessionLocal()
     remote_label_text = "Remote host"
     remote_address = ""
@@ -555,7 +540,14 @@ async def rdp_websocket(websocket: WebSocket, remote_id: int):
     try:
         import websockets
 
-        upstream_url = f"{GUACAMOLE_LITE_URL}?{urlencode({'token': token})}"
+        upstream_params = {"token": token}
+        width = websocket.query_params.get("width")
+        height = websocket.query_params.get("height")
+        if width:
+            upstream_params["width"] = width
+        if height:
+            upstream_params["height"] = height
+        upstream_url = f"{GUACAMOLE_LITE_URL}?{urlencode(upstream_params)}"
         try:
             upstream = await websockets.connect(upstream_url, subprotocols=["guacamole"], open_timeout=10)
         except Exception as exc:
@@ -591,7 +583,6 @@ async def rdp_websocket(websocket: WebSocket, remote_id: int):
         finally:
             audit_db.close()
         connected = True
-        session.last_seen_at = time.time()
 
         async def upstream_to_browser():
             try:
@@ -624,7 +615,6 @@ async def rdp_websocket(websocket: WebSocket, remote_id: int):
             if not task.done():
                 task.cancel()
     finally:
-        session.last_seen_at = time.time()
         if upstream:
             try:
                 await upstream.close()

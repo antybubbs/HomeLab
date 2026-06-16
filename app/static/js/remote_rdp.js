@@ -16,12 +16,9 @@ if (root) {
   let displayElement = null;
   let resizeTimer = null;
   let currentScale = 1;
-  let activeToken = "";
-  let reconnectTimer = null;
-  let reconnecting = false;
   let manuallyStopped = false;
-  let connectedOnce = false;
-  let hiddenAt = 0;
+  let connected = false;
+  let displayReady = false;
 
   const writeLog = (lines) => {
     if (!log) return;
@@ -82,7 +79,6 @@ if (root) {
 
   const disconnectCurrentSession = () => {
     window.clearTimeout(resizeTimer);
-    window.clearTimeout(reconnectTimer);
     if (keyboard) {
       keyboard.onkeydown = null;
       keyboard.onkeyup = null;
@@ -95,27 +91,13 @@ if (root) {
     displayElement = null;
     tunnel = null;
     currentScale = 1;
+    connected = false;
+    displayReady = false;
   };
 
   const stopSession = () => {
     manuallyStopped = true;
     disconnectCurrentSession();
-    connectedOnce = false;
-  };
-
-  const reconnectDisplay = () => {
-    if (!activeToken || reconnecting || manuallyStopped) return;
-    reconnecting = true;
-    setOverlayVisible(true);
-    setStatus("Reconnecting", "Refreshing the browser display tunnel.");
-    writeLog(["The browser display paused while HomeLab was in the background. Reconnecting the RDP view."]);
-    connectDisplay(activeToken, true);
-  };
-
-  const scheduleReconnect = () => {
-    if (!connectedOnce || !activeToken || manuallyStopped) return;
-    window.clearTimeout(reconnectTimer);
-    reconnectTimer = window.setTimeout(reconnectDisplay, 500);
   };
 
   const attachInput = () => {
@@ -145,30 +127,28 @@ if (root) {
     };
   };
 
-  const connectDisplay = (token, isReconnect = false) => {
-    if (!isReconnect) {
-      manuallyStopped = false;
-      activeToken = token;
-    }
+  const waitForLayout = () =>
+    new Promise((resolve) => {
+      window.requestAnimationFrame(() => window.requestAnimationFrame(resolve));
+    });
+
+  const connectDisplay = async (token) => {
+    manuallyStopped = false;
     disconnectCurrentSession();
     window.clearTimeout(resizeTimer);
-    window.clearTimeout(reconnectTimer);
     displayTarget.replaceChildren();
     placeholder.hidden = true;
+    displayReady = false;
     setOverlayVisible(true);
-    setStatus(isReconnect ? "Reconnecting" : "Connecting", "Opening browser display tunnel.");
+    setStatus("Connecting", "Opening browser display tunnel.");
+    await waitForLayout();
+    const size = displaySize();
+    const params = new URLSearchParams({
+      token,
+      width: String(size.width),
+      height: String(size.height),
+    });
     tunnel = new Guacamole.WebSocketTunnel(root.dataset.tunnelUrl);
-    tunnel.receiveTimeout = 120000;
-    tunnel.unstableThreshold = 10000;
-    tunnel.onerror = () => scheduleReconnect();
-    tunnel.onstatechange = (state) => {
-      if (state === Guacamole.Tunnel.State.UNSTABLE) {
-        refreshDisplay();
-      }
-      if (state === Guacamole.Tunnel.State.CLOSED) {
-        scheduleReconnect();
-      }
-    };
     client = new Guacamole.Client(tunnel);
     const displayEl = client.getDisplay().getElement();
     displayEl.classList.add("rdp-guac-display");
@@ -181,56 +161,41 @@ if (root) {
       setOverlayVisible(true);
       writeLog([`RDP display error: ${error.message || "Unknown error"}`]);
       setStatus("Connection error", error.message || "The RDP session could not be opened.");
-      if (connectedOnce) {
-        scheduleReconnect();
-      } else {
-        form.hidden = false;
-        button.disabled = false;
-      }
+      connected = false;
+      form.hidden = false;
+      button.disabled = false;
     };
     client.onstatechange = (state) => {
       if (state === Guacamole.Client.State.CONNECTED) {
         setStatus("Connected", "RDP session is active.");
-        setOverlayVisible(false);
-        displayElement.focus({ preventScroll: true });
-        reconnecting = false;
-        connectedOnce = true;
+        connected = true;
         refreshDisplay();
       }
       if (state === Guacamole.Client.State.DISCONNECTED) {
         setOverlayVisible(true);
-        if (connectedOnce && !manuallyStopped) {
-          setStatus("Reconnecting", "The display tunnel paused. Reopening it now.");
-          scheduleReconnect();
-        } else {
-          setStatus("Disconnected", "The RDP session has ended.");
-          form.hidden = false;
-          button.disabled = false;
-        }
+        connected = false;
+        displayReady = false;
+        setStatus("Disconnected", "The RDP session has ended.");
+        form.hidden = false;
+        button.disabled = false;
       }
     };
-    client.getDisplay().onresize = fitDisplay;
-    client.connect(`token=${encodeURIComponent(token)}`);
+    client.getDisplay().onresize = () => {
+      fitDisplay();
+      if (!displayReady) {
+        displayReady = true;
+        setOverlayVisible(false);
+        displayElement.focus({ preventScroll: true });
+      }
+    };
+    client.connect(params.toString());
   };
 
   window.addEventListener("resize", scheduleResize);
   window.addEventListener("focus", refreshDisplay);
   document.addEventListener("visibilitychange", () => {
-    if (document.visibilityState === "hidden") {
-      hiddenAt = Date.now();
-      return;
-    }
-    if (document.visibilityState === "visible") {
+    if (document.visibilityState === "visible" && connected) {
       refreshDisplay();
-      if (hiddenAt && Date.now() - hiddenAt > 15000) {
-        reconnectDisplay();
-        hiddenAt = 0;
-        return;
-      }
-      if (tunnel && tunnel.state === Guacamole.Tunnel.State.CLOSED) {
-        scheduleReconnect();
-      }
-      hiddenAt = 0;
     }
   });
   window.addEventListener("beforeunload", stopSession);

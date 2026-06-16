@@ -21,50 +21,50 @@
 
   const terminalThemes = {
     termix: {
-      background: "#0c0d0b",
-      foreground: "#f7f7f7",
-      cursor: "#f7f7f7",
-      cursorAccent: "#0c0d0b",
-      selectionBackground: "#3a3a3d",
-      black: "#2e3436",
-      red: "#cc0000",
-      green: "#4e9a06",
-      yellow: "#c4a000",
-      blue: "#3465a4",
-      magenta: "#75507b",
-      cyan: "#06989a",
-      white: "#d3d7cf",
-      brightBlack: "#555753",
-      brightRed: "#ef2929",
-      brightGreen: "#8ae234",
-      brightYellow: "#fce94f",
-      brightBlue: "#729fcf",
-      brightMagenta: "#ad7fa8",
-      brightCyan: "#34e2e2",
-      brightWhite: "#eeeeec",
+      background: "#011627",
+      foreground: "#d6deeb",
+      cursor: "#d6deeb",
+      cursorAccent: "#011627",
+      selectionBackground: "#1d3b53",
+      black: "#011627",
+      red: "#ef5350",
+      green: "#22da6e",
+      yellow: "#addb67",
+      blue: "#82aaff",
+      magenta: "#c792ea",
+      cyan: "#21c7a8",
+      white: "#d6deeb",
+      brightBlack: "#575656",
+      brightRed: "#ef5350",
+      brightGreen: "#22da6e",
+      brightYellow: "#ffeb95",
+      brightBlue: "#82aaff",
+      brightMagenta: "#c792ea",
+      brightCyan: "#7fdbca",
+      brightWhite: "#ffffff",
     },
     termixDark: {
-      background: "#0c0d0b",
-      foreground: "#f7f7f7",
-      cursor: "#f7f7f7",
-      cursorAccent: "#0c0d0b",
-      selectionBackground: "#3a3a3d",
-      black: "#2e3436",
-      red: "#cc0000",
-      green: "#4e9a06",
-      yellow: "#c4a000",
-      blue: "#3465a4",
-      magenta: "#75507b",
-      cyan: "#06989a",
-      white: "#d3d7cf",
-      brightBlack: "#555753",
-      brightRed: "#ef2929",
-      brightGreen: "#8ae234",
-      brightYellow: "#fce94f",
-      brightBlue: "#729fcf",
-      brightMagenta: "#ad7fa8",
-      brightCyan: "#34e2e2",
-      brightWhite: "#eeeeec",
+      background: "#011627",
+      foreground: "#d6deeb",
+      cursor: "#d6deeb",
+      cursorAccent: "#011627",
+      selectionBackground: "#1d3b53",
+      black: "#011627",
+      red: "#ef5350",
+      green: "#22da6e",
+      yellow: "#addb67",
+      blue: "#82aaff",
+      magenta: "#c792ea",
+      cyan: "#21c7a8",
+      white: "#d6deeb",
+      brightBlack: "#575656",
+      brightRed: "#ef5350",
+      brightGreen: "#22da6e",
+      brightYellow: "#ffeb95",
+      brightBlue: "#82aaff",
+      brightMagenta: "#c792ea",
+      brightCyan: "#7fdbca",
+      brightWhite: "#ffffff",
     },
     termixLight: {
       background: "#ffffff",
@@ -328,9 +328,15 @@
 
   const highlightPatterns = [
     {
-      regex: /([a-zA-Z_][a-zA-Z0-9_.-]*@[a-zA-Z0-9_.-]+)(:)(~|\/[^\s#$]*)([$#])/g,
-      ansiCode: (_match, userHost, colon, path, marker) =>
-        `${ansiCodes.colors.brightGreen}${userHost}${ansiCodes.reset}${colon}${ansiCodes.colors.brightBlue}${path}${ansiCodes.reset}${marker}`,
+      regex: /(^|[\r\n])([a-zA-Z_][a-zA-Z0-9_.-]*@[a-zA-Z0-9_.-]+)(:)(~|\/[^\s#$]*)([$#])(?=\s|$)/g,
+      ansiCode: (_match, prefix, userHost, colon, path, marker) =>
+        `${prefix}${ansiCodes.colors.brightGreen}${userHost}${ansiCodes.reset}${colon}${ansiCodes.colors.brightBlue}${path}${ansiCodes.reset}${marker}`,
+      priority: 12,
+    },
+    {
+      regex: /(^|[\r\n])([a-zA-Z_][a-zA-Z0-9_.-]*@[a-zA-Z0-9_.-]+)([$#])(?=\s|$)/g,
+      ansiCode: (_match, prefix, userHost, marker) =>
+        `${prefix}${ansiCodes.colors.brightGreen}${userHost}${ansiCodes.reset}${marker}`,
       priority: 12,
     },
     {
@@ -471,9 +477,9 @@
     lineHeight: readFloat(root.dataset.terminalLineHeight, 1, 0.8, 2),
     bellStyle: root.dataset.terminalBellStyle || "none",
     backspaceMode: root.dataset.terminalBackspaceMode || "normal",
-    cursorBlink: root.dataset.terminalCursorBlink !== "0",
+    cursorBlink: true,
     rightClickSelectsWord: root.dataset.terminalRightClickSelectsWord === "1",
-    syntaxHighlighting: root.dataset.terminalSyntaxHighlighting !== "0",
+    syntaxHighlighting: true,
     scrollback: readInt(root.dataset.terminalScrollback, 10000, 1000, 100000),
   };
 
@@ -518,6 +524,9 @@
     });
   };
 
+  const selectedTheme = terminalThemes[terminalSettings.theme] || terminalThemes.termix;
+  terminalEl.style.backgroundColor = selectedTheme.background;
+
   const term = new window.Terminal({
     allowTransparency: false,
     convertEol: true,
@@ -541,7 +550,7 @@
     fastScrollModifier: "alt",
     fastScrollSensitivity: 5,
     minimumContrastRatio: 1,
-    theme: terminalThemes[terminalSettings.theme] || terminalThemes.termix,
+    theme: selectedTheme,
   });
   const fitAddon = window.FitAddon ? new window.FitAddon.FitAddon() : null;
   if (fitAddon) term.loadAddon(fitAddon);
@@ -643,7 +652,7 @@
       connected = true;
       fit();
       term.focus();
-      term.options.cursorBlink = terminalSettings.cursorBlink;
+      term.options.cursorBlink = true;
       term.options.cursorStyle = terminalSettings.cursorStyle;
       term.refresh(0, term.rows - 1);
     });

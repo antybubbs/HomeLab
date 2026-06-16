@@ -607,8 +607,14 @@ async def ssh_websocket(websocket: WebSocket, remote_id: int):
                 env={
                     "TERM": "xterm-256color",
                     "COLORTERM": "truecolor",
-                    "LANG": "C.UTF-8",
-                    "LC_CTYPE": "C.UTF-8",
+                    "LANG": "en_US.UTF-8",
+                    "LC_ALL": "en_US.UTF-8",
+                    "LC_CTYPE": "en_US.UTF-8",
+                    "LC_MESSAGES": "en_US.UTF-8",
+                    "LC_MONETARY": "en_US.UTF-8",
+                    "LC_NUMERIC": "en_US.UTF-8",
+                    "LC_TIME": "en_US.UTF-8",
+                    "LC_COLLATE": "en_US.UTF-8",
                 },
             )
         except Exception as exc:

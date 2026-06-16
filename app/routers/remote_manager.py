@@ -416,7 +416,7 @@ def termix_shell_command() -> str:
         "export LS_COLORS='di=01;34:ln=01;36:ex=01;32:*.sh=01;32:*.py=01;32:*.js=01;32:*.json=01;33'",
         "alias ls='ls --color=auto'",
         "alias ll='ls -la --color=auto'",
-        r"PS1='\[\033[01;32m\]\u@\h\[\033[00m\]:\[\033[01;34m\]\w\[\033[00m\]\$ '",
+        r"PS1='\[\e[01;32m\]\u@\h\[\e[00m\]:\[\e[01;34m\]\w\[\e[00m\]\$ '",
         "rm -f \"$HOMELAB_TERMIX_RC\"",
     ]
     rc_body = "\n".join(rc_lines)
@@ -724,16 +724,9 @@ async def ssh_websocket(websocket: WebSocket, remote_id: int):
                     "FORCE_COLOR": "1",
                     "CLICOLOR": "1",
                     "CLICOLOR_FORCE": "1",
-                    "PS1": r"\[\033[01;32m\]\u@\h\[\033[00m\]:\[\033[01;34m\]\w\[\033[00m\]\$ ",
                     "LS_COLORS": "di=01;34:ln=01;36:ex=01;32:*.sh=01;32:*.py=01;32:*.js=01;32:*.json=01;33",
-                    "LANG": "en_US.UTF-8",
-                    "LC_ALL": "en_US.UTF-8",
-                    "LC_CTYPE": "en_US.UTF-8",
-                    "LC_MESSAGES": "en_US.UTF-8",
-                    "LC_MONETARY": "en_US.UTF-8",
-                    "LC_NUMERIC": "en_US.UTF-8",
-                    "LC_TIME": "en_US.UTF-8",
-                    "LC_COLLATE": "en_US.UTF-8",
+                    "LANG": "C.UTF-8",
+                    "LC_CTYPE": "C.UTF-8",
                 },
             )
         except Exception as exc:

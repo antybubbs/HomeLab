@@ -60,6 +60,11 @@
 .ssh-terminal .xterm-viewport::-webkit-scrollbar-thumb{background:rgba(255,255,255,.3);border-radius:4px}
 .ssh-terminal .xterm-viewport::-webkit-scrollbar-thumb:hover{background:rgba(255,255,255,.5)}
 .ssh-terminal .xterm-cursor-layer{z-index:4}
+.ssh-terminal .xterm.focus .xterm-cursor.xterm-cursor-block{background:#fafafa!important;color:#0c0d0b!important}
+.ssh-terminal .xterm .xterm-cursor.xterm-cursor-block{outline:1px solid rgba(250,250,250,.9)}
+.ssh-terminal .xterm .xterm-cursor.xterm-cursor-blink{animation:remote-terminal-cursor-blink 1s steps(2,start) infinite!important}
+.ssh-terminal .xterm.xterm-cursor-pointer,.ssh-terminal .xterm .xterm-cursor-pointer,.ssh-terminal.is-link-hover .xterm{cursor:pointer}
+@keyframes remote-terminal-cursor-blink{0%,48%{opacity:1}49%,100%{opacity:0}}
 .remote-panel-body{background:#050706;margin:0;min-height:100vh;overflow:hidden}
 .remote-panel-body .remote-session-frame{height:100vh}
 .rdp-display-shell{background:#050706;height:100%;min-height:0;outline:none;overflow:hidden;position:relative}

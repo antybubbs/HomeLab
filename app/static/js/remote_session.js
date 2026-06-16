@@ -7,11 +7,54 @@
   const passwordInput = root.querySelector("[data-ssh-password]");
   if (!terminalEl || !passwordForm || !passwordInput || !window.Terminal) return;
 
+  const registerWebLinks = () => {
+    if (typeof term.registerLinkProvider !== "function") return;
+
+    const urlPattern = /\bhttps?:\/\/[^\s<>"'`]+/gi;
+    const trimUrl = (value) => value.replace(/[),.;:!?]+$/g, "");
+
+    term.registerLinkProvider({
+      provideLinks: (line, callback) => {
+        const bufferLine = term.buffer && term.buffer.active.getLine(line - 1);
+        if (!bufferLine) {
+          callback([]);
+          return;
+        }
+
+        const text = bufferLine.translateToString(true);
+        const links = [];
+        let match = urlPattern.exec(text);
+        while (match) {
+          const url = trimUrl(match[0]);
+          const start = match.index + 1;
+          const end = start + url.length - 1;
+          links.push({
+            text: url,
+            range: {
+              start: { x: start, y: line },
+              end: { x: end, y: line },
+            },
+            activate: () => window.open(url, "_blank", "noopener,noreferrer"),
+            hover: () => terminalEl.classList.add("is-link-hover"),
+            leave: () => terminalEl.classList.remove("is-link-hover"),
+            decorations: { pointerCursor: true, underline: true },
+          });
+
+          match = urlPattern.exec(text);
+        }
+
+        callback(links);
+      },
+    });
+  };
+
   const term = new window.Terminal({
     allowTransparency: false,
     convertEol: true,
     cursorBlink: true,
+    cursorInactiveStyle: "block",
     cursorStyle: "block",
+    drawBoldTextInBrightColors: true,
     fontFamily: "Caskaydia Cove Nerd Font Mono, Cascadia Mono, Consolas, ui-monospace, SFMono-Regular, Menlo, monospace",
     fontSize: 13,
     fontWeight: 600,
@@ -19,6 +62,9 @@
     lineHeight: 1.0,
     letterSpacing: 0,
     scrollback: 10000,
+    scrollOnUserInput: true,
+    smoothScrollDuration: 0,
+    termName: "xterm-256color",
     bellStyle: "none",
     rightClickSelectsWord: false,
     fastScrollModifier: "alt",
@@ -51,7 +97,35 @@
   const fitAddon = window.FitAddon ? new window.FitAddon.FitAddon() : null;
   if (fitAddon) term.loadAddon(fitAddon);
   term.open(terminalEl);
+  registerWebLinks();
   if (fitAddon) fitAddon.fit();
+
+  if (typeof term.attachCustomKeyEventHandler === "function") {
+    term.attachCustomKeyEventHandler((event) => {
+      if (event.type !== "keydown") return true;
+      const key = event.key.toLowerCase();
+
+      if ((event.ctrlKey || event.metaKey) && key === "c" && term.hasSelection()) {
+        const selection = term.getSelection();
+        if (selection && navigator.clipboard) {
+          navigator.clipboard.writeText(selection);
+        }
+        term.clearSelection();
+        return false;
+      }
+
+      if ((event.ctrlKey || event.metaKey) && key === "v" && navigator.clipboard) {
+        navigator.clipboard.readText().then((text) => {
+          if (text && connected && socket && socket.readyState === WebSocket.OPEN) {
+            socket.send(text);
+          }
+        });
+        return false;
+      }
+
+      return true;
+    });
+  }
 
   let socket = null;
   let connected = false;
@@ -108,6 +182,8 @@
       connected = true;
       fit();
       term.focus();
+      term.options.cursorBlink = true;
+      term.refresh(0, term.rows - 1);
     });
 
     socket.addEventListener("message", (event) => term.write(event.data));

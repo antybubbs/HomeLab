@@ -606,6 +606,12 @@ async def ssh_websocket(websocket: WebSocket, remote_id: int):
                 term_size=(cols, rows),
                 env={
                     "TERM": "xterm-256color",
+                    "COLORTERM": "truecolor",
+                    "FORCE_COLOR": "1",
+                    "CLICOLOR": "1",
+                    "CLICOLOR_FORCE": "1",
+                    "PS1": r"\[\033[01;32m\]\u@\h\[\033[00m\]:\[\033[01;34m\]\w\[\033[00m\]\$ ",
+                    "LS_COLORS": "di=01;34:ln=01;36:ex=01;32:*.sh=01;32:*.py=01;32:*.js=01;32:*.json=01;33",
                     "LANG": "en_US.UTF-8",
                     "LC_ALL": "en_US.UTF-8",
                     "LC_CTYPE": "en_US.UTF-8",
@@ -614,7 +620,6 @@ async def ssh_websocket(websocket: WebSocket, remote_id: int):
                     "LC_NUMERIC": "en_US.UTF-8",
                     "LC_TIME": "en_US.UTF-8",
                     "LC_COLLATE": "en_US.UTF-8",
-                    "COLORTERM": "truecolor",
                 },
             )
         except Exception as exc:

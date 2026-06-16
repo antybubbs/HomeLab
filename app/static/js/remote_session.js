@@ -387,11 +387,6 @@
 
   const hasIncompleteAnsiSequence = (text) => /\x1b(?:\[(?:[0-9;?>=!]*)?)?$/.test(text);
 
-  const hasExistingAnsiCodes = (text) => {
-    const matches = text.match(/\x1b[[\]()#;?]*(?:[0-9]{1,4}(?:;[0-9]{0,4})*)?[0-9A-PRZcf-nq-uy=><~]/g) || [];
-    return matches.length > 10;
-  };
-
   const parseAnsiSegments = (text) => {
     const segments = [];
     const ansiRegex = /\x1b(?:[@-Z\\-_]|\[[0-9;?>=!]*[@-~])/g;
@@ -461,7 +456,7 @@
   };
 
   const highlightTerminalOutput = (text) => {
-    if (!text || !text.trim() || hasIncompleteAnsiSequence(text) || hasExistingAnsiCodes(text)) return text;
+    if (!text || !text.trim() || hasIncompleteAnsiSequence(text)) return text;
     return parseAnsiSegments(text)
       .map((segment) => (segment.isAnsi ? segment.content : highlightPlainText(segment.content)))
       .join("");

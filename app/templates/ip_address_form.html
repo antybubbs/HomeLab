@@ -73,6 +73,14 @@
             <option value="0" {% if current == '0' %}selected{% endif %}>Off</option>
           </select>
         </label>
+        <label>Syntax highlighting
+          {% set current = remote_terminal_overrides.get('terminal_syntax_highlighting', '') %}
+          <select name="override_terminal_syntax_highlighting">
+            <option value="">Global default</option>
+            <option value="1" {% if current == '1' %}selected{% endif %}>On</option>
+            <option value="0" {% if current == '0' %}selected{% endif %}>Off</option>
+          </select>
+        </label>
         <label>Scrollback buffer
           <input name="override_terminal_scrollback" type="number" min="1000" max="100000" step="1000" placeholder="Global {{ remote_defaults.terminal_scrollback }}" value="{{ remote_terminal_overrides.get('terminal_scrollback', '') }}">
         </label>

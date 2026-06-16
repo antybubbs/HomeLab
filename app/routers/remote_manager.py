@@ -41,6 +41,7 @@ SETTINGS = {
     "terminal_backspace_mode": "normal",
     "terminal_cursor_blink": "1",
     "terminal_right_click_selects_word": "0",
+    "terminal_syntax_highlighting": "1",
     "terminal_scrollback": "10000",
     "rdp_disable_audio": "0",
     "rdp_enable_audio_input": "0",
@@ -140,6 +141,7 @@ def clean_global_setting(key: str, value: str) -> str:
     if key in {
         "terminal_cursor_blink",
         "terminal_right_click_selects_word",
+        "terminal_syntax_highlighting",
         "rdp_disable_audio",
         "rdp_enable_audio_input",
         "rdp_enable_wallpaper",

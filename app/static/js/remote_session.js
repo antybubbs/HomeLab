@@ -309,6 +309,164 @@
     Monaco: "Monaco, \"Liberation Mono\", monospace",
   };
 
+  const ansiCodes = {
+    reset: "\x1b[0m",
+    colors: {
+      blue: "\x1b[34m",
+      magenta: "\x1b[35m",
+      brightBlack: "\x1b[90m",
+      brightRed: "\x1b[91m",
+      brightGreen: "\x1b[92m",
+      brightYellow: "\x1b[93m",
+      brightBlue: "\x1b[94m",
+      brightWhite: "\x1b[97m",
+    },
+    styles: {
+      underline: "\x1b[4m",
+    },
+  };
+
+  const highlightPatterns = [
+    {
+      regex: /([a-zA-Z_][a-zA-Z0-9_.-]*@[a-zA-Z0-9_.-]+)(:)(~|\/[^\s#$]*)([$#])/g,
+      ansiCode: (_match, userHost, colon, path, marker) =>
+        `${ansiCodes.colors.brightGreen}${userHost}${ansiCodes.reset}${colon}${ansiCodes.colors.brightBlue}${path}${ansiCodes.reset}${marker}`,
+      priority: 12,
+    },
+    {
+      regex: /(?:(?:25[0-5]|2[0-4][0-9]|1[0-9][0-9]|[1-9]?[0-9])\.){3}(?:25[0-5]|2[0-4][0-9]|1[0-9][0-9]|[1-9]?[0-9])(?::\d{1,5})?/g,
+      ansiCode: ansiCodes.colors.magenta,
+      priority: 10,
+    },
+    {
+      regex: /\b(ERROR|FATAL|CRITICAL|FAIL(?:ED)?|denied|invalid|DENIED)\b|\[ERROR\]/gi,
+      ansiCode: ansiCodes.colors.brightRed,
+      priority: 9,
+    },
+    {
+      regex: /\b(WARN(?:ING)?|ALERT|restart required)\b|\[WARN(?:ING)?\]/gi,
+      ansiCode: ansiCodes.colors.brightYellow,
+      priority: 9,
+    },
+    {
+      regex: /\b(SUCCESS|OK|PASS(?:ED)?|COMPLETE(?:D)?|connected|active|started|pulled|up|UP|FULL)\b|[\u2713\u2714]/gi,
+      ansiCode: ansiCodes.colors.brightGreen,
+      priority: 8,
+    },
+    {
+      regex: /https?:\/\/[^\s\])}]+/g,
+      ansiCode: `${ansiCodes.colors.brightBlue}${ansiCodes.styles.underline}`,
+      priority: 8,
+    },
+    {
+      regex: /(?:^|\s)(\/[a-zA-Z][a-zA-Z0-9_\-@.]*(?:\/[a-zA-Z0-9_\-@.]+)+)/g,
+      ansiCode: (_match, path) => `${_match.slice(0, _match.length - path.length)}${ansiCodes.colors.brightBlue}${path}${ansiCodes.reset}`,
+      priority: 7,
+    },
+    {
+      regex: /(?:^|\s)(~\/[a-zA-Z0-9_\-@./]+)/g,
+      ansiCode: (_match, path) => `${_match.slice(0, _match.length - path.length)}${ansiCodes.colors.brightBlue}${path}${ansiCodes.reset}`,
+      priority: 7,
+    },
+    {
+      regex: /\b(?:docker|compose|sudo|apt|apt-get|ls|cd|cat|nano|vim|systemctl|journalctl|ssh)\b/g,
+      ansiCode: ansiCodes.colors.brightWhite,
+      priority: 6,
+    },
+    {
+      regex: /\bINFO\b|\[INFO\]/gi,
+      ansiCode: ansiCodes.colors.blue,
+      priority: 6,
+    },
+    {
+      regex: /\b(?:DEBUG|TRACE)\b|\[(?:DEBUG|TRACE)\]/gi,
+      ansiCode: ansiCodes.colors.brightBlack,
+      priority: 6,
+    },
+  ];
+
+  const hasIncompleteAnsiSequence = (text) => /\x1b(?:\[(?:[0-9;?>=!]*)?)?$/.test(text);
+
+  const hasExistingAnsiCodes = (text) => {
+    const matches = text.match(/\x1b[[\]()#;?]*(?:[0-9]{1,4}(?:;[0-9]{0,4})*)?[0-9A-PRZcf-nq-uy=><~]/g) || [];
+    return matches.length > 10;
+  };
+
+  const parseAnsiSegments = (text) => {
+    const segments = [];
+    const ansiRegex = /\x1b(?:[@-Z\\-_]|\[[0-9;?>=!]*[@-~])/g;
+    let lastIndex = 0;
+    let match = ansiRegex.exec(text);
+    while (match) {
+      if (match.index > lastIndex) {
+        segments.push({ isAnsi: false, content: text.slice(lastIndex, match.index) });
+      }
+      segments.push({ isAnsi: true, content: match[0] });
+      lastIndex = ansiRegex.lastIndex;
+      match = ansiRegex.exec(text);
+    }
+    if (lastIndex < text.length) {
+      segments.push({ isAnsi: false, content: text.slice(lastIndex) });
+    }
+    return segments;
+  };
+
+  const highlightPlainText = (text) => {
+    if (text.length > 5000 || !text.trim()) return text;
+
+    const matches = [];
+    highlightPatterns.forEach((pattern) => {
+      pattern.regex.lastIndex = 0;
+      let match = pattern.regex.exec(text);
+      while (match) {
+        matches.push({
+          start: match.index,
+          end: match.index + match[0].length,
+          match,
+          pattern,
+          priority: pattern.priority,
+        });
+        match = pattern.regex.exec(text);
+      }
+    });
+
+    if (!matches.length) return text;
+
+    matches.sort((a, b) => (a.priority === b.priority ? a.start - b.start : b.priority - a.priority));
+    const appliedRanges = [];
+    const finalMatches = matches.filter((match) => {
+      const overlaps = appliedRanges.some(
+        (range) =>
+          (match.start >= range.start && match.start < range.end) ||
+          (match.end > range.start && match.end <= range.end) ||
+          (match.start <= range.start && match.end >= range.end),
+      );
+      if (overlaps) return false;
+      appliedRanges.push({ start: match.start, end: match.end });
+      return true;
+    });
+
+    let result = text;
+    finalMatches.reverse().forEach((match) => {
+      const before = result.slice(0, match.start);
+      const matched = result.slice(match.start, match.end);
+      const after = result.slice(match.end);
+      const replacement =
+        typeof match.pattern.ansiCode === "function"
+          ? match.pattern.ansiCode(...match.match)
+          : `${match.pattern.ansiCode}${matched}${ansiCodes.reset}`;
+      result = before + replacement + after;
+    });
+    return result;
+  };
+
+  const highlightTerminalOutput = (text) => {
+    if (!text || !text.trim() || hasIncompleteAnsiSequence(text) || hasExistingAnsiCodes(text)) return text;
+    return parseAnsiSegments(text)
+      .map((segment) => (segment.isAnsi ? segment.content : highlightPlainText(segment.content)))
+      .join("");
+  };
+
   const terminalSettings = {
     theme: root.dataset.terminalTheme || "termix",
     fontFamily: terminalFonts[root.dataset.terminalFontFamily] || terminalFonts["Caskaydia Cove Nerd Font Mono"],
@@ -320,6 +478,7 @@
     backspaceMode: root.dataset.terminalBackspaceMode || "normal",
     cursorBlink: root.dataset.terminalCursorBlink !== "0",
     rightClickSelectsWord: root.dataset.terminalRightClickSelectsWord === "1",
+    syntaxHighlighting: root.dataset.terminalSyntaxHighlighting !== "0",
     scrollback: readInt(root.dataset.terminalScrollback, 10000, 1000, 100000),
   };
 
@@ -370,6 +529,7 @@
     cursorBlink: terminalSettings.cursorBlink,
     cursorInactiveStyle: "block",
     cursorStyle: terminalSettings.cursorStyle,
+    cursorWidth: terminalSettings.cursorStyle === "bar" ? 2 : 1,
     drawBoldTextInBrightColors: true,
     fontFamily: terminalSettings.fontFamily,
     fontSize: terminalSettings.fontSize,
@@ -431,6 +591,11 @@
   let socket = null;
   let connected = false;
 
+  const writeTerminal = (data) => {
+    const text = typeof data === "string" ? data : String(data || "");
+    term.write(terminalSettings.syntaxHighlighting ? highlightTerminalOutput(text) : text);
+  };
+
   const fit = () => {
     if (!fitAddon) return;
     fitAddon.fit();
@@ -473,7 +638,7 @@
     const scheme = window.location.protocol === "https:" ? "wss:" : "ws:";
     const wsUrl = `${scheme}//${window.location.host}${root.dataset.wsUrl}`;
     term.reset();
-    term.write("Connecting...\r\n");
+    writeTerminal("Connecting...\r\n");
     socket = new WebSocket(wsUrl);
 
     socket.addEventListener("open", () => {
@@ -484,15 +649,24 @@
       fit();
       term.focus();
       term.options.cursorBlink = terminalSettings.cursorBlink;
+      term.options.cursorStyle = terminalSettings.cursorStyle;
       term.refresh(0, term.rows - 1);
     });
 
-    socket.addEventListener("message", (event) => term.write(event.data));
+    socket.addEventListener("message", (event) => {
+      writeTerminal(event.data);
+      if (connected && document.visibilityState === "visible") {
+        window.setTimeout(() => {
+          term.focus();
+          term.refresh(0, term.rows - 1);
+        }, 0);
+      }
+    });
     socket.addEventListener("close", () => {
       connected = false;
-      term.write("\r\nSession closed.\r\n");
+      writeTerminal("\r\nSession closed.\r\n");
       passwordForm.hidden = false;
     });
-    socket.addEventListener("error", () => term.write("\r\nSession error.\r\n"));
+    socket.addEventListener("error", () => writeTerminal("\r\nSession error.\r\n"));
   });
 })();

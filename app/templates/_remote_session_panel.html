@@ -12,6 +12,7 @@
     data-terminal-backspace-mode="{{ terminal_settings.get('terminal_backspace_mode', 'normal') }}"
     data-terminal-cursor-blink="{{ terminal_settings.get('terminal_cursor_blink', '1') }}"
     data-terminal-right-click-selects-word="{{ terminal_settings.get('terminal_right_click_selects_word', '0') }}"
+    data-terminal-syntax-highlighting="{{ terminal_settings.get('terminal_syntax_highlighting', '1') }}"
     data-terminal-scrollback="{{ terminal_settings.get('terminal_scrollback', '10000') }}">
     {% if not remote.username %}
     <div class="alert">Add a username to this remote host before starting an SSH session.</div>

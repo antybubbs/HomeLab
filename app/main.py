@@ -47,12 +47,17 @@ async def permission_handler(request: Request, exc: PermissionError):
 async def security_headers(request: Request, call_next):
     response = await call_next(request)
     is_static_asset = request.url.path.startswith(f"{settings.root_path}/static") if settings.root_path else request.url.path.startswith("/static")
+    path = request.url.path
+    if settings.root_path and path.startswith(settings.root_path):
+        path = path[len(settings.root_path):] or "/"
+    is_remote_panel = path.startswith("/remote-manager/") and path.endswith("/panel")
     response.headers["X-Content-Type-Options"] = "nosniff"
-    response.headers["X-Frame-Options"] = "DENY"
+    response.headers["X-Frame-Options"] = "SAMEORIGIN" if is_remote_panel else "DENY"
     response.headers["Referrer-Policy"] = "no-referrer"
     response.headers["Permissions-Policy"] = "camera=(), microphone=(), geolocation=()"
     ws_scheme = "wss" if request.url.scheme == "https" else "ws"
-    response.headers["Content-Security-Policy"] = f"default-src 'self'; connect-src 'self' {ws_scheme}://{request.url.netloc}; img-src 'self' data:; style-src 'self'; style-src-attr 'unsafe-inline'; script-src 'self'; object-src 'none'; base-uri 'self'; frame-ancestors 'none'; form-action 'self'"
+    frame_ancestors = "'self'" if is_remote_panel else "'none'"
+    response.headers["Content-Security-Policy"] = f"default-src 'self'; connect-src 'self' {ws_scheme}://{request.url.netloc}; img-src 'self' data:; style-src 'self'; style-src-attr 'unsafe-inline'; script-src 'self'; object-src 'none'; base-uri 'self'; frame-ancestors {frame_ancestors}; form-action 'self'"
     if is_static_asset:
         response.headers["Cache-Control"] = "public, max-age=604800, immutable"
     else:

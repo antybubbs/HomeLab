@@ -1,4 +1,6 @@
 /* Remote Manager */
+@font-face{font-display:swap;font-family:"Caskaydia Cove Nerd Font Mono";font-style:normal;font-weight:400;src:url("/static/vendor/fonts/CaskaydiaCoveNerdFontMono-Regular.ttf") format("truetype")}
+@font-face{font-display:swap;font-family:"Caskaydia Cove Nerd Font Mono";font-style:normal;font-weight:700;src:url("/static/vendor/fonts/CaskaydiaCoveNerdFontMono-Bold.ttf") format("truetype")}
 .topbar-session-tabs{align-items:center;display:flex;gap:6px;min-width:0}
 .session-tab{align-items:center;border:1px solid var(--line);border-radius:7px;color:var(--muted);display:inline-flex;font-size:12px;font-weight:800;min-height:30px;padding:6px 10px}
 .session-tab.active{background:var(--panel2);color:var(--text);max-width:260px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}

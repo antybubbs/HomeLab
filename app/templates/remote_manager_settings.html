@@ -54,7 +54,7 @@
     <div class="remote-settings-grid two">
       <label>Color theme
         <select name="terminal_theme">
-          {% for value, label in [('termix','Termix Default'),('termixDark','Termix Dark'),('termixLight','Termix Light'),('nightOwl','Night Owl'),('dracula','Dracula'),('monokai','Monokai'),('nord','Nord'),('oneDark','One Dark'),('tokyoNight','Tokyo Night'),('gruvboxDark','Gruvbox Dark'),('solarizedDark','Solarized Dark'),('catppuccinMocha','Catppuccin Mocha')] %}
+          {% for value, label in [('homelab','HomeLab Default'),('homelabDark','HomeLab Dark'),('homelabLight','HomeLab Light'),('nightOwl','Night Owl'),('dracula','Dracula'),('monokai','Monokai'),('nord','Nord'),('oneDark','One Dark'),('tokyoNight','Tokyo Night'),('gruvboxDark','Gruvbox Dark'),('solarizedDark','Solarized Dark'),('catppuccinMocha','Catppuccin Mocha')] %}
           <option value="{{ value }}" {% if settings.terminal_theme == value %}selected{% endif %}>{{ label }}</option>
           {% endfor %}
         </select>

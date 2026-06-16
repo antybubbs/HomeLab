@@ -20,7 +20,7 @@
   };
 
   const terminalThemes = {
-    termix: {
+    homelab: {
       background: "#011627",
       foreground: "#d6deeb",
       cursor: "#d6deeb",
@@ -43,7 +43,7 @@
       brightCyan: "#7fdbca",
       brightWhite: "#ffffff",
     },
-    termixDark: {
+    homelabDark: {
       background: "#011627",
       foreground: "#d6deeb",
       cursor: "#d6deeb",
@@ -66,7 +66,7 @@
       brightCyan: "#7fdbca",
       brightWhite: "#ffffff",
     },
-    termixLight: {
+    homelabLight: {
       background: "#ffffff",
       foreground: "#18181b",
       cursor: "#18181b",
@@ -469,7 +469,7 @@
   };
 
   const terminalSettings = {
-    theme: root.dataset.terminalTheme || "termix",
+    theme: root.dataset.terminalTheme || "homelab",
     fontFamily: terminalFonts[root.dataset.terminalFontFamily] || terminalFonts["Caskaydia Cove Nerd Font Mono"],
     fontSize: readInt(root.dataset.terminalFontSize, 14, 8, 28),
     cursorStyle: root.dataset.terminalCursorStyle || "bar",
@@ -524,7 +524,7 @@
     });
   };
 
-  const selectedTheme = terminalThemes[terminalSettings.theme] || terminalThemes.termix;
+  const selectedTheme = terminalThemes[terminalSettings.theme] || terminalThemes.homelab;
   terminalEl.style.backgroundColor = selectedTheme.background;
 
   const term = new window.Terminal({
@@ -565,7 +565,7 @@
 
       if (key === "backspace" && terminalSettings.backspaceMode === "bs") {
         if (connected && socket && socket.readyState === WebSocket.OPEN) {
-          socket.send("\b");
+          sendTerminalMessage("input", "\b");
         }
         return false;
       }
@@ -582,7 +582,7 @@
       if ((event.ctrlKey || event.metaKey) && key === "v" && navigator.clipboard) {
         navigator.clipboard.readText().then((text) => {
           if (text && connected && socket && socket.readyState === WebSocket.OPEN) {
-            socket.send(text);
+            sendTerminalMessage("input", text);
           }
         });
         return false;
@@ -600,11 +600,16 @@
     term.write(terminalSettings.syntaxHighlighting ? highlightTerminalOutput(text) : text);
   };
 
+  const sendTerminalMessage = (type, data = {}) => {
+    if (!socket || socket.readyState !== WebSocket.OPEN) return;
+    socket.send(JSON.stringify({ type, data }));
+  };
+
   const fit = () => {
     if (!fitAddon) return;
     fitAddon.fit();
     if (connected && socket && socket.readyState === WebSocket.OPEN) {
-      socket.send(`\x00resize:${term.cols}:${term.rows}`);
+      sendTerminalMessage("resize", { cols: term.cols, rows: term.rows });
     }
   };
 
@@ -627,12 +632,18 @@
     const text = event.clipboardData ? event.clipboardData.getData("text/plain") : "";
     if (!text || !connected || !socket || socket.readyState !== WebSocket.OPEN) return;
     event.preventDefault();
-    socket.send(text);
+    sendTerminalMessage("input", text);
   });
 
   term.onData((data) => {
     if (!connected || !socket || socket.readyState !== WebSocket.OPEN) return;
-    socket.send(data);
+    sendTerminalMessage("input", data);
+  });
+
+  window.addEventListener("beforeunload", () => {
+    if (socket && socket.readyState === WebSocket.OPEN) {
+      sendTerminalMessage("disconnect");
+    }
   });
 
   passwordForm.addEventListener("submit", (event) => {
@@ -646,10 +657,13 @@
     socket = new WebSocket(wsUrl);
 
     socket.addEventListener("open", () => {
-      socket.send(JSON.stringify({ password: passwordInput.value, cols: term.cols, rows: term.rows }));
+      sendTerminalMessage("connectToHost", {
+        password: passwordInput.value,
+        cols: term.cols,
+        rows: term.rows,
+      });
       passwordInput.value = "";
       passwordForm.hidden = true;
-      connected = true;
       fit();
       term.focus();
       term.options.cursorBlink = true;
@@ -658,7 +672,25 @@
     });
 
     socket.addEventListener("message", (event) => {
-      writeTerminal(event.data);
+      let message = null;
+      try {
+        message = JSON.parse(event.data);
+      } catch (_error) {
+        writeTerminal(event.data);
+        return;
+      }
+
+      if (message.type === "data") {
+        writeTerminal(message.data || "");
+      } else if (message.type === "connected") {
+        connected = true;
+        fit();
+      } else if (message.type === "error") {
+        writeTerminal(`\r\n${message.message || "SSH connection failed."}\r\n`);
+      } else if (message.type === "sessionTakenOver" || message.type === "sessionExpired") {
+        writeTerminal(`\r\n${message.message || "Session ended."}\r\n`);
+      }
+
       if (connected && document.visibilityState === "visible") {
         window.setTimeout(() => {
           term.focus();

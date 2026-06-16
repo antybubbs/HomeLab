@@ -31,7 +31,7 @@ SETTINGS = {
     "guacamole_enabled": "0",
     "guacd_host": "",
     "guacd_port": "4822",
-    "terminal_theme": "termix",
+    "terminal_theme": "homelab",
     "terminal_font_family": "Caskaydia Cove Nerd Font Mono",
     "terminal_font_size": "14",
     "terminal_cursor_style": "bar",
@@ -168,13 +168,16 @@ def clean_global_setting(key: str, value: str) -> str:
         return clean_float_text(value, 1, 0.8, 2)
     if key == "terminal_theme":
         legacy_themes = {
+            "termix": "homelab",
+            "termixDark": "homelabDark",
+            "termixLight": "homelabLight",
             "night-owl": "nightOwl",
             "one-dark": "oneDark",
             "gruvbox": "gruvboxDark",
             "solarized-dark": "solarizedDark",
         }
         value = legacy_themes.get(value, value)
-        return clean_choice(value, {"termix", "termixDark", "termixLight", "dracula", "monokai", "nord", "gruvboxDark", "gruvboxLight", "solarizedDark", "solarizedLight", "oneDark", "tokyoNight", "ayuDark", "materialTheme", "palenight", "oceanicNext", "nightOwl", "synthwave84", "cobalt2", "snazzy", "atomOneDark", "catppuccinMocha"}, SETTINGS[key])
+        return clean_choice(value, {"homelab", "homelabDark", "homelabLight", "dracula", "monokai", "nord", "gruvboxDark", "gruvboxLight", "solarizedDark", "solarizedLight", "oneDark", "tokyoNight", "ayuDark", "materialTheme", "palenight", "oceanicNext", "nightOwl", "synthwave84", "cobalt2", "snazzy", "atomOneDark", "catppuccinMocha"}, SETTINGS[key])
     if key == "terminal_cursor_style":
         return clean_choice(value, {"bar", "block", "underline"}, SETTINGS[key])
     if key == "terminal_bell_style":
@@ -219,7 +222,7 @@ def settings_map(db: Session) -> dict[str, str]:
     values = SETTINGS.copy()
     for row in db.query(RemoteManagerSetting).all():
         if row.key in SETTING_KEYS:
-            values[row.key] = row.value or ""
+            values[row.key] = clean_global_setting(row.key, row.value or "")
     app_settings = get_settings()
     env_guacd_host = getattr(app_settings, "guacd_host", "")
     env_guacd_port = getattr(app_settings, "guacd_port", "")
@@ -565,16 +568,20 @@ async def ssh_websocket(websocket: WebSocket, remote_id: int):
     client = None
     try:
         payload = await websocket.receive_json()
-        password = payload.get("password", "")
+        if payload.get("type") == "connectToHost":
+            connect_data = payload.get("data") or {}
+        else:
+            connect_data = payload
+        password = connect_data.get("password", "")
         if not password:
-            await websocket.send_text("\r\nPassword is required.\r\n")
+            await websocket.send_json({"type": "error", "message": "Password is required."})
             await websocket.close(code=1008)
             return
         try:
             import asyncssh
 
-            cols = clean_dimension(int_payload(payload, "cols", 120), 120, 40, 500)
-            rows = clean_dimension(int_payload(payload, "rows", 34), 34, 10, 200)
+            cols = clean_dimension(int_payload(connect_data, "cols", 120), 120, 40, 500)
+            rows = clean_dimension(int_payload(connect_data, "rows", 34), 34, 10, 200)
             client = await asyncio.wait_for(
                 asyncssh.connect(
                     host,
@@ -589,7 +596,7 @@ async def ssh_websocket(websocket: WebSocket, remote_id: int):
             if expected_fingerprint and expected_fingerprint != current_fingerprint:
                 client.close()
                 await client.wait_closed()
-                await websocket.send_text("\r\nSSH host key fingerprint has changed. Connection refused.\r\n")
+                await websocket.send_json({"type": "error", "message": "SSH host key fingerprint has changed. Connection refused."})
                 await websocket.close(code=1011)
                 return
             if not expected_fingerprint:
@@ -617,8 +624,9 @@ async def ssh_websocket(websocket: WebSocket, remote_id: int):
                     "LC_COLLATE": "en_US.UTF-8",
                 },
             )
+            await websocket.send_json({"type": "connected", "message": "Connected"})
         except Exception as exc:
-            await websocket.send_text(f"\r\nSSH connection failed: {exc}\r\n")
+            await websocket.send_json({"type": "error", "message": f"SSH connection failed: {exc}"})
             await websocket.close(code=1011)
             return
 
@@ -628,22 +636,29 @@ async def ssh_websocket(websocket: WebSocket, remote_id: int):
                     data = await process.stdout.read(4096)
                     if not data:
                         break
-                    await websocket.send_text(data)
+                    await websocket.send_json({"type": "data", "data": data})
             except Exception:
                 pass
 
         async def write_loop():
             try:
                 while True:
-                    text = await websocket.receive_text()
-                    if text.startswith("\x00resize:"):
-                        try:
-                            _, cols, rows = text.split(":", 2)
-                            process.change_terminal_size(int(cols), int(rows))
-                        except Exception:
-                            pass
+                    payload = await websocket.receive_json()
+                    message_type = payload.get("type")
+                    data = payload.get("data")
+                    if message_type == "resize":
+                        if isinstance(data, dict):
+                            try:
+                                process.change_terminal_size(int(data.get("cols", cols)), int(data.get("rows", rows)))
+                            except Exception:
+                                pass
                         continue
-                    process.stdin.write(text)
+                    if message_type == "disconnect":
+                        break
+                    if message_type == "input":
+                        if isinstance(data, str):
+                            process.stdin.write(data)
+                        continue
             except WebSocketDisconnect:
                 pass
 

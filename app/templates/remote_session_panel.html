@@ -15,7 +15,7 @@
   {% if remote.protocol == 'ssh' %}
   <script src="/static/vendor/xterm/xterm.js?v={{ asset_version }}"></script>
   <script src="/static/vendor/xterm/addon-fit.js?v={{ asset_version }}"></script>
-  <script src="/static/js/remote_session.js?v={{ asset_version }}"></script>
+  <script src="/static/js/remote_session.js?v={{ asset_version }}&ssh=homelab-rewrite-1"></script>
   {% else %}
   <script type="module" src="/static/js/remote_rdp.js?v={{ asset_version }}"></script>
   {% endif %}

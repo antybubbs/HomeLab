@@ -108,6 +108,8 @@ def setup_page(
 @router.post("/setup")
 def setup_submit(
     request: Request,
+    first_name: str = Form(...),
+    last_name: str = Form(...),
     email: str = Form(""),
     password: str = Form(""),
     confirm_password: str = Form(""),
@@ -158,6 +160,8 @@ def setup_submit(
 
     user = User(
         email=email,
+        first_name=first_name.strip() or None,
+        last_name=last_name.strip() or None,
         password_hash=hash_password(password),
         role="admin",
         is_active=True

@@ -20,3 +20,7 @@ services:
     read_only: false
     tmpfs:
       - /tmp
+  guacd:
+    image: guacamole/guacd:latest
+    container_name: guacd
+    restart: unless-stopped

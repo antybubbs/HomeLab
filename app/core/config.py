@@ -1,7 +1,7 @@
 from functools import lru_cache
 from urllib.parse import urlparse
 from pydantic_settings import BaseSettings
-import cryptography.fernet
+from cryptography.fernet import Fernet
 
 
 class InvalidConfigurationError(RuntimeError):

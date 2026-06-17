@@ -86,18 +86,13 @@ app.mount("/static", StaticFiles(directory="app/static"), name="static")
 def bootstrap():
     Base.metadata.create_all(bind=engine)
     migrate_existing_database()
+
     db: Session = SessionLocal()
     try:
-        admin_email = settings.admin_email.strip().lower()
-        admin = db.query(User).filter(User.email == admin_email).first()
-        if not admin:
-            db.add(User(email=admin_email, password_hash=hash_password(settings.admin_password), role="admin"))
-            db.commit()
         default_vlan = db.query(VLAN).filter(VLAN.name == "VLAN 1").first()
         if not default_vlan:
             db.add(VLAN(name="VLAN 1"))
             db.commit()
-        db.commit()
     finally:
         db.close()
 

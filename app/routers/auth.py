@@ -69,10 +69,104 @@ def require_editor(request: Request, db: Session = Depends(get_db)) -> User:
 
 
 @router.get("/login")
-def login_page(request: Request):
-    request.session.pop("pending_2fa_user_id", None)
-    return templates.TemplateResponse(request, "login.html", {"error": None, **csrf_context(request, include_version=False)})
+def login_page(
+    request: Request,
+    db: Session = Depends(get_db)
+):
+    admin = db.query(User).filter(User.role == "admin").first()
 
+    if not admin:
+        return RedirectResponse("/setup", status_code=303)
+
+    request.session.pop("pending_2fa_user_id", None)
+
+    return templates.TemplateResponse(
+        request,
+        "login.html",
+        {"error": None, **csrf_context(request, include_version=False)}
+    )
+@router.get("/setup")
+def setup_page(
+    request: Request,
+    db: Session = Depends(get_db)
+):
+    admin = db.query(User).filter(User.role == "admin").first()
+
+    if admin:
+        return RedirectResponse("/login", status_code=303)
+
+    return templates.TemplateResponse(
+        request,
+        "setup.html",
+        {
+            "error": None,
+            **csrf_context(request, include_version=False)
+        }
+    )
+
+
+@router.post("/setup")
+def setup_submit(
+    request: Request,
+    email: str = Form(""),
+    password: str = Form(""),
+    confirm_password: str = Form(""),
+    csrf_token: str = Form(...),
+    db: Session = Depends(get_db)
+):
+    validate_csrf_token(request, csrf_token)
+
+    admin = db.query(User).filter(User.role == "admin").first()
+
+    if admin:
+        return RedirectResponse("/login", status_code=303)
+
+    email = email.strip().lower()
+
+    if not email:
+        return templates.TemplateResponse(
+            request,
+            "setup.html",
+            {
+                "error": "Email is required.",
+                **csrf_context(request, include_version=False)
+            },
+            status_code=400
+        )
+
+    if len(password) < 8:
+        return templates.TemplateResponse(
+            request,
+            "setup.html",
+            {
+                "error": "Password must be at least 8 characters.",
+                **csrf_context(request, include_version=False)
+            },
+            status_code=400
+        )
+
+    if password != confirm_password:
+        return templates.TemplateResponse(
+            request,
+            "setup.html",
+            {
+                "error": "Passwords do not match.",
+                **csrf_context(request, include_version=False)
+            },
+            status_code=400
+        )
+
+    user = User(
+        email=email,
+        password_hash=hash_password(password),
+        role="admin",
+        is_active=True
+    )
+
+    db.add(user)
+    db.commit()
+
+    return RedirectResponse("/login", status_code=303)
 
 @router.post("/login")
 def login(request: Request, email: str = Form(""), password: str = Form(""), totp_code: str = Form(""), csrf_token: str = Form(...), db: Session = Depends(get_db)):

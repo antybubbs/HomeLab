@@ -33,4 +33,3 @@ EXPOSE 8080
 
 ENTRYPOINT ["/usr/local/bin/homelab-entrypoint"]
 CMD ["sh", "-c", "exec uvicorn app.main:app --host 0.0.0.0 --port 8080 --proxy-headers --forwarded-allow-ips \"${FORWARDED_ALLOW_IPS:-*}\""]
->>>>>>> Stashed changes

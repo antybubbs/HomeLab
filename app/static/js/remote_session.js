@@ -597,9 +597,20 @@
   let connected = false;
 
   const writeTerminal = (data) => {
-    const text = typeof data === "string" ? data : String(data || "");
-    term.write(terminalSettings.syntaxHighlighting ? highlightTerminalOutput(text) : text);
-  };
+  const text = typeof data === "string" ? data : String(data || "");
+
+  const hasAnsi = /\x1b\[/.test(text);
+
+  if (hasAnsi) {
+    term.write(text);
+  } else {
+    term.write(
+      terminalSettings.syntaxHighlighting
+        ? highlightTerminalOutput(text)
+        : text
+    );
+  }
+};
 
   const sendTerminalMessage = (type, data = {}) => {
     if (!socket || socket.readyState !== WebSocket.OPEN) return;

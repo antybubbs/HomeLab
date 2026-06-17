@@ -15,8 +15,8 @@ class Settings(BaseSettings):
     base_url: str = "http://localhost:8080"
     root_path: str = ""
     database_url: str = "sqlite:////app/data/homelab.db"
-    secret_key: str = "change-this-secret-key"
-    encryption_key: str = ""
+    secret_key: str =
+    encryption_key: str =
     admin_email: str = "admin@example.local"
     admin_password: str = "change-me-now"
     session_cookie_secure: bool = False

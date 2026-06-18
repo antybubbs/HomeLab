@@ -2,6 +2,7 @@ import secrets
 import time
 from fastapi import HTTPException, Request, status
 from app.services.version import version_status
+from app.services.site_settings import get_site_setting
 
 CSRF_SESSION_KEY = "csrf_token"
 ASSET_VERSION = str(int(time.time()))

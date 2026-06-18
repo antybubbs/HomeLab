@@ -6,10 +6,7 @@ from dataclasses import dataclass
 from urllib.error import URLError
 from urllib.request import Request, urlopen
 
-from sqlalchemy.orm import Session
-
 from app.core.config import get_settings
-from app.models.models import RemoteManagerSetting
 
 
 @dataclass
@@ -27,26 +24,17 @@ SHA_PATTERN = re.compile(r"^[0-9a-f]{7,40}$")
 DEV_PATTERN = re.compile(r"^dev\d+\.\d+\.\d+$", re.IGNORECASE)
 
 
-def db_setting(db: Session, key: str, default: str) -> str:
-    row = (
-        db.query(RemoteManagerSetting)
-        .filter(RemoteManagerSetting.key == key)
-        .first()
-    )
-    if row and row.value is not None and row.value.strip():
-        return row.value.strip()
-    return default
-
-
 def normalize_version(version: str) -> tuple[int, ...]:
     clean = version.strip().lower().removeprefix("v").removeprefix("dev")
     parts: list[int] = []
 
     for part in clean.split("."):
         digits = ""
+
         for char in part:
             if not char.isdigit():
                 break
+
             digits += char
 
         if digits:
@@ -67,9 +55,11 @@ def display_version(version: str) -> str:
     return version
 
 
-def _fetch_latest_release(github_repo: str) -> tuple[str | None, str | None]:
+def _fetch_latest_release() -> tuple[str | None, str | None]:
+    settings = get_settings()
+
     request = Request(
-        f"https://api.github.com/repos/{github_repo}/releases/latest",
+        f"https://api.github.com/repos/{settings.github_repo}/releases/latest",
         headers={
             "Accept": "application/vnd.github+json",
             "User-Agent": "HomeLab",
@@ -85,10 +75,10 @@ def _fetch_latest_release(github_repo: str) -> tuple[str | None, str | None]:
     return data.get("tag_name"), data.get("html_url")
 
 
-def _refresh_latest_release(github_repo: str) -> None:
+def _refresh_latest_release() -> None:
     global _refreshing
 
-    latest, release_url = _fetch_latest_release(github_repo)
+    latest, release_url = _fetch_latest_release()
 
     with _cache_lock:
         _cache.checked_at = time.monotonic()
@@ -97,25 +87,11 @@ def _refresh_latest_release(github_repo: str) -> None:
         _refreshing = False
 
 
-def latest_release(db: Session) -> tuple[str | None, str | None]:
+def latest_release() -> tuple[str | None, str | None]:
     global _refreshing
 
     settings = get_settings()
-
-    github_repo = db_setting(
-        db,
-        "github_repo",
-        settings.github_repo,
-    )
-
-    cache_seconds = int(
-        db_setting(
-            db,
-            "version_check_interval_seconds",
-            str(settings.version_check_interval_seconds),
-        )
-    )
-
+    cache_seconds = settings.version_check_interval_seconds
     now = time.monotonic()
 
     with _cache_lock:
@@ -130,22 +106,14 @@ def latest_release(db: Session) -> tuple[str | None, str | None]:
             _refreshing = True
             threading.Thread(
                 target=_refresh_latest_release,
-                args=(github_repo,),
                 daemon=True,
             ).start()
 
         return _cache.latest_version, _cache.release_url
 
 
-def version_status(db: Session) -> dict[str, str | bool | None]:
+def version_status() -> dict[str, str | bool | None]:
     settings = get_settings()
-
-    github_repo = db_setting(
-        db,
-        "github_repo",
-        settings.github_repo,
-    )
-
     installed = settings.app_version
 
     is_dev = bool(
@@ -153,7 +121,7 @@ def version_status(db: Session) -> dict[str, str | bool | None]:
         or SHA_PATTERN.match(installed.strip().lower())
     )
 
-    latest, release_url = latest_release(db)
+    latest, release_url = latest_release()
 
     update_available = False
 
@@ -162,7 +130,7 @@ def version_status(db: Session) -> dict[str, str | bool | None]:
     elif latest and normalize_version(latest) and normalize_version(installed):
         update_available = normalize_version(latest) > normalize_version(installed)
 
-    release_url = release_url or f"https://github.com/{github_repo}/releases/latest"
+    release_url = release_url or f"https://github.com/{settings.github_repo}/releases/latest"
 
     return {
         "installed": installed,

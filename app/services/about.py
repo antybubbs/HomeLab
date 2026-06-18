@@ -12,6 +12,7 @@ from sqlalchemy.orm import Session
 from app.core.config import get_settings
 from app.models.models import AuditLog, CustomField, HardwareAsset, IPAddress, Licence, ManagedListItem, NetworkMonitor, RemoteAccess, User
 from app.services.version import version_status
+from app.services.site_settings import get_site_setting
 
 PACKAGE_NAMES = [
     "fastapi",
@@ -185,7 +186,7 @@ def collect_about(db: Session) -> dict:
         "app": {
             "name": settings.app_name,
             "environment": settings.app_env,
-            "repository": settings.github_repo,
+            "repository": get_site_setting(db, "github_repo"),
             "database": "SQLite" if settings.database_url.startswith("sqlite") else "External database",
         },
         "system": {

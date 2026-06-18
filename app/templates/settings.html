@@ -33,22 +33,6 @@
     </div>
   </section>
 
-  <h2>GitHub</h2>
-
-    <section class="remote-settings-card" id="general">
-    <div class="remote-settings-grid">
-      <label>GitHub Repository
-        <small>Used for version checks and release lookups.</small>
-        <input name="github_repo" type="text" value="{{ settings.get('github_repo', 'antybubbs/HomeLab') }}">
-      </label>
-
-      <label>Version Check Interval
-        <small>How often HomeLab checks GitHub for updates, in seconds.</small>
-        <input name="version_check_interval_seconds" type="number" min="300" value="{{ settings.get('version_check_interval_seconds', '1800') }}">
-      </label>
-    </div>
-  </section>
-
   <h2>Uploads</h2>
 
     <section class="remote-settings-card" id="general">

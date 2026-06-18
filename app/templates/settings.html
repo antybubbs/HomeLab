@@ -24,7 +24,9 @@
 
     <section class="remote-settings-card" id="general">
     <div class="remote-settings-grid">
-      <label>Base URL
+      <label>
+        <strong></strong>Base URL</strong>
+        <small> The public URL used to access HomeLab. Once configured, HomeLab will automatically trust this hostname instead of allowing requests from any host.</small>
         <input name="base_url" type="url" value="{{ settings.get('base_url', '') }}" placeholder="http://localhost:8080">
       </label>
     </div>
@@ -34,8 +36,9 @@
 
     <section class="remote-settings-card" id="general">
     <div class="remote-settings-grid">
-      <label>Maximum Upload Size</strong>
-        <small>Maximum upload size in MB.</small>
+      <label>
+        <strong></strong>Maximum Upload Size</strong>
+        <small>Maximum upload size for all files uploaded accross the site, in MB.</small>
         <input name="max_upload_mb" type="number" min="1" value="{{ settings.get('max_upload_mb', '25') }}">
       </label>
     </div>

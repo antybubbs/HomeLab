@@ -16,11 +16,15 @@ def csrf_token(request: Request) -> str:
 
 
 def csrf_context(request: Request, include_version: bool = True) -> dict[str, object]:
-    context: dict[str, object] = {"csrf_token": csrf_token(request), "asset_version": ASSET_VERSION}
-    if include_version:
-        context["version_status"] = None
-    return context
+    context: dict[str, object] = {
+        "csrf_token": csrf_token(request),
+        "asset_version": ASSET_VERSION,
+    }
 
+    if include_version:
+        context["version_status"] = version_status()
+
+    return context
 
 def validate_csrf_token(request: Request, submitted_token: str | None) -> None:
     expected_token = request.session.get(CSRF_SESSION_KEY)

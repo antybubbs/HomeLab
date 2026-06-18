@@ -2,7 +2,6 @@ import secrets
 import time
 from fastapi import HTTPException, Request, status
 from app.services.version import version_status
-from app.services.site_settings import get_site_setting
 
 CSRF_SESSION_KEY = "csrf_token"
 ASSET_VERSION = str(int(time.time()))
@@ -19,7 +18,7 @@ def csrf_token(request: Request) -> str:
 def csrf_context(request: Request, include_version: bool = True) -> dict[str, object]:
     context: dict[str, object] = {"csrf_token": csrf_token(request), "asset_version": ASSET_VERSION}
     if include_version:
-        context["version_status"] = version_status(db)
+        context["version_status"] = None
     return context
 
 

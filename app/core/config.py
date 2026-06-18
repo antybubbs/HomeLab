@@ -18,8 +18,6 @@ class Settings(BaseSettings):
     database_url: str = "sqlite:////app/data/homelab.db"
     secret_key: str = ""
     encryption_key: str = ""
-    admin_email: str = "admin@example.local"
-    admin_password: str = "change-me-now"
     session_cookie_secure: bool = False
     upload_dir: str = "/app/uploads"
     max_upload_mb: int = 25
@@ -29,9 +27,9 @@ class Settings(BaseSettings):
     guacd_port: str = ""
     version_check_interval_seconds: int = 1800
 
-    class Config:
-        env_file = ".env"
-        extra = "ignore"
+    model_config = {
+    "extra": "ignore"
+    }
 
 
 def trusted_hosts(settings: Settings) -> list[str]:

@@ -178,7 +178,7 @@ def module_counts(db: Session) -> list[dict[str, str | int]]:
 
 def collect_about(db: Session) -> dict:
     settings = get_settings()
-    version = version_status(db)
+    version = version_status()
     db_path = sqlite_path(settings.database_url)
     data_path = db_path.parent if db_path else Path("/app/data")
     return {

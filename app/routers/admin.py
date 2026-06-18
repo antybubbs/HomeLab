@@ -52,11 +52,10 @@ CUSTOM_FIELD_MODULES = {
 SITE_SETTING_KEYS = {
     "app_name": "HomeLab",
     "base_url": "http://localhost:8080",
-    "github_repo": "antybubbs/HomeLab",
-    "version_check_interval_seconds": "1800",
-    "guacd_host": "",
-    "guacd_port": "",
     "max_upload_mb": "25",
+    "allowed_hosts": "",
+    "guacd_host": "",
+    "guacd_port": "4822",
 }
 
 

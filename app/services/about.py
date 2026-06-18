@@ -186,7 +186,7 @@ def collect_about(db: Session) -> dict:
         "app": {
             "name": settings.app_name,
             "environment": settings.app_env,
-            "repository": get_site_setting(db, "github_repo"),
+            "repository": settings.github_repo,
             "database": "SQLite" if settings.database_url.startswith("sqlite") else "External database",
         },
         "system": {

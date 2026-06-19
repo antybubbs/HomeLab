@@ -524,7 +524,7 @@
     });
   };
 
-  const selectedTheme = terminalThemes.homelab;
+  const selectedTheme = terminalThemes[terminalSettings.theme] || terminalThemes.homelab;
   terminalEl.style.backgroundColor = selectedTheme.background;
   terminalEl.dataset.homelabSshRenderer = "rewrite-2";
 

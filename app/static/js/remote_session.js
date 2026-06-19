@@ -707,7 +707,8 @@
       } else if (message.type === "closed") {
         connected = false;
         closeHandled = true;
-        writeTerminal(`\r\n${message.message || "SSH session closed."}\r\n`);
+        
+          term.reset();
 
         try {
           socket.close();

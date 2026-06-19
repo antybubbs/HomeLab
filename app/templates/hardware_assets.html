@@ -3,20 +3,20 @@
 <section class="module-header">
   <div class="module-title-row">
     <div class="module-title">
-      <h1>Hardware Assets</h1>
+      <h1>Asset Manager</h1>
       <span class="module-stat">Total <strong>{{ total }}</strong></span>
     </div>
   </div>
   <div class="module-toolbar">
     <form class="search list-search" method="get">
       {% if active_category %}<input type="hidden" name="category" value="{{ active_category }}">{% endif %}
-      <input name="q" placeholder="Search hardware assets..." value="{{ q }}">
+      <input name="q" placeholder="Search assets..." value="{{ q }}">
       <button>Search</button>
     </form>
     <div class="module-actions">
       {% if user.role in ['admin','editor'] %}<a class="button" href="/hardware-assets/new">Add Asset</a>{% endif %}
     </div>
-    <nav class="category-tabs" aria-label="Hardware asset categories">
+    <nav class="category-tabs" aria-label="Asset categories">
       <a class="{% if not active_category %}active{% endif %}" href="/hardware-assets{% if q %}?q={{ q|urlencode }}{% endif %}">All</a>
       {% for category in categories %}
       <a class="{% if active_category == category %}active{% endif %}" href="/hardware-assets?category={{ category|urlencode }}{% if q %}&q={{ q|urlencode }}{% endif %}">{{ category }}</a>

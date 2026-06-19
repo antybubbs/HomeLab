@@ -5,13 +5,13 @@
 {% if error %}<div class="alert">{{ error }}</div>{% endif %}
 <div class="tabs">
   <a class="{% if active_module == 'licences' %}active{% endif %}" href="/admin/import?module=licences">License Keys</a>
-  <a class="{% if active_module == 'ip-addresses' %}active{% endif %}" href="/admin/import?module=ip-addresses">IP Addresses</a>
-  <span>Hardware Assets</span>
+  <a class="{% if active_module == 'ip-addresses' %}active{% endif %}" href="/admin/import?module=ip-addresses">VLAN/IP Manager</a>
+  <span>Asset Manager</span>
 </div>
 <section class="panel stack">
 {% if active_module == 'ip-addresses' %}
 <div>
-<h2>Import IP Addresses</h2>
+<h2>Import VLAN/IP Records</h2>
 <form method="post" action="/admin/import/ip-addresses" enctype="multipart/form-data" class="stack">
   <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
   <label>CSV file<input name="file" type="file" accept=".csv" required></label>
@@ -19,8 +19,8 @@
 </form>
 </div>
 <div id="export">
-<h2>Export IP Addresses</h2>
-<p class="muted">Use this export as the template for future IP address imports. The Category column controls the category shown on the IP address table.</p>
+<h2>Export VLAN/IP Records</h2>
+<p class="muted">Use this export as the template for future VLAN/IP imports. The Category column controls the category shown on the VLAN/IP table.</p>
 <form method="post" action="/admin/export/ip-addresses">
   <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
   <button class="button secondary" type="submit">Download export</button>

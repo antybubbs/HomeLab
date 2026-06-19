@@ -1,7 +1,7 @@
 {% extends "base.html" %}
 {% block extra_head %}<link rel="stylesheet" href="/static/css/remote.css?v={{ asset_version }}">{% endblock %}
 {% block content %}
-<div class="topbar"><div><h1>{% if record %}Edit IP Address{% else %}Add IP Address{% endif %}</h1></div></div>
+<div class="topbar"><div><h1>{% if record %}Edit VLAN/IP Record{% else %}Add VLAN/IP Record{% endif %}</h1></div></div>
 {% if error %}<div class="alert">{{ error }}</div>{% endif %}
 <section class="panel">
 <form method="post" class="form-grid">
@@ -12,7 +12,7 @@
   <label>Description<textarea name="description">{{ record.description if record and record.description else '' }}</textarea></label>
   <label>Static/Dynamic<select name="assignment_type">{% for option in assignment_types %}<option value="{{ option }}" {% if record and record.assignment_type == option %}selected{% endif %}>{{ option }}</option>{% endfor %}</select></label>
   <div class="wide monitor-settings">
-    <label class="checkbox-label"><input name="monitor_enabled" type="checkbox" value="1" {% if monitor and monitor.is_enabled %}checked{% endif %}> Show in Network Monitor</label>
+    <label class="checkbox-label"><input name="monitor_enabled" type="checkbox" value="1" {% if monitor and monitor.is_enabled %}checked{% endif %}> Show in IP/WAN Monitor</label>
     <div class="form-grid">
       <label>Monitor display name<input name="monitor_display_name" placeholder="Uses name or IP address if blank" value="{{ monitor.display_name if monitor and monitor.display_name else '' }}"></label>
       <label>Check interval<select name="monitor_interval_seconds">

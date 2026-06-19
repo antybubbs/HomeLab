@@ -10,7 +10,7 @@
     <div class="record-chips">
       <span class="table-chip muted-chip">{{ record.assignment_type }}</span>
       {% if record.category %}<span class="table-chip">Category: {{ record.category }}</span>{% endif %}
-      <span class="table-chip muted-chip">Network Monitor {% if monitor and monitor.is_enabled %}On{% else %}Off{% endif %}</span>
+      <span class="table-chip muted-chip">IP/WAN Monitor {% if monitor and monitor.is_enabled %}On{% else %}Off{% endif %}</span>
       <span class="table-chip muted-chip">Remote Manager {% if remote and remote.is_enabled %}On{% else %}Off{% endif %}</span>
     </div>
   </div>
@@ -37,7 +37,7 @@
     <h2>Services</h2>
     <div class="service-card-list">
       <div class="service-card">
-        <div><strong>Network Monitor</strong><span>Monitors uptime and latency for this IP address.</span></div>
+        <div><strong>IP/WAN Monitor</strong><span>Monitors uptime and latency for this IP address.</span></div>
         <span data-view class="service-pill {% if monitor and monitor.is_enabled %}on{% endif %}">{% if monitor and monitor.is_enabled %}Enabled{% else %}Disabled{% endif %}</span>
         <label data-edit class="inline-toggle"><input name="monitor_enabled" type="checkbox" value="1" {% if monitor and monitor.is_enabled %}checked{% endif %}> Enabled</label>
       </div>

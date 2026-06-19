@@ -45,8 +45,8 @@ templates = Jinja2Templates(directory="app/templates")
 ROLES = {"admin", "editor", "viewer"}
 
 CUSTOM_FIELD_MODULES = {
-    "ip_addresses": "IP Addresses",
-    "hardware_assets": "Hardware Assets",
+    "ip_addresses": "VLAN/IP Manager",
+    "hardware_assets": "Asset Manager",
     "licences": "License Keys",
 }
 

@@ -17,7 +17,7 @@
 
 {% if message %}<div class="success">{{ message }}</div>{% endif %}
 
-<form method="post" action="/admin/settings" class="remote-card">
+<form method="post" action="/system/site-administration" class="remote-card">
   <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
 
   <h2>General</h2>

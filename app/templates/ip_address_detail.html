@@ -1,7 +1,7 @@
 {% extends "base.html" %}
 {% block content %}
 {% set record_title = record.name or record.description or record.address %}
-<form method="post" action="/ip-addresses/{{ record.id }}/edit" class="inline-record" data-inline-edit>
+<form method="post" action="/networking/vlan-ip-manager/{{ record.id }}/edit" class="inline-record" data-inline-edit>
 <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
 <div class="record-hero">
   <div>
@@ -53,7 +53,7 @@
       {% endif %}
       <div class="service-card" data-ping-card>
         <div><strong>Ping</strong><span data-ping-message>Allows a quick ping to see if this device is up.</span></div>
-        <button class="button secondary" type="button" data-ping-url="/ip-addresses/{{ record.id }}/ping" data-csrf-token="{{ csrf_token }}">Ping</button>
+        <button class="button secondary" type="button" data-ping-url="/networking/vlan-ip-manager/{{ record.id }}/ping" data-csrf-token="{{ csrf_token }}">Ping</button>
       </div>
       <div class="service-card">
         <div><strong>Remote Manager</strong><span>Allows remote access via SSH or RDP.</span></div>

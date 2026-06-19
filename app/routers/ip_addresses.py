@@ -15,7 +15,7 @@ from app.services.custom_fields import active_fields, field_values, option_list,
 from app.services.managed_lists import list_values
 from app.services.network_monitor import clamp_interval, clamp_timeout, ping_ipv4
 
-router = APIRouter(prefix="/ip-addresses")
+router = APIRouter(prefix="/networking/vlan-ip-manager")
 templates = Jinja2Templates(directory="app/templates")
 ASSIGNMENT_TYPES = {"Static", "Dynamic"}
 REMOTE_PROTOCOLS = {"ssh", "rdp"}
@@ -170,7 +170,7 @@ def bulk_update_ip_addresses(
     validate_csrf_token(request, csrf_token)
     ids = sorted({record_id for record_id in selected_ids if record_id > 0})[:500]
     if not ids:
-        return RedirectResponse("/ip-addresses", status_code=303)
+        return RedirectResponse("/networking/vlan-ip-manager", status_code=303)
     categories = list_values(db, MODULE).get("category", [])
     category_value: str | None = None
     update_category = category != BULK_NO_CHANGE
@@ -185,7 +185,7 @@ def bulk_update_ip_addresses(
     if update_assignment and assignment_type not in ASSIGNMENT_TYPES:
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Choose Static or Dynamic.")
     if not update_category and not update_assignment:
-        return RedirectResponse("/ip-addresses", status_code=303)
+        return RedirectResponse("/networking/vlan-ip-manager", status_code=303)
     rows = db.query(IPAddress).filter(IPAddress.id.in_(ids)).all()
     for row in rows:
         if update_category:
@@ -207,7 +207,7 @@ def bulk_update_ip_addresses(
         request.client.host if request.client else None,
         detail=f"Updated {len(rows)} IP addresses: {', '.join(fields)}",
     )
-    return RedirectResponse("/ip-addresses", status_code=303)
+    return RedirectResponse("/networking/vlan-ip-manager", status_code=303)
 
 
 @router.post("/{record_id}/ping")
@@ -262,7 +262,7 @@ async def create_ip_address(request: Request, address: str = Form(..., max_lengt
     save_custom_values(db, fields, form, ENTITY_TYPE, row.id)
     db.commit()
     write_audit(db, user, "create", "ip_address", str(row.id), request.client.host if request.client else None, detail=clean_address)
-    return RedirectResponse("/ip-addresses", status_code=303)
+    return RedirectResponse("/networking/vlan-ip-manager", status_code=303)
 
 
 @router.get("/{record_id}")
@@ -321,4 +321,4 @@ async def update_ip_address(request: Request, record_id: int, address: str = For
     save_custom_values(db, fields, form, ENTITY_TYPE, row.id)
     db.commit()
     write_audit(db, user, "update", "ip_address", str(row.id), request.client.host if request.client else None, detail=clean_address)
-    return RedirectResponse(f"/ip-addresses/{row.id}", status_code=303)
+    return RedirectResponse(f"/networking/vlan-ip-manager/{row.id}", status_code=303)

@@ -12,7 +12,7 @@
     </label>
     <div class="remote-host-toolbar" aria-label="Host tools">
       <button type="button" title="Refresh visible sessions" data-remote-refresh-tabs>R</button>
-      <a href="/ip-addresses/new" title="Add host">+</a>
+      <a href="/networking/vlan-ip-manager/new" title="Add host">+</a>
       <a href="/remote-manager/settings" title="Remote settings">Set</a>
     </div>
   </div>
@@ -33,8 +33,8 @@
           <summary title="More actions">...</summary>
           <div>
             <a href="/remote-manager/{{ row.id }}/session" data-remote-open>Connect {{ row.protocol|upper }}</a>
-            <a href="/ip-addresses/{{ row.ip_address.id }}">View IP record</a>
-            <a href="/ip-addresses/{{ row.ip_address.id }}/edit">Edit remote settings</a>
+            <a href="/networking/vlan-ip-manager/{{ row.ip_address.id }}">View IP record</a>
+            <a href="/networking/vlan-ip-manager/{{ row.ip_address.id }}/edit">Edit remote settings</a>
           </div>
         </details>
       </div>

@@ -39,7 +39,7 @@ from app.services.managed_lists import MANAGED_LIST_MODULES, MANAGED_LISTS, list
 from app.services.sessions import active_since
 from app.services.site_settings import get_site_setting
 
-router = APIRouter(prefix="/admin")
+router = APIRouter()
 templates = Jinja2Templates(directory="app/templates")
 
 ROLES = {"admin", "editor", "viewer"}
@@ -92,7 +92,7 @@ def save_site_setting(db: Session, key: str, value: str) -> None:
     row.value = value.strip()
 
 
-@router.get("")
+@router.get("/admin")
 def admin_home(
     request: Request,
     db: Session = Depends(get_db),
@@ -115,7 +115,7 @@ def admin_home(
     )
 
 
-@router.get("/users")
+@router.get("/team/users")
 def users(
     request: Request,
     db: Session = Depends(get_db),
@@ -134,7 +134,7 @@ def users(
     )
 
 
-@router.get("/users/new")
+@router.get("/team/users/new")
 def new_user(
     request: Request,
     user=Depends(require_admin),
@@ -152,7 +152,7 @@ def new_user(
     )
 
 
-@router.post("/users/new")
+@router.post("/team/users/new")
 def create_user(
     request: Request,
     email: str = Form(..., max_length=255),
@@ -205,10 +205,10 @@ def create_user(
         detail=email,
     )
 
-    return RedirectResponse("/admin/users", status_code=303)
+    return RedirectResponse("/team/users", status_code=303)
 
 
-@router.get("/users/{user_id}/edit")
+@router.get("/team/users/{user_id}/edit")
 def edit_user(
     request: Request,
     user_id: int,
@@ -236,7 +236,7 @@ def edit_user(
     )
 
 
-@router.post("/users/{user_id}/edit")
+@router.post("/team/users/{user_id}/edit")
 def update_user(
     request: Request,
     user_id: int,
@@ -311,10 +311,10 @@ def update_user(
         detail=target.email,
     )
 
-    return RedirectResponse("/admin/users", status_code=303)
+    return RedirectResponse("/team/users", status_code=303)
 
 
-@router.post("/users/{user_id}/reset-2fa")
+@router.post("/team/users/{user_id}/reset-2fa")
 def reset_user_2fa(
     request: Request,
     user_id: int,
@@ -347,10 +347,10 @@ def reset_user_2fa(
         detail=target.email,
     )
 
-    return RedirectResponse("/admin/users", status_code=303)
+    return RedirectResponse("/team/users", status_code=303)
 
 
-@router.get("/import")
+@router.get("/data/import-export")
 def import_page(
     request: Request,
     module: str = "licences",
@@ -369,7 +369,7 @@ def import_page(
     )
 
 
-@router.post("/import/{module}")
+@router.post("/data/import-export/import/{module}")
 async def import_upload(
     request: Request,
     module: str,
@@ -465,7 +465,7 @@ async def import_upload(
     )
 
 
-@router.post("/export/{module}")
+@router.post("/data/import-export/export/{module}")
 def export_csv(
     request: Request,
     module: str,
@@ -503,7 +503,7 @@ def export_csv(
     )
 
 
-@router.get("/custom-fields")
+@router.get("/data/custom-fields")
 def custom_fields(
     request: Request,
     module: str = "ip_addresses",
@@ -534,7 +534,7 @@ def custom_fields(
     )
 
 
-@router.post("/custom-fields")
+@router.post("/data/custom-fields")
 def create_custom_field(
     request: Request,
     module: str = Form("ip_addresses"),
@@ -645,11 +645,11 @@ def create_custom_field(
     params = urlencode({"module": active_module})
 
     return RedirectResponse(
-        f"/admin/custom-fields?{params}",
+        f"/data/custom-fields?{params}",
         status_code=303,
     )
 
-@router.post("/custom-fields/{field_id}/toggle")
+@router.post("/data/custom-fields/{field_id}/toggle")
 def toggle_custom_field(
     request: Request,
     field_id: int,
@@ -681,12 +681,12 @@ def toggle_custom_field(
     )
 
     return RedirectResponse(
-        f"/admin/custom-fields?module={row.module}",
+        f"/data/custom-fields?module={row.module}",
         status_code=303,
     )
 
 
-@router.get("/categories")
+@router.get("/data/categories")
 def categories(
     request: Request,
     module: str = "hardware_assets",
@@ -725,7 +725,7 @@ def categories(
     )
 
 
-@router.post("/categories")
+@router.post("/data/categories")
 def create_category(
     request: Request,
     module: str = Form("hardware_assets"),
@@ -819,12 +819,12 @@ def create_category(
     )
 
     return RedirectResponse(
-        f"/admin/categories?module={active_module}&list_key={active_list}",
+        f"/data/categories?module={active_module}&list_key={active_list}",
         status_code=303,
     )
 
 
-@router.post("/categories/{item_id}/toggle")
+@router.post("/data/categories/{item_id}/toggle")
 def toggle_category(
     request: Request,
     item_id: int,
@@ -856,12 +856,12 @@ def toggle_category(
     )
 
     return RedirectResponse(
-        f"/admin/categories?module={row.module}&list_key={row.list_key}",
+        f"/data/categories?module={row.module}&list_key={row.list_key}",
         status_code=303,
     )
 
 
-@router.post("/categories/{item_id}/edit")
+@router.post("/data/categories/{item_id}/edit")
 def edit_category(
     request: Request,
     item_id: int,
@@ -923,12 +923,12 @@ def edit_category(
     )
 
     return RedirectResponse(
-        f"/admin/categories?module={row.module}&list_key={row.list_key}",
+        f"/data/categories?module={row.module}&list_key={row.list_key}",
         status_code=303,
     )
 
 
-@router.get("/security")
+@router.get("/admin/security")
 def security(
     request: Request,
     user=Depends(require_admin),
@@ -956,7 +956,7 @@ def security(
     )
 
 
-@router.post("/security/2fa/start")
+@router.post("/admin/security/2fa/start")
 def start_2fa(
     request: Request,
     csrf_token: str = Form(...),
@@ -983,7 +983,7 @@ def start_2fa(
     return RedirectResponse("/admin/security", status_code=303)
 
 
-@router.post("/security/2fa/enable")
+@router.post("/admin/security/2fa/enable")
 def enable_2fa(
     request: Request,
     code: str = Form(...),
@@ -1029,7 +1029,7 @@ def enable_2fa(
     return RedirectResponse("/admin/security", status_code=303)
 
 
-@router.post("/security/2fa/disable")
+@router.post("/admin/security/2fa/disable")
 def disable_2fa(
     request: Request,
     current_password: str = Form("", max_length=255),
@@ -1071,7 +1071,7 @@ def disable_2fa(
     return RedirectResponse("/admin/security", status_code=303)
 
 
-@router.get("/audit")
+@router.get("/admin/audit")
 def audit(
     request: Request,
     db: Session = Depends(get_db),
@@ -1095,7 +1095,7 @@ def audit(
     )
 
 
-@router.get("/about")
+@router.get("/system/about")
 def about(
     request: Request,
     db: Session = Depends(get_db),
@@ -1128,7 +1128,7 @@ def about(
     )
 
 
-@router.get("/settings")
+@router.get("/system/site-administration")
 def settings_page(
     request: Request,
     db: Session = Depends(get_db),
@@ -1146,7 +1146,7 @@ def settings_page(
     )
 
 
-@router.post("/settings")
+@router.post("/system/site-administration")
 def save_settings(
     request: Request,
     app_name: str = Form("HomeLab"),

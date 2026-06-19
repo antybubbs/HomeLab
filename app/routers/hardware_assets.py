@@ -16,7 +16,7 @@ from app.services.audit import write_audit
 from app.services.custom_fields import active_fields, field_values, option_list, save_custom_values, validate_custom_values
 from app.services.managed_lists import list_values
 
-router = APIRouter(prefix="/hardware-assets")
+router = APIRouter(prefix="/infrastructure/asset-manager")
 templates = Jinja2Templates(directory="app/templates")
 MODULE = "hardware_assets"
 ENTITY_TYPE = "hardware_asset"
@@ -152,7 +152,7 @@ async def create_asset(request: Request, asset_tag: str = Form("", max_length=12
     save_custom_values(db, fields, form, ENTITY_TYPE, row.id)
     db.commit()
     write_audit(db, user, "create", "hardware_asset", str(row.id), request.client.host if request.client else None, detail=row.name)
-    return RedirectResponse(f"/hardware-assets/{row.id}", status_code=303)
+    return RedirectResponse(f"/infrastructure/asset-manager/{row.id}", status_code=303)
 
 
 @router.get("/{asset_id}")
@@ -216,7 +216,7 @@ async def update_asset(request: Request, asset_id: int, asset_tag: str = Form(""
     save_custom_values(db, fields, form, ENTITY_TYPE, row.id)
     db.commit()
     write_audit(db, user, "update", "hardware_asset", str(row.id), request.client.host if request.client else None, detail=row.name)
-    return RedirectResponse(f"/hardware-assets/{row.id}", status_code=303)
+    return RedirectResponse(f"/infrastructure/asset-manager/{row.id}", status_code=303)
 
 
 @router.post("/{asset_id}/attachments")
@@ -230,7 +230,7 @@ async def upload_attachment(request: Request, asset_id: int, csrf_token: str = F
         db.add(HardwareAssetAttachment(asset_id=row.id, original_filename=saved_attachment[0], stored_filename=saved_attachment[1], content_type=saved_attachment[2]))
         db.commit()
         write_audit(db, user, "upload_attachment", "hardware_asset", str(row.id), request.client.host if request.client else None, detail=saved_attachment[0])
-    return RedirectResponse(f"/hardware-assets/{row.id}", status_code=303)
+    return RedirectResponse(f"/infrastructure/asset-manager/{row.id}", status_code=303)
 
 
 @router.get("/{asset_id}/photo")

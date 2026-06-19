@@ -4,15 +4,15 @@
 {% if message %}<div class="success">{{ message }}</div>{% endif %}
 {% if error %}<div class="alert">{{ error }}</div>{% endif %}
 <div class="tabs">
-  <a class="{% if active_module == 'licences' %}active{% endif %}" href="/admin/import?module=licences">License Keys</a>
-  <a class="{% if active_module == 'ip-addresses' %}active{% endif %}" href="/admin/import?module=ip-addresses">VLAN/IP Manager</a>
+  <a class="{% if active_module == 'licences' %}active{% endif %}" href="/data/import-export?module=licences">License Keys</a>
+  <a class="{% if active_module == 'ip-addresses' %}active{% endif %}" href="/data/import-export?module=ip-addresses">VLAN/IP Manager</a>
   <span>Asset Manager</span>
 </div>
 <section class="panel stack">
 {% if active_module == 'ip-addresses' %}
 <div>
 <h2>Import VLAN/IP Records</h2>
-<form method="post" action="/admin/import/ip-addresses" enctype="multipart/form-data" class="stack">
+<form method="post" action="/data/import-export/import/ip-addresses" enctype="multipart/form-data" class="stack">
   <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
   <label>CSV file<input name="file" type="file" accept=".csv" required></label>
   <button type="submit">Import records</button>
@@ -21,7 +21,7 @@
 <div id="export">
 <h2>Export VLAN/IP Records</h2>
 <p class="muted">Use this export as the template for future VLAN/IP imports. The Category column controls the category shown on the VLAN/IP table.</p>
-<form method="post" action="/admin/export/ip-addresses">
+<form method="post" action="/data/import-export/export/ip-addresses">
   <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
   <button class="button secondary" type="submit">Download export</button>
 </form>
@@ -29,7 +29,7 @@
 {% else %}
 <div>
 <h2>Import License Keys</h2>
-<form method="post" action="/admin/import/licences" enctype="multipart/form-data" class="stack">
+<form method="post" action="/data/import-export/import/licences" enctype="multipart/form-data" class="stack">
   <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
   <label>CSV file<input name="file" type="file" accept=".csv" required></label>
   <button type="submit">Import records</button>
@@ -38,7 +38,7 @@
 <div id="export">
 <h2>Export License Keys</h2>
 <p class="muted">Exports include decrypted product keys. Store the file carefully. Use this export as the template for future imports.</p>
-<form method="post" action="/admin/export/licences">
+<form method="post" action="/data/import-export/export/licences">
   <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
   <button class="button secondary" type="submit">Download export</button>
 </form>

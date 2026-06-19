@@ -12,7 +12,7 @@
     }
     loading = true;
     try {
-      const response = await fetch("/network-monitor/cards", {
+      const response = await fetch("/networking/ip-wan-monitor/cards", {
         headers: { "X-Requested-With": "fetch" },
         cache: "no-store",
       });

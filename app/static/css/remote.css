@@ -57,6 +57,7 @@
 .remote-layout-button:hover:not(:disabled),.remote-layout-button.active{background:rgba(56,189,248,.12);border-color:rgba(56,189,248,.65);color:var(--text)}
 .remote-layout-button:disabled{cursor:not-allowed;opacity:.48}
 .remote-tab-panels{height:100%;min-height:0;position:relative}
+.remote-tab-panels>[hidden]{display:none!important}
 .remote-tab-panel{height:100%;inset:0;position:absolute;width:100%}
 .remote-tab-panel iframe{background:#050706;border:0;display:block;height:100%;width:100%}
 .remote-tab-panels.is-split{display:grid;gap:1px;grid-template-columns:minmax(0,1fr) minmax(0,1fr);position:relative}

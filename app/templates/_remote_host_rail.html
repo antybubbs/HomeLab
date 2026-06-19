@@ -7,13 +7,13 @@
   </header>
   <div class="remote-host-search">
     <label>
-      <span aria-hidden="true">⌕</span>
+      <span aria-hidden="true">/</span>
       <input type="search" data-remote-search placeholder="Search hosts...">
     </label>
     <div class="remote-host-toolbar" aria-label="Host tools">
-      <button type="button" title="Refresh sessions" data-remote-refresh-tabs>↻</button>
-      <a href="/ip-addresses/new" title="Add host">＋</a>
-      <a href="/remote-manager/settings" title="Remote settings">⚙</a>
+      <button type="button" title="Refresh visible sessions" data-remote-refresh-tabs>R</button>
+      <a href="/ip-addresses/new" title="Add host">+</a>
+      <a href="/remote-manager/settings" title="Remote settings">Set</a>
     </div>
   </div>
   <div class="remote-host-list">
@@ -28,9 +28,9 @@
         </div>
       </div>
       <div class="remote-host-actions">
-        <a class="remote-protocol-icon" href="/remote-manager/{{ row.id }}/session" data-remote-open title="Open {{ row.protocol|upper }}">{% if row.protocol == 'rdp' %}▣{% else %}&gt;_{% endif %}</a>
+        <a class="remote-protocol-icon" href="/remote-manager/{{ row.id }}/session" data-remote-open title="Open {{ row.protocol|upper }}">{% if row.protocol == 'rdp' %}RDP{% else %}&gt;_{% endif %}</a>
         <details class="remote-connect-menu">
-          <summary title="More actions">⋯</summary>
+          <summary title="More actions">...</summary>
           <div>
             <a href="/remote-manager/{{ row.id }}/session" data-remote-open>Connect {{ row.protocol|upper }}</a>
             <a href="/ip-addresses/{{ row.ip_address.id }}">View IP record</a>

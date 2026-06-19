@@ -7,6 +7,7 @@ from fastapi.templating import Jinja2Templates
 from sqlalchemy.orm import Session
 from sqlalchemy.orm import selectinload
 from starlette import status
+from urllib.parse import urlencode
 
 from app.core.config import get_settings
 from app.core.csrf import csrf_context, validate_csrf_token
@@ -641,11 +642,12 @@ def create_custom_field(
         detail=f"{CUSTOM_FIELD_MODULES[active_module]}: {clean_label}",
     )
 
-    return RedirectResponse(
-        f"/admin/custom-fields?module={active_module}",
-        status_code=303,
-    )
+    params = urlencode({"module": active_module})
 
+    return RedirectResponse(
+    f"/admin/custom-fields?{params}",
+    status_code=303,
+    )
 
 @router.post("/custom-fields/{field_id}/toggle")
 def toggle_custom_field(

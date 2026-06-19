@@ -645,8 +645,8 @@ def create_custom_field(
     params = urlencode({"module": active_module})
 
     return RedirectResponse(
-    f"/admin/custom-fields?{params}",
-    status_code=303,
+        f"/admin/custom-fields?{params}",
+        status_code=303,
     )
 
 @router.post("/custom-fields/{field_id}/toggle")

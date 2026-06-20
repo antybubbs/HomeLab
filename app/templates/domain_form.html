@@ -1,9 +1,18 @@
 {% extends "base.html" %}
 {% block content %}
 <div class="topbar">
-  <div><h1>{% if record %}Edit Domain{% else %}Add Domain{% endif %}</h1></div>
-  <p class="muted">add a domain in and click save to auto populate its details, if you want to just add it manually then fill in all the fields.</p>
-  <a class="button secondary" href="{% if record %}/networking/domain-manager/{{ record.id }}{% else %}/networking/domain-manager{% endif %}">Cancel</a>
+    <div>
+        <h1>{% if record %}Edit Domain{% else %}Add Domain{% endif %}</h1>
+        <p class="muted">
+            Add a domain and click save to auto-populate its details. If you want
+            to add it manually, complete all fields below, untick the "lookup domain details when saving" checkbox and click save.
+        </p>
+    </div>
+
+    <a class="button secondary"
+       href="{% if record %}/networking/domain-manager/{{ record.id }}{% else %}/networking/domain-manager{% endif %}">
+        Cancel
+    </a>
 </div>
 {% if error %}<div class="alert">{{ error }}</div>{% endif %}
 <section class="panel">

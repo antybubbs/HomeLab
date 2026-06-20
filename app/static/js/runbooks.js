@@ -1,4 +1,32 @@
 (function () {
+  const viewStorageKey = "homelab.runbook.view";
+  const viewButtons = Array.from(document.querySelectorAll("[data-runbook-view-button]"));
+  const views = Array.from(document.querySelectorAll("[data-runbook-view]"));
+
+  function setRunbookView(view) {
+    const nextView = view === "table" ? "table" : "tiles";
+    views.forEach((item) => {
+      item.hidden = item.dataset.runbookView !== nextView;
+    });
+    viewButtons.forEach((button) => {
+      const active = button.dataset.runbookViewButton === nextView;
+      button.classList.toggle("active", active);
+      button.setAttribute("aria-pressed", active ? "true" : "false");
+    });
+    if (views.length) {
+      localStorage.setItem(viewStorageKey, nextView);
+    }
+  }
+
+  if (views.length && viewButtons.length) {
+    setRunbookView(localStorage.getItem(viewStorageKey) || "tiles");
+    viewButtons.forEach((button) => {
+      button.addEventListener("click", () => {
+        setRunbookView(button.dataset.runbookViewButton);
+      });
+    });
+  }
+
   const textarea = document.querySelector("[data-runbook-markdown]");
   const preview = document.querySelector("[data-runbook-preview]");
   if (!textarea || !preview) return;

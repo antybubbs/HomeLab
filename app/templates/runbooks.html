@@ -16,6 +16,10 @@
       <button>Search</button>
     </form>
     <div class="module-actions">
+      <div class="runbook-view-toggle" role="group" aria-label="Runbook view">
+        <button class="button secondary" type="button" data-runbook-view-button="tiles">Tiles</button>
+        <button class="button secondary" type="button" data-runbook-view-button="table">Table</button>
+      </div>
       {% if user.role in ['admin','editor'] %}<a class="button" href="/documentation/runbook-manager/new">New Page</a>{% endif %}
     </div>
   </div>
@@ -53,9 +57,9 @@
     {% endif %}
   </aside>
 
-  <section class="panel runbook-list">
+  <section class="panel runbook-list" data-runbook-home>
     {% if pages %}
-    <div class="runbook-page-grid">
+    <div class="runbook-page-grid" data-runbook-view="tiles">
       {% for page in pages %}
       <article class="runbook-page-card">
         <div class="runbook-card-title">
@@ -78,6 +82,36 @@
       </article>
       {% endfor %}
     </div>
+    <div class="runbook-table-view" data-runbook-view="table" hidden>
+      <table data-table-key="runbook-pages">
+        <thead>
+          <tr>
+            <th class="action-col" data-col="actions">Open</th>
+            <th data-col="title" data-sort>Title</th>
+            <th data-col="space" data-sort>Space</th>
+            <th data-col="summary" data-sort>Summary</th>
+            <th data-col="tags" data-sort>Tags</th>
+            <th data-col="pinned" data-sort>Pinned</th>
+            <th data-col="updated" data-sort>Updated</th>
+            <th data-col="created" data-sort>Created</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for page in pages %}
+          <tr>
+            <td class="action-col"><a class="button secondary" href="/documentation/runbook-manager/{{ page.slug }}">Open</a></td>
+            <td><strong>{{ page.title }}</strong></td>
+            <td>{% if page.space %}<span class="table-chip">{{ page.space.name }}</span>{% else %}-{% endif %}</td>
+            <td>{{ page.summary or '-' }}</td>
+            <td>{% if page.tags %}{{ page.tags }}{% else %}-{% endif %}</td>
+            <td>{% if page.is_pinned %}Yes{% else %}No{% endif %}</td>
+            <td>{{ page.updated_at.strftime('%Y-%m-%d %H:%M') if page.updated_at else '-' }}</td>
+            <td>{{ page.created_at.strftime('%Y-%m-%d %H:%M') if page.created_at else '-' }}</td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
     {% else %}
     <div class="empty-state">
       <h2>No runbooks yet</h2>
@@ -87,4 +121,7 @@
     {% endif %}
   </section>
 </section>
+{% endblock %}
+{% block extra_scripts %}
+<script src="/static/js/runbooks.js?v={{ asset_version }}" defer></script>
 {% endblock %}

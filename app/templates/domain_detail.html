@@ -1,0 +1,95 @@
+{% extends "base.html" %}
+{% block content %}
+{% set state = expiry_state(record) %}
+{% set expires_at = display_expires_at(record) %}
+<div class="record-hero">
+  <div>
+    <h1>{{ record.name }}</h1>
+    <p class="record-identifier mono">{{ display_registrar(record) or 'Registrar unknown' }}</p>
+    <div class="record-chips">
+      <span class="table-chip domain-state-{{ state }}">{{ state|title }}</span>
+      {% if display_dns_provider(record) %}<span class="table-chip">{{ display_dns_provider(record) }}</span>{% endif %}
+      {% if record.auto_renew %}<span class="table-chip muted-chip">Auto-renew</span>{% endif %}
+    </div>
+  </div>
+  <div class="inline-actions">
+    <a class="button secondary" href="/networking/domain-manager">Back</a>
+    {% if user.role in ['admin','editor'] %}
+    <form method="post" action="/networking/domain-manager/{{ record.id }}/lookup">
+      <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+      <button class="button secondary" type="submit">Lookup Details</button>
+    </form>
+    <a class="button" href="/networking/domain-manager/{{ record.id }}/edit">Edit</a>
+    {% endif %}
+  </div>
+</div>
+
+<section class="record-layout">
+  <section class="panel record-panel">
+    <h2>Overview</h2>
+    <dl class="record-kv-list">
+      <div><dt>Domain</dt><dd class="mono">{{ record.name }}</dd></div>
+      <div><dt>Registrar</dt><dd>{{ display_registrar(record) or '-' }}</dd></div>
+      <div><dt>DNS Provider</dt><dd>{{ display_dns_provider(record) or '-' }}</dd></div>
+      <div><dt>Status</dt><dd>{{ display_status(record) or '-' }}</dd></div>
+      <div><dt>Expires</dt><dd>{{ expires_at.strftime('%Y-%m-%d') if expires_at else '-' }}</dd></div>
+      <div><dt>Last Lookup</dt><dd>{{ record.last_lookup_at.strftime('%Y-%m-%d %H:%M') if record.last_lookup_at else '-' }}</dd></div>
+    </dl>
+  </section>
+
+  <section class="panel record-panel">
+    <h2>Nameservers</h2>
+    {% set nameservers = display_nameservers(record) %}
+    {% if nameservers %}
+    <div class="domain-record-list">
+      {% for nameserver in nameservers %}
+      <span class="mono">{{ nameserver }}</span>
+      {% endfor %}
+    </div>
+    {% else %}
+    <p class="muted">No nameservers stored yet.</p>
+    {% endif %}
+  </section>
+
+  <section class="panel record-panel wide">
+    <h2>DNS Records</h2>
+    {% set records = json_dict(record.dns_records) %}
+    {% if records %}
+    <div class="domain-dns-grid">
+      {% for type, values in records.items() %}
+      <div class="domain-dns-type">
+        <strong>{{ type }}</strong>
+        {% if values %}
+        {% for value in values %}<span class="mono">{{ value }}</span>{% endfor %}
+        {% else %}
+        <span class="muted">No records</span>
+        {% endif %}
+      </div>
+      {% endfor %}
+    </div>
+    {% else %}
+    <p class="muted">Run a lookup to capture DNS records.</p>
+    {% endif %}
+  </section>
+
+  <section class="panel record-panel wide">
+    <h2>Notes and Lookup Health</h2>
+    <dl class="record-kv-list full">
+      <div><dt>Notes</dt><dd>{{ record.notes or '-' }}</dd></div>
+      <div><dt>Lookup Error</dt><dd>{{ record.lookup_error or '-' }}</dd></div>
+      <div><dt>Discovered Registrar</dt><dd>{{ record.lookup_registrar or '-' }}</dd></div>
+      <div><dt>Discovered Expiry</dt><dd>{{ record.lookup_expires_at.strftime('%Y-%m-%d') if record.lookup_expires_at else '-' }}</dd></div>
+    </dl>
+  </section>
+</section>
+
+{% if user.role in ['admin','editor'] %}
+<section class="panel section-gap">
+  <h2>Danger Zone</h2>
+  <form method="post" action="/networking/domain-manager/{{ record.id }}/delete">
+    <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+    <button class="button secondary" type="submit">Delete Domain</button>
+  </form>
+</section>
+{% endif %}
+{% endblock %}

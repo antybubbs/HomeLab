@@ -132,6 +132,29 @@ class RemoteManagerSetting(Base):
     updated_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
 
 
+class DomainRecord(Base):
+    __tablename__ = "domain_records"
+    id: Mapped[int] = mapped_column(Integer, primary_key=True)
+    name: Mapped[str] = mapped_column(String(255), unique=True, index=True)
+    registrar: Mapped[str | None] = mapped_column(String(255), nullable=True, index=True)
+    dns_provider: Mapped[str | None] = mapped_column(String(255), nullable=True, index=True)
+    status: Mapped[str | None] = mapped_column(String(120), nullable=True, index=True)
+    expires_at: Mapped[datetime | None] = mapped_column(DateTime, nullable=True, index=True)
+    auto_renew: Mapped[bool] = mapped_column(Boolean, default=False, index=True)
+    nameservers: Mapped[str | None] = mapped_column(Text, nullable=True)
+    lookup_registrar: Mapped[str | None] = mapped_column(String(255), nullable=True)
+    lookup_dns_provider: Mapped[str | None] = mapped_column(String(255), nullable=True)
+    lookup_status: Mapped[str | None] = mapped_column(String(120), nullable=True)
+    lookup_expires_at: Mapped[datetime | None] = mapped_column(DateTime, nullable=True)
+    lookup_nameservers: Mapped[str | None] = mapped_column(Text, nullable=True)
+    dns_records: Mapped[str | None] = mapped_column(Text, nullable=True)
+    lookup_error: Mapped[str | None] = mapped_column(Text, nullable=True)
+    last_lookup_at: Mapped[datetime | None] = mapped_column(DateTime, nullable=True, index=True)
+    notes: Mapped[str | None] = mapped_column(Text, nullable=True)
+    created_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow)
+    updated_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+
+
 class HardwareAsset(Base):
     __tablename__ = "hardware_assets"
     id: Mapped[int] = mapped_column(Integer, primary_key=True)

@@ -11,7 +11,7 @@ from app.core.config import get_settings, trusted_hosts
 from app.core.security import hash_password
 from app.db.session import Base, engine, SessionLocal
 from app.models.models import User, VLAN
-from app.routers import auth, dashboard, licences, admin, ip_addresses, hardware_assets, network_monitor, remote_manager, runbooks
+from app.routers import auth, dashboard, licences, admin, ip_addresses, hardware_assets, network_monitor, remote_manager, runbooks, domain_manager
 from app.services.guacamole_bridge import stop_guacamole_bridge
 from app.services.homelab_remote_service import start_homelab_remote_service, stop_homelab_remote_service
 from app.services.network_monitor import monitor_loop
@@ -206,6 +206,21 @@ def migrate_existing_database():
             conn.execute(text("CREATE INDEX ix_runbook_page_history_page_id ON runbook_page_history (page_id)"))
             conn.execute(text("CREATE INDEX ix_runbook_page_history_saved_by_id ON runbook_page_history (saved_by_id)"))
             conn.execute(text("CREATE INDEX ix_runbook_page_history_saved_at ON runbook_page_history (saved_at)"))
+        domain_columns = {row[1] for row in conn.execute(text("PRAGMA table_info(domain_records)"))}
+        if not domain_columns:
+            conn.execute(text("CREATE TABLE domain_records (id INTEGER NOT NULL PRIMARY KEY, name VARCHAR(255) NOT NULL UNIQUE, registrar VARCHAR(255), dns_provider VARCHAR(255), status VARCHAR(120), expires_at DATETIME, auto_renew BOOLEAN DEFAULT 0 NOT NULL, nameservers TEXT, lookup_registrar VARCHAR(255), lookup_dns_provider VARCHAR(255), lookup_status VARCHAR(120), lookup_expires_at DATETIME, lookup_nameservers TEXT, dns_records TEXT, lookup_error TEXT, last_lookup_at DATETIME, notes TEXT, created_at DATETIME, updated_at DATETIME)"))
+            for column in ["name", "registrar", "dns_provider", "status", "expires_at", "auto_renew", "last_lookup_at"]:
+                conn.execute(text(f"CREATE INDEX ix_domain_records_{column} ON domain_records ({column})"))
+        else:
+            for column, definition in {
+                "lookup_registrar": "VARCHAR(255)",
+                "lookup_dns_provider": "VARCHAR(255)",
+                "lookup_status": "VARCHAR(120)",
+                "lookup_expires_at": "DATETIME",
+                "lookup_nameservers": "TEXT",
+            }.items():
+                if column not in domain_columns:
+                    conn.execute(text(f"ALTER TABLE domain_records ADD COLUMN {column} {definition}"))
 
 
 @app.on_event("startup")
@@ -232,6 +247,7 @@ app.include_router(hardware_assets.router)
 app.include_router(network_monitor.router)
 app.include_router(remote_manager.router)
 app.include_router(runbooks.router)
+app.include_router(domain_manager.router)
 app.include_router(admin.router)
 
 @app.get("/healthz", include_in_schema=False)

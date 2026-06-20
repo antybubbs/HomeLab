@@ -11,7 +11,7 @@ from app.core.config import get_settings, trusted_hosts
 from app.core.security import hash_password
 from app.db.session import Base, engine, SessionLocal
 from app.models.models import User, VLAN
-from app.routers import auth, dashboard, licences, admin, ip_addresses, hardware_assets, network_monitor, remote_manager
+from app.routers import auth, dashboard, licences, admin, ip_addresses, hardware_assets, network_monitor, remote_manager, runbooks
 from app.services.guacamole_bridge import stop_guacamole_bridge
 from app.services.homelab_remote_service import start_homelab_remote_service, stop_homelab_remote_service
 from app.services.network_monitor import monitor_loop
@@ -185,6 +185,27 @@ def migrate_existing_database():
         if not remote_settings_columns:
             conn.execute(text("CREATE TABLE remote_manager_settings (id INTEGER NOT NULL PRIMARY KEY, key VARCHAR(80) NOT NULL UNIQUE, value TEXT, updated_at DATETIME)"))
             conn.execute(text("CREATE INDEX ix_remote_manager_settings_key ON remote_manager_settings (key)"))
+        runbook_space_columns = {row[1] for row in conn.execute(text("PRAGMA table_info(runbook_spaces)"))}
+        if not runbook_space_columns:
+            conn.execute(text("CREATE TABLE runbook_spaces (id INTEGER NOT NULL PRIMARY KEY, name VARCHAR(160) NOT NULL UNIQUE, description TEXT, sort_order INTEGER DEFAULT 0 NOT NULL, created_at DATETIME, updated_at DATETIME)"))
+            conn.execute(text("CREATE INDEX ix_runbook_spaces_name ON runbook_spaces (name)"))
+        runbook_page_columns = {row[1] for row in conn.execute(text("PRAGMA table_info(runbook_pages)"))}
+        if not runbook_page_columns:
+            conn.execute(text("CREATE TABLE runbook_pages (id INTEGER NOT NULL PRIMARY KEY, space_id INTEGER REFERENCES runbook_spaces(id), parent_id INTEGER REFERENCES runbook_pages(id), title VARCHAR(255) NOT NULL, slug VARCHAR(255) NOT NULL UNIQUE, summary VARCHAR(500), body TEXT, tags VARCHAR(500), is_pinned BOOLEAN DEFAULT 0 NOT NULL, created_by_id INTEGER REFERENCES users(id), updated_by_id INTEGER REFERENCES users(id), created_at DATETIME, updated_at DATETIME)"))
+            conn.execute(text("CREATE INDEX ix_runbook_pages_space_id ON runbook_pages (space_id)"))
+            conn.execute(text("CREATE INDEX ix_runbook_pages_parent_id ON runbook_pages (parent_id)"))
+            conn.execute(text("CREATE INDEX ix_runbook_pages_title ON runbook_pages (title)"))
+            conn.execute(text("CREATE INDEX ix_runbook_pages_slug ON runbook_pages (slug)"))
+            conn.execute(text("CREATE INDEX ix_runbook_pages_tags ON runbook_pages (tags)"))
+            conn.execute(text("CREATE INDEX ix_runbook_pages_is_pinned ON runbook_pages (is_pinned)"))
+            conn.execute(text("CREATE INDEX ix_runbook_pages_created_by_id ON runbook_pages (created_by_id)"))
+            conn.execute(text("CREATE INDEX ix_runbook_pages_updated_by_id ON runbook_pages (updated_by_id)"))
+        runbook_history_columns = {row[1] for row in conn.execute(text("PRAGMA table_info(runbook_page_history)"))}
+        if not runbook_history_columns:
+            conn.execute(text("CREATE TABLE runbook_page_history (id INTEGER NOT NULL PRIMARY KEY, page_id INTEGER NOT NULL REFERENCES runbook_pages(id), title VARCHAR(255) NOT NULL, summary VARCHAR(500), body TEXT, tags VARCHAR(500), saved_by_id INTEGER REFERENCES users(id), saved_at DATETIME)"))
+            conn.execute(text("CREATE INDEX ix_runbook_page_history_page_id ON runbook_page_history (page_id)"))
+            conn.execute(text("CREATE INDEX ix_runbook_page_history_saved_by_id ON runbook_page_history (saved_by_id)"))
+            conn.execute(text("CREATE INDEX ix_runbook_page_history_saved_at ON runbook_page_history (saved_at)"))
 
 
 @app.on_event("startup")
@@ -210,6 +231,7 @@ app.include_router(ip_addresses.router)
 app.include_router(hardware_assets.router)
 app.include_router(network_monitor.router)
 app.include_router(remote_manager.router)
+app.include_router(runbooks.router)
 app.include_router(admin.router)
 
 @app.get("/healthz", include_in_schema=False)

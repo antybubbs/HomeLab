@@ -2,6 +2,7 @@
 {% block content %}
 <div class="topbar">
   <div><h1>{% if record %}Edit Domain{% else %}Add Domain{% endif %}</h1></div>
+  <p class="muted">add a domain in and click save to auto populate its details, if you want to just add it manually then fill in all the fields.</p>
   <a class="button secondary" href="{% if record %}/networking/domain-manager/{{ record.id }}{% else %}/networking/domain-manager{% endif %}">Cancel</a>
 </div>
 {% if error %}<div class="alert">{{ error }}</div>{% endif %}
@@ -38,8 +39,10 @@
       <input name="lookup_now" type="checkbox" value="on" checked> Lookup domain details when saving
     </label>
     {% endif %}
-    <button class="button secondary" type="reset">Reset</button>
-    <button type="submit">Save Domain</button>
+    <div class="form-actions wide">
+      <button class="button secondary" type="reset">Reset</button>
+      <button type="submit">Save Domain</button>
+    </div>
   </form>
 </section>
 {% endblock %}

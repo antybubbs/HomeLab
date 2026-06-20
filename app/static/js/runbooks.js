@@ -27,7 +27,7 @@
 
     const flushParagraph = () => {
       if (!paragraph.length) return;
-      output.push(`<p>${inline(paragraph.join(" "))}</p>`);
+      output.push(`<p>${paragraph.map((line) => inline(line)).join("<br>")}</p>`);
       paragraph = [];
     };
 

@@ -81,7 +81,7 @@ def markdown_to_html(markdown: str | None) -> str:
     def flush_paragraph() -> None:
         nonlocal paragraph
         if paragraph:
-            output.append(f"<p>{inline(' '.join(paragraph))}</p>")
+            output.append(f"<p>{'<br>'.join(inline(line) for line in paragraph)}</p>")
             paragraph = []
 
     def close_list() -> None:

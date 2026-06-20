@@ -35,7 +35,7 @@
       {% endif %}
       <section class="panel">
         <h2>Page Info</h2>
-        <dl class="record-kv-list full">
+        <dl class="runbook-info-list">
           <div><dt>Created</dt><dd>{{ page.created_at.strftime('%d %b %Y %H:%M') if page.created_at else '-' }}</dd></div>
           <div><dt>Updated</dt><dd>{{ page.updated_at.strftime('%d %b %Y %H:%M') if page.updated_at else '-' }}</dd></div>
           <div><dt>Slug</dt><dd class="mono">{{ page.slug }}</dd></div>

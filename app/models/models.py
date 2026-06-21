@@ -1,5 +1,5 @@
 from datetime import datetime
-from sqlalchemy import Boolean, Date, DateTime, ForeignKey, Integer, String, Text, UniqueConstraint
+from sqlalchemy import Boolean, Date, DateTime, Float, ForeignKey, Integer, String, Text, UniqueConstraint
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 from app.db.session import Base
 
@@ -284,6 +284,98 @@ class RunbookPageHistory(Base):
     saved_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow, index=True)
     page = relationship("RunbookPage")
     saved_by = relationship("User")
+
+
+class ComputeHost(Base):
+    __tablename__ = "compute_hosts"
+    id: Mapped[int] = mapped_column(Integer, primary_key=True)
+    name: Mapped[str] = mapped_column(String(255), unique=True, index=True)
+    platform: Mapped[str] = mapped_column(String(30), index=True)
+    base_url: Mapped[str] = mapped_column(String(500))
+    token_id: Mapped[str | None] = mapped_column(String(255), nullable=True)
+    encrypted_token: Mapped[str | None] = mapped_column(Text, nullable=True)
+    verify_tls: Mapped[bool] = mapped_column(Boolean, default=True)
+    is_enabled: Mapped[bool] = mapped_column(Boolean, default=True, index=True)
+    poll_interval_seconds: Mapped[int] = mapped_column(Integer, default=30)
+    owner: Mapped[str | None] = mapped_column(String(255), nullable=True, index=True)
+    notes: Mapped[str | None] = mapped_column(Text, nullable=True)
+    status: Mapped[str] = mapped_column(String(30), default="pending", index=True)
+    version: Mapped[str | None] = mapped_column(String(120), nullable=True)
+    cpu_percent: Mapped[float | None] = mapped_column(Float, nullable=True)
+    memory_used: Mapped[int | None] = mapped_column(Integer, nullable=True)
+    memory_total: Mapped[int | None] = mapped_column(Integer, nullable=True)
+    storage_used: Mapped[int | None] = mapped_column(Integer, nullable=True)
+    storage_total: Mapped[int | None] = mapped_column(Integer, nullable=True)
+    metadata_json: Mapped[str | None] = mapped_column(Text, nullable=True)
+    last_error: Mapped[str | None] = mapped_column(Text, nullable=True)
+    last_synced_at: Mapped[datetime | None] = mapped_column(DateTime, nullable=True, index=True)
+    created_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow)
+    updated_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+
+
+class ComputeWorkload(Base):
+    __tablename__ = "compute_workloads"
+    __table_args__ = (UniqueConstraint("host_id", "kind", "external_id", name="uq_compute_workload_external"),)
+    id: Mapped[int] = mapped_column(Integer, primary_key=True)
+    host_id: Mapped[int] = mapped_column(ForeignKey("compute_hosts.id"), index=True)
+    external_id: Mapped[str] = mapped_column(String(255), index=True)
+    name: Mapped[str] = mapped_column(String(255), index=True)
+    kind: Mapped[str] = mapped_column(String(30), index=True)
+    node: Mapped[str | None] = mapped_column(String(255), nullable=True, index=True)
+    status: Mapped[str] = mapped_column(String(30), default="unknown", index=True)
+    cpu_percent: Mapped[float | None] = mapped_column(Float, nullable=True)
+    cpu_total: Mapped[float | None] = mapped_column(Float, nullable=True)
+    memory_used: Mapped[int | None] = mapped_column(Integer, nullable=True)
+    memory_total: Mapped[int | None] = mapped_column(Integer, nullable=True)
+    storage_used: Mapped[int | None] = mapped_column(Integer, nullable=True)
+    storage_total: Mapped[int | None] = mapped_column(Integer, nullable=True)
+    uptime_seconds: Mapped[int | None] = mapped_column(Integer, nullable=True)
+    owner: Mapped[str | None] = mapped_column(String(255), nullable=True, index=True)
+    backup_policy: Mapped[str | None] = mapped_column(String(255), nullable=True)
+    tags: Mapped[str | None] = mapped_column(String(500), nullable=True, index=True)
+    metadata_json: Mapped[str | None] = mapped_column(Text, nullable=True)
+    last_seen_at: Mapped[datetime | None] = mapped_column(DateTime, nullable=True, index=True)
+    created_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow)
+    updated_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+    host = relationship("ComputeHost")
+
+
+class ComputeInventoryItem(Base):
+    __tablename__ = "compute_inventory_items"
+    __table_args__ = (UniqueConstraint("host_id", "kind", "external_id", name="uq_compute_inventory_external"),)
+    id: Mapped[int] = mapped_column(Integer, primary_key=True)
+    host_id: Mapped[int] = mapped_column(ForeignKey("compute_hosts.id"), index=True)
+    external_id: Mapped[str] = mapped_column(String(500), index=True)
+    name: Mapped[str] = mapped_column(String(500), index=True)
+    kind: Mapped[str] = mapped_column(String(30), index=True)
+    status: Mapped[str | None] = mapped_column(String(30), nullable=True, index=True)
+    size_bytes: Mapped[int | None] = mapped_column(Integer, nullable=True)
+    metadata_json: Mapped[str | None] = mapped_column(Text, nullable=True)
+    last_seen_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow, index=True)
+    host = relationship("ComputeHost")
+
+
+class ComputeMetric(Base):
+    __tablename__ = "compute_metrics"
+    id: Mapped[int] = mapped_column(Integer, primary_key=True)
+    host_id: Mapped[int] = mapped_column(ForeignKey("compute_hosts.id"), index=True)
+    workload_id: Mapped[int | None] = mapped_column(ForeignKey("compute_workloads.id"), nullable=True, index=True)
+    cpu_percent: Mapped[float | None] = mapped_column(Float, nullable=True)
+    memory_used: Mapped[int | None] = mapped_column(Integer, nullable=True)
+    memory_total: Mapped[int | None] = mapped_column(Integer, nullable=True)
+    storage_used: Mapped[int | None] = mapped_column(Integer, nullable=True)
+    storage_total: Mapped[int | None] = mapped_column(Integer, nullable=True)
+    recorded_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow, index=True)
+
+
+class ComputeEvent(Base):
+    __tablename__ = "compute_events"
+    id: Mapped[int] = mapped_column(Integer, primary_key=True)
+    host_id: Mapped[int] = mapped_column(ForeignKey("compute_hosts.id"), index=True)
+    workload_id: Mapped[int | None] = mapped_column(ForeignKey("compute_workloads.id"), nullable=True, index=True)
+    event_type: Mapped[str] = mapped_column(String(50), index=True)
+    detail: Mapped[str] = mapped_column(Text)
+    created_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow, index=True)
 
 
 class AuditLog(Base):

@@ -1,0 +1,20 @@
+(() => {
+  const platform = document.querySelector('[data-compute-platform]');
+  const togglePlatform = () => document.querySelectorAll('[data-proxmox-field]').forEach((field) => { field.hidden = platform?.value !== 'proxmox'; });
+  platform?.addEventListener('change', togglePlatform); togglePlatform();
+  const age = document.querySelector('[data-live-age]');
+  if (!age) return;
+  let lastUpdate = null;
+  const renderAge = () => { if (!lastUpdate) return; const seconds=Math.max(0,Math.floor((Date.now()-lastUpdate)/1000)); age.textContent=`updated ${seconds}s ago`; };
+  const refresh = async () => {
+    try {
+      const response=await fetch('/infrastructure/vm-docker-manager/api/summary',{headers:{Accept:'application/json'}}); if(!response.ok) return;
+      const data=await response.json(); lastUpdate=data.updated_at?new Date(data.updated_at).getTime():Date.now();
+      document.querySelectorAll('[data-summary]').forEach((el)=>{ const value=data[el.dataset.summary]; if(value!==undefined) el.textContent=value; });
+      document.querySelectorAll('[data-resource]').forEach((el)=>{ const value=data[el.dataset.resource]; el.textContent=value==null?'-':`${value}%`; });
+      document.querySelectorAll('[data-resource-bar]').forEach((el)=>{ const value=data[el.dataset.resourceBar]||0; el.style.width=`${Math.min(100,value)}%`; });
+      (data.hosts||[]).forEach((host)=>{ const card=document.querySelector(`[data-host-id="${host.id}"]`); if(!card)return; card.className=`compute-host-card status-${host.status}`; const set=(selector,value)=>{const el=card.querySelector(selector);if(el)el.textContent=value==null?'-':`${value}%`;}; set('[data-host-cpu]',host.cpu);set('[data-host-memory]',host.memory);set('[data-host-storage]',host.storage); });
+    } catch (_) { age.textContent='connection interrupted'; }
+  };
+  refresh(); setInterval(refresh,5000); setInterval(renderAge,1000);
+})();

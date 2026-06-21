@@ -11,11 +11,12 @@ from app.core.config import get_settings, trusted_hosts
 from app.core.security import hash_password
 from app.db.session import Base, engine, SessionLocal
 from app.models.models import User, VLAN
-from app.routers import auth, dashboard, licences, admin, ip_addresses, hardware_assets, network_monitor, remote_manager, runbooks, domain_manager
+from app.routers import auth, dashboard, licences, admin, ip_addresses, hardware_assets, network_monitor, remote_manager, runbooks, domain_manager, compute_manager
 from app.services.guacamole_bridge import stop_guacamole_bridge
 from app.services.homelab_remote_service import start_homelab_remote_service, stop_homelab_remote_service
 from app.services.network_monitor import monitor_loop
 from app.services.domain_polling import domain_poll_loop
+from app.services.compute_monitor import compute_monitor_loop
 
 settings = get_settings()
 app = FastAPI(
@@ -25,6 +26,7 @@ app = FastAPI(
 )
 monitor_task = None
 domain_poll_task = None
+compute_monitor_task = None
 
 if settings.app_env == "production":
     app.add_middleware(
@@ -229,9 +231,10 @@ def migrate_existing_database():
 async def on_startup():
     bootstrap()
     start_homelab_remote_service()
-    global monitor_task, domain_poll_task
+    global monitor_task, domain_poll_task, compute_monitor_task
     monitor_task = asyncio.create_task(monitor_loop())
     domain_poll_task = asyncio.create_task(domain_poll_loop())
+    compute_monitor_task = asyncio.create_task(compute_monitor_loop())
 
 
 @app.on_event("shutdown")
@@ -240,6 +243,8 @@ async def on_shutdown():
         monitor_task.cancel()
     if domain_poll_task:
         domain_poll_task.cancel()
+    if compute_monitor_task:
+        compute_monitor_task.cancel()
     stop_homelab_remote_service()
     stop_guacamole_bridge()
 
@@ -253,6 +258,7 @@ app.include_router(network_monitor.router)
 app.include_router(remote_manager.router)
 app.include_router(runbooks.router)
 app.include_router(domain_manager.router)
+app.include_router(compute_manager.router)
 app.include_router(admin.router)
 
 @app.get("/healthz", include_in_schema=False)

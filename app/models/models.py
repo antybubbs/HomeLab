@@ -155,6 +155,17 @@ class DomainRecord(Base):
     updated_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
 
 
+class DomainRecordHistory(Base):
+    __tablename__ = "domain_record_history"
+    id: Mapped[int] = mapped_column(Integer, primary_key=True)
+    domain_id: Mapped[int | None] = mapped_column(ForeignKey("domain_records.id", ondelete="SET NULL"), nullable=True, index=True)
+    domain_name: Mapped[str] = mapped_column(String(255), index=True)
+    source: Mapped[str] = mapped_column(String(30), default="scheduled", index=True)
+    changes: Mapped[str] = mapped_column(Text)
+    checked_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow, index=True)
+    domain = relationship("DomainRecord")
+
+
 class HardwareAsset(Base):
     __tablename__ = "hardware_assets"
     id: Mapped[int] = mapped_column(Integer, primary_key=True)

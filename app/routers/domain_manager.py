@@ -10,10 +10,15 @@ from starlette import status
 
 from app.core.csrf import csrf_context, validate_csrf_token
 from app.db.session import get_db
-from app.models.models import DomainRecord
+from app.models.models import DomainRecord, DomainRecordHistory
 from app.routers.auth import require_editor, require_user
 from app.services.audit import write_audit
 from app.services.domain_lookup import lookup_domain, normalize_domain
+from app.services.domain_polling import (
+    get_poll_cadence,
+    poll_domain,
+    set_poll_cadence,
+)
 
 router = APIRouter(prefix="/networking/domain-manager")
 templates = Jinja2Templates(directory="app/templates")
@@ -37,6 +42,16 @@ def json_dict(value: str | None) -> dict[str, list[str]]:
     except json.JSONDecodeError:
         return {}
     return parsed if isinstance(parsed, dict) else {}
+
+
+def history_changes(value: str | None) -> list[dict]:
+    if not value:
+        return []
+    try:
+        parsed = json.loads(value)
+    except json.JSONDecodeError:
+        return []
+    return parsed if isinstance(parsed, list) else []
 
 
 def clean_lines(value: str) -> list[str]:
@@ -102,6 +117,7 @@ def context(**extra):
         **extra,
         "json_list": json_list,
         "json_dict": json_dict,
+        "history_changes": history_changes,
         "expiry_state": expiry_state,
         "display_registrar": display_registrar,
         "display_dns_provider": display_dns_provider,
@@ -127,11 +143,29 @@ def list_domains(request: Request, q: str = Query("", max_length=200), db: Sessi
             )
         )
     rows = query.order_by(DomainRecord.expires_at.is_(None), DomainRecord.expires_at.asc(), DomainRecord.name.asc()).limit(500).all()
+    poll_cadence = get_poll_cadence(db)
     return templates.TemplateResponse(
         request,
         "domain_manager.html",
-        context(user=user, rows=rows, total=db.query(DomainRecord).count(), q=clean_q, **csrf_context(request)),
+        context(user=user, rows=rows, total=db.query(DomainRecord).count(), q=clean_q, poll_cadence=poll_cadence, **csrf_context(request)),
     )
+
+
+@router.post("/poll-cadence")
+def update_poll_cadence(
+    request: Request,
+    cadence: str = Form(...),
+    csrf_token: str = Form(...),
+    db: Session = Depends(get_db),
+    user=Depends(require_editor),
+):
+    validate_csrf_token(request, csrf_token)
+    try:
+        set_poll_cadence(db, cadence)
+    except ValueError as exc:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(exc)) from exc
+    write_audit(db, user, "update", "domain_poll_cadence", None, request.client.host if request.client else None, detail=cadence)
+    return RedirectResponse("/networking/domain-manager", status_code=303)
 
 
 @router.get("/new")
@@ -185,7 +219,10 @@ def detail_domain(request: Request, record_id: int, db: Session = Depends(get_db
     record = db.get(DomainRecord, record_id)
     if not record:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Domain not found")
-    return templates.TemplateResponse(request, "domain_detail.html", context(user=user, record=record, **csrf_context(request)))
+    history = db.query(DomainRecordHistory).filter(
+        DomainRecordHistory.domain_id == record.id
+    ).order_by(DomainRecordHistory.checked_at.desc()).limit(100).all()
+    return templates.TemplateResponse(request, "domain_detail.html", context(user=user, record=record, history=history, **csrf_context(request)))
 
 
 @router.get("/{record_id}/edit")
@@ -243,9 +280,7 @@ def refresh_domain(request: Request, record_id: int, csrf_token: str = Form(...)
     record = db.get(DomainRecord, record_id)
     if not record:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Domain not found")
-    save_lookup(record, lookup_domain(record.name))
-    record.updated_at = datetime.utcnow()
-    db.commit()
+    poll_domain(db, record, source="manual")
     write_audit(db, user, "lookup", "domain", str(record.id), request.client.host if request.client else None, detail=record.name)
     return RedirectResponse(f"/networking/domain-manager/{record.id}", status_code=303)
 
@@ -257,6 +292,9 @@ def delete_domain(request: Request, record_id: int, csrf_token: str = Form(...),
     if not record:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Domain not found")
     name = record.name
+    db.query(DomainRecordHistory).filter(
+        DomainRecordHistory.domain_id == record.id
+    ).update({DomainRecordHistory.domain_id: None}, synchronize_session=False)
     db.delete(record)
     db.commit()
     write_audit(db, user, "delete", "domain", None, request.client.host if request.client else None, detail=name)

@@ -15,6 +15,7 @@ from app.routers import auth, dashboard, licences, admin, ip_addresses, hardware
 from app.services.guacamole_bridge import stop_guacamole_bridge
 from app.services.homelab_remote_service import start_homelab_remote_service, stop_homelab_remote_service
 from app.services.network_monitor import monitor_loop
+from app.services.domain_polling import domain_poll_loop
 
 settings = get_settings()
 app = FastAPI(
@@ -23,6 +24,7 @@ app = FastAPI(
     root_path=settings.root_path,
 )
 monitor_task = None
+domain_poll_task = None
 
 if settings.app_env == "production":
     app.add_middleware(
@@ -227,14 +229,17 @@ def migrate_existing_database():
 async def on_startup():
     bootstrap()
     start_homelab_remote_service()
-    global monitor_task
+    global monitor_task, domain_poll_task
     monitor_task = asyncio.create_task(monitor_loop())
+    domain_poll_task = asyncio.create_task(domain_poll_loop())
 
 
 @app.on_event("shutdown")
 async def on_shutdown():
     if monitor_task:
         monitor_task.cancel()
+    if domain_poll_task:
+        domain_poll_task.cancel()
     stop_homelab_remote_service()
     stop_guacamole_bridge()
 

@@ -83,6 +83,38 @@
   </section>
 </section>
 
+<section class="panel section-gap">
+  <h2>Change History</h2>
+  {% if history %}
+  <table data-table-key="domain-history">
+    <thead>
+      <tr>
+        <th>Checked</th>
+        <th>Source</th>
+        <th>Field</th>
+        <th>Previous</th>
+        <th>New</th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for entry in history %}
+      {% for change in history_changes(entry.changes) %}
+      <tr>
+        <td>{{ entry.checked_at.strftime('%Y-%m-%d %H:%M') }}</td>
+        <td>{{ entry.source|title }}</td>
+        <td><strong>{{ change.label }}</strong></td>
+        <td class="mono">{% if change.before is mapping or (change.before is sequence and change.before is not string) %}{{ change.before|tojson }}{% else %}{{ change.before if change.before is not none else '-' }}{% endif %}</td>
+        <td class="mono">{% if change.after is mapping or (change.after is sequence and change.after is not string) %}{{ change.after|tojson }}{% else %}{{ change.after if change.after is not none else '-' }}{% endif %}</td>
+      </tr>
+      {% endfor %}
+      {% endfor %}
+    </tbody>
+  </table>
+  {% else %}
+  <p class="muted">No discovered domain details have changed since the first lookup.</p>
+  {% endif %}
+</section>
+
 {% if user.role in ['admin','editor'] %}
 <section class="panel section-gap">
   <h2>Danger Zone</h2>

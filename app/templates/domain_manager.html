@@ -14,7 +14,19 @@
       <button>Search</button>
     </form>
     <div class="module-actions">
-      {% if user.role in ['admin','editor'] %}<a class="button" href="/networking/domain-manager/new">Add Domain</a>{% endif %}
+      {% if user.role in ['admin','editor'] %}
+      <form class="inline-actions" method="post" action="/networking/domain-manager/poll-cadence">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+        <label class="muted" for="domain-poll-cadence">Poll domains</label>
+        <select id="domain-poll-cadence" name="cadence">
+          <option value="daily" {% if poll_cadence == 'daily' %}selected{% endif %}>Daily</option>
+          <option value="weekly" {% if poll_cadence == 'weekly' %}selected{% endif %}>Weekly</option>
+          <option value="monthly" {% if poll_cadence == 'monthly' %}selected{% endif %}>Monthly</option>
+        </select>
+        <button class="button secondary" type="submit">Save</button>
+      </form>
+      <a class="button" href="/networking/domain-manager/new">Add Domain</a>
+      {% endif %}
     </div>
   </div>
 </section>

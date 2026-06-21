@@ -56,7 +56,7 @@ def collect_proxmox(host):
     version=pve(host,'/version') or {}
     resources=pve(host,'/cluster/resources') or []
     node_names=sorted({x.get('node') for x in resources if x.get('type')=='node' and x.get('node')})
-    seen={(x.get('type'),str(x.get('vmid') or x.get('node') or x.get('storage') or x.get('id'))) for x in resources}
+    seen={(x.get('type'),str(x.get('id') or x.get('vmid') or x.get('node') or x.get('storage'))) for x in resources}
     for node_name in node_names:
         try:
             node_status=pve(host,f'/nodes/{node_name}/status') or {}
@@ -69,7 +69,7 @@ def collect_proxmox(host):
         for endpoint,kind in (('qemu','qemu'),('lxc','lxc')):
             try:
                 for guest in pve(host,f'/nodes/{node_name}/{endpoint}') or []:
-                    key=(kind,str(guest.get('vmid')))
+                    key=(kind,str(kind)+'/'+str(guest.get('vmid')))
                     if key not in seen:
                         guest.update({'type':kind,'node':node_name,'id':f'{kind}/{guest.get("vmid")}'})
                         if guest.get('maxcpu') is None: guest['maxcpu']=guest.get('cpus')
@@ -78,7 +78,7 @@ def collect_proxmox(host):
                 pass
         try:
             for storage in pve(host,f'/nodes/{node_name}/storage') or []:
-                key=('storage',str(storage.get('storage')))
+                key=('storage','storage/'+str(node_name)+'/'+str(storage.get('storage')))
                 if key not in seen:
                     storage.update({'type':'storage','node':node_name,'id':f'storage/{node_name}/{storage.get("storage")}','disk':storage.get('used'),'maxdisk':storage.get('total'),'plugintype':storage.get('type'),'status':'available' if storage.get('active',1) else 'offline'})
                     resources.append(storage); seen.add(key)
@@ -115,7 +115,12 @@ def sync_host(db,host):
         for row in db.query(ComputeWorkload).filter_by(host_id=host.id).all():
             if (row.kind,row.external_id) not in seen and row.status!='missing': row.status='missing'; db.add(ComputeEvent(host_id=host.id,workload_id=row.id,event_type='missing',detail=f'{row.name} is no longer reported'))
         db.query(ComputeInventoryItem).filter_by(host_id=host.id).delete(synchronize_session=False)
-        for data in result['items']: db.add(ComputeInventoryItem(host_id=host.id,external_id=data['external_id'],name=data['name'],kind=data['kind'],status=data.get('status'),size_bytes=data.get('size_bytes'),metadata_json=json.dumps(data.get('metadata') or {}),last_seen_at=now))
+        inventory_seen=set()
+        for data in result['items']:
+            key=(data['kind'],data['external_id'])
+            if key in inventory_seen: continue
+            inventory_seen.add(key)
+            db.add(ComputeInventoryItem(host_id=host.id,external_id=data['external_id'],name=data['name'],kind=data['kind'],status=data.get('status'),size_bytes=data.get('size_bytes'),metadata_json=json.dumps(data.get('metadata') or {}),last_seen_at=now))
         last=db.query(ComputeMetric).filter(ComputeMetric.host_id==host.id,ComputeMetric.workload_id.is_(None)).order_by(ComputeMetric.recorded_at.desc()).first()
         if not last or last.recorded_at<now-timedelta(seconds=60):
             db.add(ComputeMetric(host_id=host.id,cpu_percent=host.cpu_percent,memory_used=host.memory_used,memory_total=host.memory_total,storage_used=host.storage_used,storage_total=host.storage_total,recorded_at=now))
@@ -132,6 +137,8 @@ def sync_host_by_id(host_id):
     try:
         host=db.get(ComputeHost,host_id)
         if host and host.is_enabled: sync_host(db,host)
+    except Exception:
+        db.rollback()
     finally: db.close()
 
 async def compute_monitor_loop():
@@ -140,7 +147,7 @@ async def compute_monitor_loop():
         db=SessionLocal(); now=datetime.utcnow()
         try: ids=[h.id for h in db.query(ComputeHost).filter_by(is_enabled=True).all() if not h.last_synced_at or h.last_synced_at<=now-timedelta(seconds=max(15,min(h.poll_interval_seconds,3600)))]
         finally: db.close()
-        if ids: await asyncio.gather(*(asyncio.to_thread(sync_host_by_id,i) for i in ids[:3]))
+        if ids: await asyncio.gather(*(asyncio.to_thread(sync_host_by_id,i) for i in ids[:3]),return_exceptions=True)
         await asyncio.sleep(5)
 
 def compute_summary(db):

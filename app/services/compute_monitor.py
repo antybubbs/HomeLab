@@ -53,24 +53,57 @@ def pve(host,path):
     data=request_json(host,'/api2/json'+path); return data.get('data') if isinstance(data,dict) else data
 
 def collect_proxmox(host):
-    version=pve(host,'/version') or {}; resources=pve(host,'/cluster/resources') or []; workloads=[]; items=[]; nodes=[]
+    version=pve(host,'/version') or {}
+    resources=pve(host,'/cluster/resources') or []
+    node_names=sorted({x.get('node') for x in resources if x.get('type')=='node' and x.get('node')})
+    seen={(x.get('type'),str(x.get('vmid') or x.get('node') or x.get('storage') or x.get('id'))) for x in resources}
+    for node_name in node_names:
+        try:
+            node_status=pve(host,f'/nodes/{node_name}/status') or {}
+            node_row=next((x for x in resources if x.get('type')=='node' and x.get('node')==node_name),None)
+            if node_row is not None:
+                memory=node_status.get('memory') or {}; rootfs=node_status.get('rootfs') or {}; cpuinfo=node_status.get('cpuinfo') or {}
+                node_row.update({'cpu':node_status.get('cpu',node_row.get('cpu')),'maxcpu':cpuinfo.get('cpus') or node_status.get('cpuinfo',{}).get('cpus') or node_row.get('maxcpu'),'mem':memory.get('used',node_row.get('mem')),'maxmem':memory.get('total',node_row.get('maxmem')),'disk':rootfs.get('used',node_row.get('disk')),'maxdisk':rootfs.get('total',node_row.get('maxdisk')),'uptime':node_status.get('uptime',node_row.get('uptime'))})
+        except Exception:
+            pass
+        for endpoint,kind in (('qemu','qemu'),('lxc','lxc')):
+            try:
+                for guest in pve(host,f'/nodes/{node_name}/{endpoint}') or []:
+                    key=(kind,str(guest.get('vmid')))
+                    if key not in seen:
+                        guest.update({'type':kind,'node':node_name,'id':f'{kind}/{guest.get("vmid")}'})
+                        if guest.get('maxcpu') is None: guest['maxcpu']=guest.get('cpus')
+                        resources.append(guest); seen.add(key)
+            except Exception:
+                pass
+        try:
+            for storage in pve(host,f'/nodes/{node_name}/storage') or []:
+                key=('storage',str(storage.get('storage')))
+                if key not in seen:
+                    storage.update({'type':'storage','node':node_name,'id':f'storage/{node_name}/{storage.get("storage")}','disk':storage.get('used'),'maxdisk':storage.get('total'),'plugintype':storage.get('type'),'status':'available' if storage.get('active',1) else 'offline'})
+                    resources.append(storage); seen.add(key)
+        except Exception:
+            pass
+    workloads=[]; items=[]; nodes=[]
     for x in resources:
         kind=x.get('type')
         if kind=='node': nodes.append(x)
         if kind in {'node','qemu','lxc'}:
-            workloads.append({'external_id':str(x.get('vmid') or x.get('node') or x.get('id')),'name':x.get('name') or x.get('node') or x.get('id'),'kind':'vm' if kind=='qemu' else kind,'node':x.get('node'),'status':x.get('status') or 'unknown','cpu_percent':round(float(x.get('cpu') or 0)*100,2),'cpu_total':float(x.get('maxcpu') or 0),'memory_used':x.get('mem'),'memory_total':x.get('maxmem'),'storage_used':x.get('disk'),'storage_total':x.get('maxdisk'),'uptime_seconds':x.get('uptime'),'tags':x.get('tags'),'metadata':{'id':x.get('id'),'pool':x.get('pool'),'template':x.get('template')}})
+            workloads.append({'external_id':str(x.get('vmid') or x.get('node') or x.get('id')),'name':x.get('name') or x.get('node') or x.get('id'),'kind':'vm' if kind=='qemu' else kind,'node':x.get('node'),'status':x.get('status') or 'unknown','cpu_percent':round(float(x.get('cpu') or 0)*100,2),'cpu_total':float(x.get('maxcpu') or x.get('cpus') or 0),'memory_used':x.get('mem'),'memory_total':x.get('maxmem'),'storage_used':x.get('disk'),'storage_total':x.get('maxdisk'),'uptime_seconds':x.get('uptime'),'tags':x.get('tags'),'metadata':{'id':x.get('id'),'pool':x.get('pool'),'template':x.get('template')}})
         elif kind=='storage': items.append({'external_id':x.get('id'),'name':x.get('storage') or x.get('id'),'kind':'storage','status':x.get('status'),'size_bytes':x.get('maxdisk'),'metadata':{'node':x.get('node'),'used':x.get('disk'),'type':x.get('plugintype')}})
     try: jobs=pve(host,'/cluster/backup') or []
     except Exception: jobs=[]
     for x in jobs:
         eid=str(x.get('id') or f"{x.get('storage')}:{x.get('schedule')}:{x.get('vmid','all')}"); items.append({'external_id':eid,'name':x.get('id') or f"Backup to {x.get('storage','storage')}",'kind':'backup','status':'enabled' if x.get('enabled',1) else 'disabled','size_bytes':None,'metadata':x})
     cpu=sum(float(x.get('cpu') or 0)*100 for x in nodes)/len(nodes) if nodes else None
-    return {'version':version.get('version'),'host':{'cpu_percent':round(cpu,2) if cpu is not None else None,'memory_used':sum(x.get('mem') or 0 for x in nodes),'memory_total':sum(x.get('maxmem') or 0 for x in nodes),'storage_used':sum(x.get('disk') or 0 for x in nodes),'storage_total':sum(x.get('maxdisk') or 0 for x in nodes),'metadata':{'release':version.get('release'),'nodes':len(nodes)}},'workloads':workloads,'items':items}
+    limited=bool(nodes) and not any(x.get('maxmem') for x in nodes)
+    warning='Connected, but the API token cannot read node capacity or guests. Assign PVEAuditor to the API token at / with Propagate enabled.' if limited else None
+    return {'version':version.get('version'),'warning':warning,'host':{'cpu_percent':round(cpu,2) if cpu is not None else None,'memory_used':sum(x.get('mem') or 0 for x in nodes),'memory_total':sum(x.get('maxmem') or 0 for x in nodes),'storage_used':sum(x.get('disk') or 0 for x in nodes),'storage_total':sum(x.get('maxdisk') or 0 for x in nodes),'metadata':{'release':version.get('release'),'nodes':len(nodes)}},'workloads':workloads,'items':items}
 
 def sync_host(db,host):
     now=datetime.utcnow(); old_host_status=host.status
     try:
-        result=collect_docker(host) if host.platform=='docker' else collect_proxmox(host); snap=result['host']; host.status='online'; host.version=result.get('version'); host.last_error=None
+        result=collect_docker(host) if host.platform=='docker' else collect_proxmox(host); snap=result['host']; host.status='online'; host.version=result.get('version'); host.last_error=result.get('warning')
         for key in ('cpu_percent','memory_used','memory_total','storage_used','storage_total'): setattr(host,key,snap.get(key))
         host.metadata_json=json.dumps(snap.get('metadata') or {}); seen=set()
         for data in result['workloads']:

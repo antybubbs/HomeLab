@@ -35,4 +35,7 @@ export ENCRYPTION_KEY
 
 echo "Starting HomeLab with ENCRYPTION_KEY length: ${#ENCRYPTION_KEY}"
 
+echo "Running database migrations..."
+gosu homelab python /app/scripts/migrate_sqlite.py
+
 exec gosu homelab "$@"

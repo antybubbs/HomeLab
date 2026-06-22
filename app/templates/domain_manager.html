@@ -1,0 +1,63 @@
+{% extends "base.html" %}
+{% block content %}
+<section class="module-header">
+  <div class="module-title-row">
+    <div class="module-heading">
+      <h1>Domain Manager</h1>
+      <p class="muted">Track domain ownership, registration dates, nameservers and DNS records.</p>
+    </div>
+    <span class="module-stat">Domains <strong>{{ total }}</strong></span>
+  </div>
+  <div class="module-toolbar">
+    <div class="module-primary-actions">
+      <form class="search list-search" method="get">
+        <input name="q" placeholder="Search domains..." value="{{ q }}">
+        <button>Search</button>
+      </form>
+      {% if user.role in ['admin','editor'] %}<a class="button" href="/networking/domain-manager/new">Add Domain</a>{% endif %}
+    </div>
+    {% if user.role in ['admin','editor'] %}
+    <form class="module-secondary-actions domain-poll-controls" method="post" action="/networking/domain-manager/poll-cadence">
+      <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+      <label class="muted" for="domain-poll-cadence">Poll domains</label>
+      <select id="domain-poll-cadence" name="cadence">
+        <option value="daily" {% if poll_cadence == 'daily' %}selected{% endif %}>Daily</option>
+        <option value="weekly" {% if poll_cadence == 'weekly' %}selected{% endif %}>Weekly</option>
+        <option value="monthly" {% if poll_cadence == 'monthly' %}selected{% endif %}>Monthly</option>
+      </select>
+      <button class="button secondary" type="submit">Save</button>
+    </form>
+    {% endif %}
+  </div>
+</section>
+<section class="panel">
+  <table data-table-key="domains">
+    <thead>
+      <tr>
+        <th class="action-col" data-col="actions">View</th>
+        <th data-col="domain" data-sort>Domain</th>
+        <th data-col="registrar" data-sort>Registrar</th>
+        <th data-col="dns-provider" data-sort>DNS Provider</th>
+        <th data-col="expiry" data-sort>Expiry</th>
+        <th data-col="state" data-sort>State</th>
+        <th data-col="lookup" data-sort>Last Lookup</th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for row in rows %}
+      {% set state = expiry_state(row) %}
+      {% set expires_at = display_expires_at(row) %}
+      <tr>
+        <td class="action-col"><a class="button secondary" href="/networking/domain-manager/{{ row.id }}">View</a></td>
+        <td><strong>{{ row.name }}</strong></td>
+        <td>{{ display_registrar(row) or '-' }}</td>
+        <td>{{ display_dns_provider(row) or '-' }}</td>
+        <td>{{ expires_at.strftime('%Y-%m-%d') if expires_at else '-' }}</td>
+        <td><span class="table-chip domain-state-{{ state }}">{{ state|title }}</span></td>
+        <td>{{ row.last_lookup_at.strftime('%Y-%m-%d %H:%M') if row.last_lookup_at else '-' }}</td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</section>
+{% endblock %}

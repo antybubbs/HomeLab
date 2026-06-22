@@ -7,15 +7,16 @@ from sqlalchemy.orm import Session
 from starlette import status
 from app.core.csrf import csrf_context, validate_csrf_token
 from app.db.session import get_db
-from app.models.models import IPAddress, NetworkMonitor, RemoteAccess, VLAN
+from app.models.models import ComputeWorkload, IPAddress, NetworkMonitor, RemoteAccess, VLAN
 from app.routers.auth import require_editor, require_user
+from app.routers.compute_manager import uptime_label, workload_addresses
 from app.routers.remote_manager import RDP_SETTING_KEYS, SETTINGS as REMOTE_MANAGER_DEFAULTS, TERMINAL_SETTING_KEYS, clean_global_setting, decode_settings_blob, encode_settings_blob
 from app.services.audit import write_audit
 from app.services.custom_fields import active_fields, field_values, option_list, save_custom_values, validate_custom_values
 from app.services.managed_lists import list_values
 from app.services.network_monitor import clamp_interval, clamp_timeout, ping_ipv4
 
-router = APIRouter(prefix="/ip-addresses")
+router = APIRouter(prefix="/networking/vlan-ip-manager")
 templates = Jinja2Templates(directory="app/templates")
 ASSIGNMENT_TYPES = {"Static", "Dynamic"}
 REMOTE_PROTOCOLS = {"ssh", "rdp"}
@@ -170,7 +171,7 @@ def bulk_update_ip_addresses(
     validate_csrf_token(request, csrf_token)
     ids = sorted({record_id for record_id in selected_ids if record_id > 0})[:500]
     if not ids:
-        return RedirectResponse("/ip-addresses", status_code=303)
+        return RedirectResponse("/networking/vlan-ip-manager", status_code=303)
     categories = list_values(db, MODULE).get("category", [])
     category_value: str | None = None
     update_category = category != BULK_NO_CHANGE
@@ -185,7 +186,7 @@ def bulk_update_ip_addresses(
     if update_assignment and assignment_type not in ASSIGNMENT_TYPES:
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Choose Static or Dynamic.")
     if not update_category and not update_assignment:
-        return RedirectResponse("/ip-addresses", status_code=303)
+        return RedirectResponse("/networking/vlan-ip-manager", status_code=303)
     rows = db.query(IPAddress).filter(IPAddress.id.in_(ids)).all()
     for row in rows:
         if update_category:
@@ -207,7 +208,7 @@ def bulk_update_ip_addresses(
         request.client.host if request.client else None,
         detail=f"Updated {len(rows)} IP addresses: {', '.join(fields)}",
     )
-    return RedirectResponse("/ip-addresses", status_code=303)
+    return RedirectResponse("/networking/vlan-ip-manager", status_code=303)
 
 
 @router.post("/{record_id}/ping")
@@ -262,7 +263,7 @@ async def create_ip_address(request: Request, address: str = Form(..., max_lengt
     save_custom_values(db, fields, form, ENTITY_TYPE, row.id)
     db.commit()
     write_audit(db, user, "create", "ip_address", str(row.id), request.client.host if request.client else None, detail=clean_address)
-    return RedirectResponse("/ip-addresses", status_code=303)
+    return RedirectResponse("/networking/vlan-ip-manager", status_code=303)
 
 
 @router.get("/{record_id}")
@@ -273,7 +274,14 @@ def detail_ip_address(request: Request, record_id: int, db: Session = Depends(ge
     fields = active_fields(db, MODULE)
     values = field_values(db, MODULE, ENTITY_TYPE, row.id)
     categories = list_values(db, MODULE).get("category", [])
-    return templates.TemplateResponse(request, "ip_address_detail.html", {"user": user, "record": row, "monitor": monitor_for(db, row.id), "remote": remote_for(db, row.id), "categories": categories, "assignment_types": sorted(ASSIGNMENT_TYPES), "remote_protocols": sorted(REMOTE_PROTOCOLS), "custom_fields": fields, "custom_values": values, "option_list": option_list, **remote_settings_context(remote_for(db, row.id)), **csrf_context(request)})
+    target_address = str(ip_address(row.address))
+    compute_matches = [
+        workload
+        for workload in db.query(ComputeWorkload).filter(ComputeWorkload.status != "missing").all()
+        if any(item["address"] == target_address for item in workload_addresses(workload))
+    ]
+    compute_matches.sort(key=lambda workload: (workload.host.name.lower(), workload.name.lower()))
+    return templates.TemplateResponse(request, "ip_address_detail.html", {"user": user, "record": row, "monitor": monitor_for(db, row.id), "remote": remote_for(db, row.id), "compute_matches": compute_matches, "uptime_label": uptime_label, "categories": categories, "assignment_types": sorted(ASSIGNMENT_TYPES), "remote_protocols": sorted(REMOTE_PROTOCOLS), "custom_fields": fields, "custom_values": values, "option_list": option_list, **remote_settings_context(remote_for(db, row.id)), **csrf_context(request)})
 
 
 @router.get("/{record_id}/edit")
@@ -321,4 +329,4 @@ async def update_ip_address(request: Request, record_id: int, address: str = For
     save_custom_values(db, fields, form, ENTITY_TYPE, row.id)
     db.commit()
     write_audit(db, user, "update", "ip_address", str(row.id), request.client.host if request.client else None, detail=clean_address)
-    return RedirectResponse(f"/ip-addresses/{row.id}", status_code=303)
+    return RedirectResponse(f"/networking/vlan-ip-manager/{row.id}", status_code=303)

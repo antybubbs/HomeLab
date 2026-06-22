@@ -1,6 +1,6 @@
 {% extends "base.html" %}
 {% block content %}
-<form method="post" action="/hardware-assets/{{ record.id }}/edit" class="inline-record" data-inline-edit enctype="multipart/form-data">
+<form method="post" action="/infrastructure/asset-manager/{{ record.id }}/edit" class="inline-record" data-inline-edit enctype="multipart/form-data">
 <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
 <div class="record-hero">
   <div>
@@ -24,7 +24,7 @@
   {% if record.photo_filename %}
   <section class="panel record-panel media-panel">
     <h2>Photo</h2>
-    <div class="asset-photo-wrap"><img class="asset-photo" src="/hardware-assets/{{ record.id }}/photo" alt="{{ record.name }}"></div>
+    <div class="asset-photo-wrap"><img class="asset-photo" src="/infrastructure/asset-manager/{{ record.id }}/photo" alt="{{ record.name }}"></div>
   </section>
   {% endif %}
   <section class="panel record-panel {% if not record.photo_filename %}wide{% endif %}">
@@ -75,7 +75,7 @@
     <thead><tr><th>File</th><th>Uploaded</th><th></th></tr></thead>
     <tbody>
     {% for attachment in attachments %}
-    <tr><td>{{ attachment.original_filename }}</td><td>{{ attachment.uploaded_at }}</td><td><a class="button secondary" href="/hardware-assets/{{ record.id }}/attachments/{{ attachment.id }}">Download</a></td></tr>
+    <tr><td>{{ attachment.original_filename }}</td><td>{{ attachment.uploaded_at }}</td><td><a class="button secondary" href="/infrastructure/asset-manager/{{ record.id }}/attachments/{{ attachment.id }}">Download</a></td></tr>
     {% endfor %}
     </tbody>
   </table>
@@ -83,7 +83,7 @@
   <p class="muted">No attachments yet.</p>
   {% endif %}
   {% if user.role in ['admin','editor'] %}
-  <form method="post" action="/hardware-assets/{{ record.id }}/attachments" enctype="multipart/form-data" class="search section-gap">
+  <form method="post" action="/infrastructure/asset-manager/{{ record.id }}/attachments" enctype="multipart/form-data" class="search section-gap">
     <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
     <input name="attachment" type="file" required>
     <button type="submit">Upload attachment</button>

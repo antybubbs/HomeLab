@@ -1,5 +1,7 @@
 from pathlib import Path
 import asyncio
+from time import perf_counter
+from uuid import uuid4
 from fastapi import FastAPI, Request
 from fastapi.responses import PlainTextResponse, RedirectResponse
 from fastapi.staticfiles import StaticFiles
@@ -8,13 +10,16 @@ from starlette.middleware.trustedhost import TrustedHostMiddleware
 from sqlalchemy import text
 from sqlalchemy.orm import Session
 from app.core.config import get_settings, trusted_hosts
-from app.core.security import hash_password
+from app.core.security import decrypt_secret, hash_password
 from app.db.session import Base, engine, SessionLocal
-from app.models.models import User, VLAN
-from app.routers import auth, dashboard, licences, admin, ip_addresses, hardware_assets, network_monitor, remote_manager
+from app.models.models import AuditLog, User, VLAN
+from app.routers import auth, dashboard, licences, admin, ip_addresses, hardware_assets, network_monitor, remote_manager, runbooks, domain_manager, compute_manager
 from app.services.guacamole_bridge import stop_guacamole_bridge
 from app.services.homelab_remote_service import start_homelab_remote_service, stop_homelab_remote_service
 from app.services.network_monitor import monitor_loop
+from app.services.domain_polling import domain_poll_loop
+from app.services.compute_monitor import compute_monitor_loop
+from app.services.audit import begin_request_context, end_request_context, request_event_written, write_audit
 
 settings = get_settings()
 app = FastAPI(
@@ -23,6 +28,8 @@ app = FastAPI(
     root_path=settings.root_path,
 )
 monitor_task = None
+domain_poll_task = None
+compute_monitor_task = None
 
 if settings.app_env == "production":
     app.add_middleware(
@@ -78,6 +85,90 @@ async def security_headers(request: Request, call_next):
         response.headers["Strict-Transport-Security"] = "max-age=31536000; includeSubDomains"
     return response
 
+
+def audit_entity_for_path(path: str) -> str:
+    parts = [part for part in path.split("/") if part]
+    return parts[0].replace("-", "_") if parts else "application"
+
+
+@app.middleware("http")
+async def audit_requests(request: Request, call_next):
+    path = request.url.path
+    if path.startswith("/static/") or path == "/healthz":
+        return await call_next(request)
+    request_id = (request.headers.get("x-request-id") or uuid4().hex)[:64]
+    token, context = begin_request_context(
+        request_id=request_id,
+        method=request.method,
+        path=path,
+        ip_address=request.client.host if request.client else None,
+        user_agent=(request.headers.get("user-agent") or "")[:2000] or None,
+    )
+    started = perf_counter()
+    response = None
+    try:
+        response = await call_next(request)
+        context["status_code"] = response.status_code
+        context["user_id"] = (request.scope.get("session") or {}).get("user_id")
+        duration_ms = round((perf_counter() - started) * 1000, 1)
+        high_frequency_success = response.status_code < 400 and (
+            path.endswith("/api/summary") or path.endswith("/api/agent/checkin")
+        )
+        should_log = not request_event_written(context) and (
+            response.status_code >= 400
+            or (
+                request.method not in {"GET", "HEAD", "OPTIONS"}
+                and not high_frequency_success
+            )
+        )
+        db = SessionLocal()
+        try:
+            if context["row_ids"]:
+                db.query(AuditLog).filter(AuditLog.id.in_(context["row_ids"])).update(
+                    {AuditLog.status_code: response.status_code},
+                    synchronize_session=False,
+                )
+                db.commit()
+            if should_log:
+                user = db.get(User, context["user_id"]) if context.get("user_id") else None
+                action = "request_failed" if response.status_code >= 400 else request.method.lower()
+                write_audit(
+                    db,
+                    user,
+                    action,
+                    audit_entity_for_path(path),
+                    ip_address=context.get("ip_address"),
+                    detail=f"{request.method} {path} returned {response.status_code}",
+                    status_code=response.status_code,
+                    metadata={"duration_ms": duration_ms, "query_keys": sorted(request.query_params.keys())},
+                )
+        finally:
+            db.close()
+        response.headers["X-Request-ID"] = request_id
+        return response
+    except Exception as exc:
+        context["status_code"] = 500
+        context["user_id"] = (request.scope.get("session") or {}).get("user_id")
+        db = SessionLocal()
+        try:
+            user = db.get(User, context["user_id"]) if context.get("user_id") else None
+            write_audit(
+                db,
+                user,
+                "request_error",
+                audit_entity_for_path(path),
+                ip_address=context.get("ip_address"),
+                detail=f"{request.method} {path} raised {type(exc).__name__}",
+                severity="error",
+                status_code=500,
+                metadata={"duration_ms": round((perf_counter() - started) * 1000, 1)},
+            )
+        finally:
+            db.close()
+        raise
+    finally:
+        end_request_context(token)
+
 Path("/app/uploads").mkdir(parents=True, exist_ok=True)
 Path("/app/data").mkdir(parents=True, exist_ok=True)
 app.mount("/static", StaticFiles(directory="app/static"), name="static")
@@ -86,18 +177,13 @@ app.mount("/static", StaticFiles(directory="app/static"), name="static")
 def bootstrap():
     Base.metadata.create_all(bind=engine)
     migrate_existing_database()
+
     db: Session = SessionLocal()
     try:
-        admin_email = settings.admin_email.strip().lower()
-        admin = db.query(User).filter(User.email == admin_email).first()
-        if not admin:
-            db.add(User(email=admin_email, password_hash=hash_password(settings.admin_password), role="admin"))
-            db.commit()
         default_vlan = db.query(VLAN).filter(VLAN.name == "VLAN 1").first()
         if not default_vlan:
             db.add(VLAN(name="VLAN 1"))
             db.commit()
-        db.commit()
     finally:
         db.close()
 
@@ -190,20 +276,107 @@ def migrate_existing_database():
         if not remote_settings_columns:
             conn.execute(text("CREATE TABLE remote_manager_settings (id INTEGER NOT NULL PRIMARY KEY, key VARCHAR(80) NOT NULL UNIQUE, value TEXT, updated_at DATETIME)"))
             conn.execute(text("CREATE INDEX ix_remote_manager_settings_key ON remote_manager_settings (key)"))
+        runbook_space_columns = {row[1] for row in conn.execute(text("PRAGMA table_info(runbook_spaces)"))}
+        if not runbook_space_columns:
+            conn.execute(text("CREATE TABLE runbook_spaces (id INTEGER NOT NULL PRIMARY KEY, name VARCHAR(160) NOT NULL UNIQUE, description TEXT, sort_order INTEGER DEFAULT 0 NOT NULL, created_at DATETIME, updated_at DATETIME)"))
+            conn.execute(text("CREATE INDEX ix_runbook_spaces_name ON runbook_spaces (name)"))
+        runbook_page_columns = {row[1] for row in conn.execute(text("PRAGMA table_info(runbook_pages)"))}
+        if not runbook_page_columns:
+            conn.execute(text("CREATE TABLE runbook_pages (id INTEGER NOT NULL PRIMARY KEY, space_id INTEGER REFERENCES runbook_spaces(id), parent_id INTEGER REFERENCES runbook_pages(id), title VARCHAR(255) NOT NULL, slug VARCHAR(255) NOT NULL UNIQUE, summary VARCHAR(500), body TEXT, tags VARCHAR(500), is_pinned BOOLEAN DEFAULT 0 NOT NULL, created_by_id INTEGER REFERENCES users(id), updated_by_id INTEGER REFERENCES users(id), created_at DATETIME, updated_at DATETIME)"))
+            conn.execute(text("CREATE INDEX ix_runbook_pages_space_id ON runbook_pages (space_id)"))
+            conn.execute(text("CREATE INDEX ix_runbook_pages_parent_id ON runbook_pages (parent_id)"))
+            conn.execute(text("CREATE INDEX ix_runbook_pages_title ON runbook_pages (title)"))
+            conn.execute(text("CREATE INDEX ix_runbook_pages_slug ON runbook_pages (slug)"))
+            conn.execute(text("CREATE INDEX ix_runbook_pages_tags ON runbook_pages (tags)"))
+            conn.execute(text("CREATE INDEX ix_runbook_pages_is_pinned ON runbook_pages (is_pinned)"))
+            conn.execute(text("CREATE INDEX ix_runbook_pages_created_by_id ON runbook_pages (created_by_id)"))
+            conn.execute(text("CREATE INDEX ix_runbook_pages_updated_by_id ON runbook_pages (updated_by_id)"))
+        runbook_history_columns = {row[1] for row in conn.execute(text("PRAGMA table_info(runbook_page_history)"))}
+        if not runbook_history_columns:
+            conn.execute(text("CREATE TABLE runbook_page_history (id INTEGER NOT NULL PRIMARY KEY, page_id INTEGER NOT NULL REFERENCES runbook_pages(id), title VARCHAR(255) NOT NULL, summary VARCHAR(500), body TEXT, tags VARCHAR(500), saved_by_id INTEGER REFERENCES users(id), saved_at DATETIME)"))
+            conn.execute(text("CREATE INDEX ix_runbook_page_history_page_id ON runbook_page_history (page_id)"))
+            conn.execute(text("CREATE INDEX ix_runbook_page_history_saved_by_id ON runbook_page_history (saved_by_id)"))
+            conn.execute(text("CREATE INDEX ix_runbook_page_history_saved_at ON runbook_page_history (saved_at)"))
+        domain_columns = {row[1] for row in conn.execute(text("PRAGMA table_info(domain_records)"))}
+        if not domain_columns:
+            conn.execute(text("CREATE TABLE domain_records (id INTEGER NOT NULL PRIMARY KEY, name VARCHAR(255) NOT NULL UNIQUE, registrar VARCHAR(255), dns_provider VARCHAR(255), status VARCHAR(120), expires_at DATETIME, auto_renew BOOLEAN DEFAULT 0 NOT NULL, nameservers TEXT, lookup_registrar VARCHAR(255), lookup_dns_provider VARCHAR(255), lookup_status VARCHAR(120), lookup_expires_at DATETIME, lookup_nameservers TEXT, dns_records TEXT, lookup_error TEXT, last_lookup_at DATETIME, notes TEXT, created_at DATETIME, updated_at DATETIME)"))
+            for column in ["name", "registrar", "dns_provider", "status", "expires_at", "auto_renew", "last_lookup_at"]:
+                conn.execute(text(f"CREATE INDEX ix_domain_records_{column} ON domain_records ({column})"))
+        else:
+            for column, definition in {
+                "lookup_registrar": "VARCHAR(255)",
+                "lookup_dns_provider": "VARCHAR(255)",
+                "lookup_status": "VARCHAR(120)",
+                "lookup_expires_at": "DATETIME",
+                "lookup_nameservers": "TEXT",
+            }.items():
+                if column not in domain_columns:
+                    conn.execute(text(f"ALTER TABLE domain_records ADD COLUMN {column} {definition}"))
+
+        audit_columns = {row[1] for row in conn.execute(text("PRAGMA table_info(audit_logs)"))}
+        if audit_columns:
+            for column, definition in {
+                "category": "VARCHAR(40) DEFAULT 'activity' NOT NULL",
+                "severity": "VARCHAR(20) DEFAULT 'info' NOT NULL",
+                "request_method": "VARCHAR(10)",
+                "request_path": "VARCHAR(500)",
+                "status_code": "INTEGER",
+                "user_agent": "TEXT",
+                "request_id": "VARCHAR(64)",
+                "metadata_json": "TEXT",
+            }.items():
+                if column not in audit_columns:
+                    conn.execute(text(f"ALTER TABLE audit_logs ADD COLUMN {column} {definition}"))
+            conn.execute(text("UPDATE audit_logs SET category = 'activity' WHERE category IS NULL"))
+            conn.execute(text("UPDATE audit_logs SET severity = 'info' WHERE severity IS NULL"))
+            conn.execute(text("CREATE INDEX IF NOT EXISTS ix_audit_logs_category ON audit_logs (category)"))
+            conn.execute(text("CREATE INDEX IF NOT EXISTS ix_audit_logs_severity ON audit_logs (severity)"))
+            conn.execute(text("CREATE INDEX IF NOT EXISTS ix_audit_logs_user_id ON audit_logs (user_id)"))
+            conn.execute(text("CREATE INDEX IF NOT EXISTS ix_audit_logs_status_code ON audit_logs (status_code)"))
+            conn.execute(text("CREATE INDEX IF NOT EXISTS ix_audit_logs_request_id ON audit_logs (request_id)"))
+            conn.execute(text("CREATE INDEX IF NOT EXISTS ix_audit_logs_created_at ON audit_logs (created_at)"))
+
+        compute_host_columns = {row[1] for row in conn.execute(text("PRAGMA table_info(compute_hosts)"))}
+        if compute_host_columns:
+            if "agent_token_hash" not in compute_host_columns:
+                conn.execute(text("ALTER TABLE compute_hosts ADD COLUMN agent_token_hash VARCHAR(64)"))
+                compute_host_columns.add("agent_token_hash")
+            conn.execute(text("CREATE UNIQUE INDEX IF NOT EXISTS ix_compute_hosts_agent_token_hash ON compute_hosts (agent_token_hash)"))
+
+            legacy_columns = [name for name in ("agent_token", "encrypted_agent_token") if name in compute_host_columns]
+            if legacy_columns:
+                import hashlib
+                selected = ", ".join(["id", "agent_token_hash", *legacy_columns])
+                rows = conn.execute(text(f"SELECT {selected} FROM compute_hosts")).mappings().all()
+                for row in rows:
+                    token = row.get("agent_token") or ""
+                    if not token and row.get("encrypted_agent_token"):
+                        token = decrypt_secret(row["encrypted_agent_token"])
+                    token_hash = row["agent_token_hash"]
+                    if token and token != "[decryption failed]":
+                        token_hash = hashlib.sha256(token.encode("utf-8")).hexdigest()
+                    assignments = ["agent_token_hash = :token_hash", *[f"{name} = NULL" for name in legacy_columns]]
+                    conn.execute(text(f"UPDATE compute_hosts SET {', '.join(assignments)} WHERE id = :id"), {"token_hash": token_hash, "id": row["id"]})
 
 
 @app.on_event("startup")
 async def on_startup():
     bootstrap()
     start_homelab_remote_service()
-    global monitor_task
+    global monitor_task, domain_poll_task, compute_monitor_task
     monitor_task = asyncio.create_task(monitor_loop())
+    domain_poll_task = asyncio.create_task(domain_poll_loop())
+    compute_monitor_task = asyncio.create_task(compute_monitor_loop())
 
 
 @app.on_event("shutdown")
 async def on_shutdown():
     if monitor_task:
         monitor_task.cancel()
+    if domain_poll_task:
+        domain_poll_task.cancel()
+    if compute_monitor_task:
+        compute_monitor_task.cancel()
     stop_homelab_remote_service()
     stop_guacamole_bridge()
 
@@ -215,6 +388,9 @@ app.include_router(ip_addresses.router)
 app.include_router(hardware_assets.router)
 app.include_router(network_monitor.router)
 app.include_router(remote_manager.router)
+app.include_router(runbooks.router)
+app.include_router(domain_manager.router)
+app.include_router(compute_manager.router)
 app.include_router(admin.router)
 
 @app.get("/healthz", include_in_schema=False)

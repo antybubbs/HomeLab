@@ -5,9 +5,6 @@ services:
     build: .
     container_name: homelab
     restart: unless-stopped
-    env_file:
-      - path: .env
-        required: false
     ports:
       - "8080:8080"
     volumes:
@@ -20,3 +17,7 @@ services:
     read_only: false
     tmpfs:
       - /tmp
+  guacd:
+    image: guacamole/guacd:latest
+    container_name: guacd
+    restart: unless-stopped

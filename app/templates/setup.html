@@ -1,0 +1,68 @@
+{% extends "base.html" %}
+
+{% block extra_head %}
+<link rel="stylesheet" href="/static/css/remote.css?v={{ asset_version }}">
+{% endblock %}
+
+{% block public %}
+<main class="content">
+  <div class="remote-card" style="max-width: 460px; margin: 80px auto;">
+    <h1>Welcome to HomeLab</h1>
+    <p class="muted">Before you can log in for the first time, you need to create your administrator account.</p>
+
+    {% if error %}
+      <div class="error">{{ error }}</div>
+    {% endif %}
+
+    <form method="post" action="/setup">
+      <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+
+       <label class="remote-setting-row">
+            <span>
+            <strong>First Name</strong>
+            <small>Your first name.</small>
+            </span>
+            <input type="text" name="first_name" required>
+        </label>
+
+        <label class="remote-setting-row">
+            <span>
+            <strong>Last Name</strong>
+            <small>Your last name.</small>
+            </span>
+            <input type="text" name="last_name" required>
+        </label>
+
+      <label class="remote-setting-row">
+        <span>
+          <strong>Email</strong>
+          <small>Your administrator login email.</small>
+        </span>
+        <input type="email" name="email" required>
+      </label>
+
+      <label class="remote-setting-row">
+        <span>
+          <strong>Password</strong>
+          <small>Minimum 12 characters.</small>
+        </span>
+        <input type="password" name="password" required minlength="12">
+      </label>
+
+      <label class="remote-setting-row">
+        <span>
+          <strong>Confirm Password</strong>
+          <small>Re-enter your password.</small>
+        </span>
+        <input type="password" name="confirm_password" required minlength="12">
+      </label>
+
+      <div style="margin-top: 1.5rem;">
+        <button type="submit" class="btn btn-primary">
+          Create administrator
+        </button>
+      </div>
+    </form>
+  </div>
+</main>
+{% endblock %}

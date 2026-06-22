@@ -8,59 +8,7 @@ Self-hosted home lab management solution.
 
 TBC
 
-## Local development quick start
-
-```bash
-cp .env.example .env
-python scripts/generate_secrets.py
-# Put the generated SECRET_KEY and ENCRYPTION_KEY into .env
-docker compose up --build
-```
-
-Open:
-
-```text
-http://localhost:8080
-```
-
-Default admin credentials come from `.env`:
-
-```text
-ADMIN_EMAIL=admin@example.local
-ADMIN_PASSWORD=change-me-now
-```
-
-Change these before using the app with real data.
-
 ## Docker Compose install
-
-Create an `.env` file beside `docker-compose.prod.yml`:
-
-```text
-HOMELAB_IMAGE=ghcr.io/antybubbs/homelab:latest
-# Development/test server only:
-# HOMELAB_IMAGE=ghcr.io/antybubbs/homelab:dev0.15.1
-HOMELAB_PORT=8080
-APP_NAME=HomeLab
-APP_ENV=production
-BASE_URL=https://homelab.example.com
-ALLOWED_HOSTS=homelab.example.com
-SESSION_COOKIE_SECURE=true
-FORWARDED_ALLOW_IPS=*
-DATABASE_URL=sqlite:////app/data/homelab.db
-UPLOAD_DIR=/app/uploads
-MAX_UPLOAD_MB=25
-GITHUB_REPO=antybubbs/HomeLab
-```
-
-Also set strong generated values for:
-
-```text
-SECRET_KEY
-ENCRYPTION_KEY
-ADMIN_EMAIL
-ADMIN_PASSWORD
-```
 
 Generate secure keys with:
 
@@ -68,12 +16,17 @@ Generate secure keys with:
 python scripts/generate_secrets.py
 ```
 
-Start or update:
+Update an installer-based deployment:
 
 ```bash
-docker compose -f docker-compose.prod.yml pull
-docker compose -f docker-compose.prod.yml up -d
+cd /opt/homelab
+cp data/homelab.db "data/homelab.db.backup-$(date +%Y%m%d-%H%M%S)"
+docker compose pull
+docker compose up -d
 ```
+
+Preserve `/opt/homelab/.env`, `data`, and `uploads` when updating. Do not rerun
+the installation script to perform a routine update.
 
 ## Development branch installs
 
@@ -89,8 +42,9 @@ HOMELAB_IMAGE=ghcr.io/antybubbs/homelab:dev0.15.1
 Then update the test server:
 
 ```bash
-docker compose -f docker-compose.prod.yml pull
-docker compose -f docker-compose.prod.yml up -d
+cd /opt/homelab
+docker compose pull
+docker compose up -d
 ```
 
 Development builds show a Development channel in the sidebar version box.

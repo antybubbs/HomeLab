@@ -49,7 +49,7 @@
       <div><span class="term-cyan">drwxr-xr-x</span> 3 root root 4096 Apr 15 18:44 ..</div>
       <div>-rw-r--r-- 1 deploy deploy 220 Apr 15 18:44 <span class="term-white">.bash_logout</span></div>
       <div><span class="term-green">-rwxr-xr-x</span> 1 deploy deploy 8192 May 1 08:55 deploy.sh</div>
-      <div><span class="term-green">deploy@web-01</span>:<span class="term-blue">~</span>$ <span class="term-cursor"></span></div>
+      <div><span class="term-green">deploy@homelab</span>:<span class="term-blue">~</span>$ <span class="term-cursor"></span></div>
     </div>
     <div class="remote-settings-grid two">
       <label>Color theme
@@ -61,7 +61,7 @@
       </label>
       <label>Font family
         <select name="terminal_font_family">
-          {% for value, label in [('Caskaydia Cove Nerd Font Mono','Caskaydia Cove Nerd Font Mono'),('JetBrains Mono','JetBrains Mono'),('Fira Code','Fira Code'),('Cascadia Code','Cascadia Code'),('Source Code Pro','Source Code Pro'),('SF Mono','SF Mono'),('Consolas','Consolas'),('Monaco','Monaco')] %}
+          {% for value, label in [('Caskaydia Cove Nerd Font Mono','Caskaydia Cove Nerd Font Mono')] %}
           <option value="{{ value }}" {% if settings.terminal_font_family == value %}selected{% endif %}>{{ label }}</option>
           {% endfor %}
         </select>
@@ -140,4 +140,8 @@
     <button type="submit">Save settings</button>
   </div>
 </form>
+{% endblock %}
+
+{% block extra_scripts %}
+<script src="/static/js/remote_settings.js?v={{ asset_version }}"></script>
 {% endblock %}

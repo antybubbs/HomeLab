@@ -2,30 +2,31 @@
 {% block content %}
 <section class="module-header">
   <div class="module-title-row">
-    <div class="module-title">
-      <h1>IP Addresses</h1>
-      <span class="module-stat">Total <strong>{{ total }}</strong></span>
+    <div class="module-heading">
+      <h1>VLAN/IP Manager</h1>
+      <p class="muted">Manage VLANs, IP allocations, categories and device assignments.</p>
     </div>
+    <span class="module-stat">Records <strong>{{ total }}</strong></span>
   </div>
   <div class="module-toolbar">
-    <form class="search list-search" method="get">
-      {% if active_category %}<input type="hidden" name="category" value="{{ active_category }}">{% endif %}
-      <input name="q" placeholder="Search IP addresses..." value="{{ q }}">
-      <button>Search</button>
-    </form>
-    <div class="module-actions">
-      {% if user.role in ['admin','editor'] %}<a class="button" href="/ip-addresses/new">Add IP</a>{% endif %}
+    <div class="module-primary-actions">
+      <form class="search list-search" method="get">
+        {% if active_category %}<input type="hidden" name="category" value="{{ active_category }}">{% endif %}
+        <input name="q" placeholder="Search VLAN/IP records..." value="{{ q }}">
+        <button>Search</button>
+      </form>
+      {% if user.role in ['admin','editor'] %}<a class="button" href="/networking/vlan-ip-manager/new">Add IP</a>{% endif %}
     </div>
-    <nav class="category-tabs" aria-label="IP address categories">
-      <a class="{% if not active_category %}active{% endif %}" href="/ip-addresses{% if q %}?q={{ q|urlencode }}{% endif %}">All</a>
-      {% for category in categories %}
-      <a class="{% if active_category == category %}active{% endif %}" href="/ip-addresses?category={{ category|urlencode }}{% if q %}&q={{ q|urlencode }}{% endif %}">{{ category }}</a>
-      {% endfor %}
-    </nav>
   </div>
+  <nav class="category-tabs module-filters" aria-label="VLAN/IP categories">
+    <a class="{% if not active_category %}active{% endif %}" href="/networking/vlan-ip-manager{% if q %}?q={{ q|urlencode }}{% endif %}">All</a>
+    {% for category in categories %}
+    <a class="{% if active_category == category %}active{% endif %}" href="/networking/vlan-ip-manager?category={{ category|urlencode }}{% if q %}&q={{ q|urlencode }}{% endif %}">{{ category }}</a>
+    {% endfor %}
+  </nav>
 </section>
 <section class="panel">
-<form method="post" action="/ip-addresses/bulk-update" data-ip-bulk-form>
+<form method="post" action="/networking/vlan-ip-manager/bulk-update" data-ip-bulk-form>
   <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
   <div class="bulk-action-bar" data-bulk-bar hidden>
     <strong><span data-selected-count>0</span> selected</strong>
@@ -47,7 +48,7 @@
     <button class="button secondary" type="button" data-clear-selection>Clear</button>
   </div>
   <table data-table-key="ip-addresses"><thead><tr><th class="select-col" data-col="select" data-label="Select"><label class="table-check"><input type="checkbox" aria-label="Select all IP addresses" data-select-all></label></th><th class="action-col" data-col="actions">View</th><th data-col="ip" data-sort>IP</th><th data-col="category" data-sort>Category</th><th data-col="name" data-sort>Name</th><th data-col="description" data-sort>Description</th><th data-col="assignment" data-sort>Static/Dynamic</th><th data-col="notes" data-sort>Notes</th></tr></thead><tbody>
-  {% for row in rows %}<tr><td class="select-col"><input class="row-select" type="checkbox" name="selected_ids" value="{{ row.id }}"></td><td class="action-col"><a class="button secondary" href="/ip-addresses/{{ row.id }}">View</a></td><td class="mono">{{ row.address }}</td><td>{% if row.category %}<span class="table-chip">{{ row.category }}</span>{% else %}-{% endif %}</td><td>{{ row.name or '-' }}</td><td>{{ row.description or '-' }}</td><td>{{ row.assignment_type }}</td><td>{{ row.notes or '-' }}</td></tr>{% endfor %}
+  {% for row in rows %}<tr><td class="select-col"><input class="row-select" type="checkbox" name="selected_ids" value="{{ row.id }}"></td><td class="action-col"><a class="button secondary" href="/networking/vlan-ip-manager/{{ row.id }}">View</a></td><td class="mono">{{ row.address }}</td><td>{% if row.category %}<span class="table-chip">{{ row.category }}</span>{% else %}-{% endif %}</td><td>{{ row.name or '-' }}</td><td>{{ row.description or '-' }}</td><td>{{ row.assignment_type }}</td><td>{{ row.notes or '-' }}</td></tr>{% endfor %}
   </tbody></table>
 </form>
 </section>

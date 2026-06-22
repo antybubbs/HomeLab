@@ -13,7 +13,7 @@ from app.models.models import NetworkMonitor, NetworkMonitorCheck
 from app.routers.auth import require_user
 from app.services.network_monitor import monitor_label, run_monitor_check_by_id
 
-router = APIRouter(prefix="/network-monitor")
+router = APIRouter(prefix="/networking/ip-wan-monitor")
 templates = Jinja2Templates(directory="app/templates")
 
 

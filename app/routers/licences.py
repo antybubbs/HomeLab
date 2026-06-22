@@ -13,7 +13,7 @@ from app.services.audit import write_audit
 from app.services.custom_fields import active_fields, field_values, option_list, save_custom_values, validate_custom_values
 from app.services.managed_lists import list_values
 
-router = APIRouter(prefix="/licences")
+router = APIRouter(prefix="/security/license-keys")
 templates = Jinja2Templates(directory="app/templates")
 MODULE = "licences"
 ENTITY_TYPE = "licence"
@@ -85,7 +85,7 @@ async def create_licence(request: Request, product: str = Form(..., max_length=5
     save_custom_values(db, fields, form, ENTITY_TYPE, row.id)
     db.commit()
     write_audit(db, user, "create", "licence", str(row.id), request.client.host if request.client else None)
-    return RedirectResponse("/licences", status_code=303)
+    return RedirectResponse("/security/license-keys", status_code=303)
 
 
 @router.get("/{licence_id}/edit")
@@ -124,7 +124,7 @@ async def update_licence(request: Request, licence_id: int, product: str = Form(
     save_custom_values(db, fields, form, ENTITY_TYPE, row.id)
     db.commit()
     write_audit(db, user, "update", "licence", str(row.id), request.client.host if request.client else None, detail=product)
-    return RedirectResponse(f"/licences/{row.id}", status_code=303)
+    return RedirectResponse(f"/security/license-keys/{row.id}", status_code=303)
 
 
 @router.get("/{licence_id}")

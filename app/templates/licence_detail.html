@@ -1,6 +1,6 @@
 {% extends "base.html" %}
 {% block content %}
-<form method="post" action="/licences/{{ licence.id }}/edit" class="inline-record" data-inline-edit>
+<form method="post" action="/security/license-keys/{{ licence.id }}/edit" class="inline-record" data-inline-edit>
 <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
 <div class="record-hero">
   <div>
@@ -63,7 +63,7 @@
 </section>
 </form>
 {% if user.role in ['admin','editor'] and not revealed %}
-<form id="reveal-key-form" method="post" action="/licences/{{ licence.id }}/reveal">
+<form id="reveal-key-form" method="post" action="/security/license-keys/{{ licence.id }}/reveal">
   <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
 </form>
 {% endif %}

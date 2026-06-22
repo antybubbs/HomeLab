@@ -7,13 +7,18 @@
   const empty = root.querySelector("[data-remote-empty]");
   const searchInput = root.querySelector("[data-remote-search]");
   const refreshTabsButton = root.querySelector("[data-remote-refresh-tabs]");
+  const hostRail = root.querySelector(".remote-host-rail");
+  const hostResizer = root.querySelector("[data-remote-host-resizer]");
   const noResults = root.querySelector("[data-remote-no-results]");
   const sessionVersion = root.dataset.remoteSessionVersion || "1";
   const storageKey = `homelab.remote.tabs.${sessionVersion}`;
+  const railWidthStorageKey = "homelab.remote.hostRailWidth";
   if (!tabbar || !panels || !empty) return;
 
   let tabs = [];
   let activeId = "";
+  let splitEnabled = false;
+  let splitIds = [];
 
   const safeParse = (value) => {
     try {
@@ -23,8 +28,19 @@
     }
   };
 
+  const clamp = (value, min, max) => Math.min(max, Math.max(min, value));
+
+  const setHostRailWidth = (width) => {
+    if (!hostRail) return;
+    const nextWidth = clamp(width, 96, 520);
+    root.style.setProperty("--remote-host-rail-width", `${nextWidth}px`);
+    root.classList.toggle("remote-rail-compact", nextWidth < 230);
+    root.classList.toggle("remote-rail-mini", nextWidth < 150);
+    localStorage.setItem(railWidthStorageKey, String(nextWidth));
+  };
+
   const save = () => {
-    window.sessionStorage.setItem(storageKey, JSON.stringify({ tabs, activeId }));
+    window.sessionStorage.setItem(storageKey, JSON.stringify({ tabs, activeId, splitEnabled, splitIds }));
   };
 
   const hostFromCard = (card) => ({
@@ -35,13 +51,40 @@
     url: card.dataset.remotePanelUrl,
   });
 
+  const notifyPanel = (id, delay = 50) => {
+    const iframe = panels.querySelector(`[data-remote-panel="${CSS.escape(id)}"] iframe`);
+    if (!iframe || !iframe.contentWindow) return;
+    window.setTimeout(() => {
+      iframe.contentWindow.postMessage({ type: "homelab:remote-tab-active" }, window.location.origin);
+    }, delay);
+  };
+
+  const visibleIds = () => {
+    if (!splitEnabled) return activeId ? [activeId] : [];
+
+    const validSplitIds = splitIds.filter((id) => tabs.some((tab) => tab.id === id));
+    const ids = [];
+    if (activeId && validSplitIds.includes(activeId)) ids.push(activeId);
+    validSplitIds.forEach((id) => {
+      if (!ids.includes(id)) ids.push(id);
+    });
+    if (activeId && !ids.includes(activeId)) ids.unshift(activeId);
+    tabs.forEach((tab) => {
+      if (ids.length < 2 && !ids.includes(tab.id)) ids.push(tab.id);
+    });
+
+    splitIds = ids.slice(0, 2);
+    return splitIds;
+  };
+
   const activate = (id) => {
+    if (splitEnabled && tabs.length > 1 && !splitIds.includes(id)) {
+      const anchorId = splitIds.find((splitId) => splitId !== activeId) || activeId || tabs[0]?.id || id;
+      splitIds = anchorId === id ? [id] : [anchorId, id];
+    }
     activeId = id;
     render();
-    const iframe = panels.querySelector(`[data-remote-panel="${CSS.escape(id)}"] iframe`);
-    if (iframe && iframe.contentWindow) {
-      iframe.contentWindow.postMessage({ type: "homelab:remote-tab-active" }, window.location.origin);
-    }
+    notifyPanel(id, 0);
     save();
   };
 
@@ -53,6 +96,8 @@
     if (activeId === id) {
       activeId = tabs[Math.max(0, index - 1)]?.id || tabs[0]?.id || "";
     }
+    splitIds = splitIds.filter((splitId) => splitId !== id);
+    if (tabs.length < 2) splitEnabled = false;
     render();
     save();
   };
@@ -80,13 +125,46 @@
 
   const iconFor = (protocol) => (protocol === "rdp" ? "RDP" : ">_");
 
+  const setSplitEnabled = (enabled) => {
+    splitEnabled = enabled && tabs.length > 1;
+    if (splitEnabled) {
+      const current = activeId || tabs[0]?.id || "";
+      const other = tabs.find((tab) => tab.id !== current)?.id || "";
+      splitIds = [current, other].filter(Boolean).slice(0, 2);
+    } else {
+      splitIds = [];
+    }
+    render();
+    save();
+  };
+
+  const ensureLayoutTools = () => {
+    const tools = document.createElement("div");
+    tools.className = "remote-layout-tools";
+    tools.dataset.remoteLayoutTools = "";
+
+    const split = document.createElement("button");
+    split.type = "button";
+    split.className = `remote-layout-button${splitEnabled ? " active" : ""}`;
+    split.title = tabs.length > 1 ? "Show two sessions side by side" : "Open two sessions to use split view";
+    split.disabled = tabs.length < 2;
+    split.textContent = splitEnabled ? "Single" : "Split";
+    split.addEventListener("click", () => setSplitEnabled(!splitEnabled));
+
+    tools.appendChild(split);
+    tabbar.appendChild(tools);
+  };
+
   const render = () => {
     tabbar.replaceChildren();
     empty.hidden = tabs.length > 0;
+    if (tabs.length < 2) splitEnabled = false;
+    const shownIds = visibleIds();
 
     tabs.forEach((tab) => {
+      const visible = shownIds.includes(tab.id);
       const button = document.createElement("div");
-      button.className = `remote-session-tab${tab.id === activeId ? " active" : ""}`;
+      button.className = `remote-session-tab${tab.id === activeId ? " active" : ""}${visible && splitEnabled ? " split-visible" : ""}`;
       button.setAttribute("role", "button");
       button.setAttribute("tabindex", "0");
       button.dataset.remoteTab = tab.id;
@@ -107,7 +185,7 @@
       refresh.type = "button";
       refresh.className = "remote-tab-tool";
       refresh.title = "Refresh connection";
-      refresh.textContent = "↻";
+      refresh.textContent = "R";
       refresh.addEventListener("click", (event) => {
         event.stopPropagation();
         refreshTab(tab.id);
@@ -117,7 +195,7 @@
       close.type = "button";
       close.className = "remote-tab-tool";
       close.title = "Close session";
-      close.textContent = "×";
+      close.textContent = "X";
       close.addEventListener("click", (event) => {
         event.stopPropagation();
         closeTab(tab.id);
@@ -128,17 +206,18 @@
       tabbar.appendChild(button);
     });
 
+    ensureLayoutTools();
+    panels.classList.toggle("is-split", splitEnabled && shownIds.length > 1);
+
     tabs.forEach((tab) => {
       const panel = ensurePanel(tab);
-      panel.hidden = tab.id !== activeId;
+      const visible = shownIds.includes(tab.id);
+      panel.hidden = !visible;
+      panel.classList.toggle("split-primary", splitEnabled && tab.id === shownIds[0]);
+      panel.classList.toggle("split-secondary", splitEnabled && tab.id === shownIds[1]);
     });
 
-    const activeFrame = panels.querySelector(`[data-remote-panel="${CSS.escape(activeId)}"] iframe`);
-    if (activeFrame && activeFrame.contentWindow) {
-      window.setTimeout(() => {
-        activeFrame.contentWindow.postMessage({ type: "homelab:remote-tab-active" }, window.location.origin);
-      }, 50);
-    }
+    shownIds.forEach((id) => notifyPanel(id));
 
     panels.querySelectorAll("[data-remote-panel]").forEach((panel) => {
       if (!tabs.some((tab) => tab.id === panel.dataset.remotePanel)) {
@@ -148,7 +227,9 @@
 
     root.querySelectorAll(".remote-host-card").forEach((card) => {
       const activeTab = tabs.find((tab) => tab.id === activeId);
+      const splitTab = tabs.find((tab) => splitEnabled && shownIds.includes(tab.id) && tab.remoteId === card.dataset.remoteId);
       card.classList.toggle("active", activeTab && activeTab.remoteId === card.dataset.remoteId);
+      card.classList.toggle("split-active", Boolean(splitTab));
     });
   };
 
@@ -161,6 +242,9 @@
     }
     tabs.push(session);
     activeId = session.id;
+    if (splitEnabled && tabs.length > 1) {
+      splitIds = [splitIds[0] || tabs[0].id, session.id].filter(Boolean).slice(0, 2);
+    }
     render();
     save();
   };
@@ -222,13 +306,42 @@
 
   if (refreshTabsButton) {
     refreshTabsButton.addEventListener("click", () => {
-      const activeFrame = panels.querySelector(`[data-remote-panel="${CSS.escape(activeId)}"] iframe`);
-      if (activeFrame) activeFrame.src = activeFrame.src;
+      visibleIds().forEach((id) => refreshTab(id));
+    });
+  }
+
+  if (hostRail && hostResizer) {
+    const storedWidth = Number.parseInt(localStorage.getItem(railWidthStorageKey) || "", 10);
+    if (Number.isFinite(storedWidth)) setHostRailWidth(storedWidth);
+
+    hostResizer.addEventListener("pointerdown", (event) => {
+      event.preventDefault();
+      const startX = event.clientX;
+      const startWidth = hostRail.getBoundingClientRect().width;
+      hostResizer.setPointerCapture(event.pointerId);
+      document.body.classList.add("remote-resizing");
+
+      const move = (moveEvent) => {
+        setHostRailWidth(startWidth + moveEvent.clientX - startX);
+      };
+
+      const stop = () => {
+        document.body.classList.remove("remote-resizing");
+        hostResizer.removeEventListener("pointermove", move);
+        hostResizer.removeEventListener("pointerup", stop);
+        hostResizer.removeEventListener("pointercancel", stop);
+      };
+
+      hostResizer.addEventListener("pointermove", move);
+      hostResizer.addEventListener("pointerup", stop);
+      hostResizer.addEventListener("pointercancel", stop);
     });
   }
 
   const restored = safeParse(window.sessionStorage.getItem(storageKey));
   tabs = Array.isArray(restored.tabs) ? restored.tabs : [];
   activeId = restored.activeId || tabs[0]?.id || "";
+  splitEnabled = Boolean(restored.splitEnabled);
+  splitIds = Array.isArray(restored.splitIds) ? restored.splitIds : [];
   render();
 })();

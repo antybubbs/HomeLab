@@ -4,7 +4,7 @@
   <div class="card"><span>Down</span><strong>{{ down_count }}</strong></div>
 </section>
 {% if not rows %}
-<section class="panel"><p class="muted">No IP addresses are enabled for Network Monitor yet.</p></section>
+<section class="panel"><p class="muted">No IP addresses are enabled for IP/WAN Monitor yet.</p></section>
 {% else %}
 <section class="monitor-grid">
 {% for row in rows %}
@@ -14,7 +14,7 @@
       <div>
         <div class="monitor-title-row">
           <h2>{{ row.label }}</h2>
-          <form class="monitor-refresh-form" method="post" action="/network-monitor/{{ monitor.id }}/refresh">
+          <form class="monitor-refresh-form" method="post" action="/networking/ip-wan-monitor/{{ monitor.id }}/refresh">
             <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
             <button class="monitor-refresh-button" type="submit" title="Refresh monitor" aria-label="Refresh {{ row.label }}">
               <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M20 6v5h-5"></path><path d="M4 18v-5h5"></path><path d="M18.5 9A7 7 0 0 0 6.6 6.6L4 9"></path><path d="M5.5 15a7 7 0 0 0 11.9 2.4L20 15"></path></svg>

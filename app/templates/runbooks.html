@@ -1,0 +1,135 @@
+{% extends "base.html" %}
+{% block content %}
+<section class="module-header runbook-header">
+  <div class="module-title-row">
+    <div class="module-heading">
+      <h1>Runbook Manager</h1>
+      <p class="muted">Store notes, recovery steps, service documentation and homelab knowledge.</p>
+    </div>
+    <span class="module-stat">Pages <strong>{{ total }}</strong></span>
+  </div>
+  <div class="module-toolbar">
+    <div class="module-primary-actions">
+      <form class="search list-search" method="get">
+        {% if active_space %}<input type="hidden" name="space" value="{{ active_space }}">{% endif %}
+        {% if active_tag %}<input type="hidden" name="tag" value="{{ active_tag }}">{% endif %}
+        <input name="q" placeholder="Search runbooks..." value="{{ q }}">
+        <button>Search</button>
+      </form>
+      {% if user.role in ['admin','editor'] %}<a class="button" href="/documentation/runbook-manager/new">New Page</a>{% endif %}
+    </div>
+    <div class="module-secondary-actions">
+      <div class="runbook-view-toggle" role="group" aria-label="Runbook view">
+        <button class="button secondary" type="button" data-runbook-view-button="tiles">Tiles</button>
+        <button class="button secondary" type="button" data-runbook-view-button="table">Table</button>
+      </div>
+    </div>
+  </div>
+</section>
+
+<section class="runbook-shell">
+  <aside class="panel runbook-side">
+    <div class="runbook-side-section">
+      <h2>Spaces</h2>
+      <a class="runbook-filter {% if not active_space %}active{% endif %}" href="/documentation/runbook-manager{% if q %}?q={{ q|urlencode }}{% endif %}">All Spaces</a>
+      {% for space in spaces %}
+      <a class="runbook-filter {% if active_space == space.id %}active{% endif %}" href="/documentation/runbook-manager?space={{ space.id }}{% if q %}&q={{ q|urlencode }}{% endif %}">{{ space.name }}</a>
+      {% endfor %}
+    </div>
+    {% if tags %}
+    <div class="runbook-side-section">
+      <h2>Tags</h2>
+      <div class="runbook-tags">
+        {% for tag in tags %}
+        <a class="table-chip {% if active_tag == tag %}active{% endif %}" href="/documentation/runbook-manager?tag={{ tag|urlencode }}{% if q %}&q={{ q|urlencode }}{% endif %}">{{ tag }}</a>
+        {% endfor %}
+      </div>
+    </div>
+    {% endif %}
+    {% if user.role in ['admin','editor'] %}
+    <div class="runbook-side-section">
+      <h2>New Space</h2>
+      <form method="post" action="/documentation/runbook-manager/spaces" class="stack compact-form">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+        <input name="name" placeholder="Backups, Docker, Network..." required>
+        <textarea name="description" placeholder="Optional description"></textarea>
+        <button class="button secondary" type="submit">Add Space</button>
+      </form>
+    </div>
+    {% endif %}
+  </aside>
+
+  <section class="panel runbook-list" data-runbook-home>
+    {% if pages %}
+    <div class="runbook-page-grid" data-runbook-view="tiles">
+      {% for page in pages %}
+      <article class="runbook-page-card">
+        <div class="runbook-card-title">
+          {% if page.is_pinned %}<span class="table-chip muted-chip">Pinned</span>{% endif %}
+          {% if page.space %}<span class="table-chip">{{ page.space.name }}</span>{% endif %}
+        </div>
+        <h2><a href="/documentation/runbook-manager/{{ page.slug }}">{{ page.title }}</a></h2>
+        <p class="muted">{{ page.summary or 'No summary yet.' }}</p>
+        {% if page.tags %}
+        <div class="runbook-tags">
+          {% for tag in page.tags.split(',') %}
+          <span class="table-chip muted-chip">{{ tag.strip() }}</span>
+          {% endfor %}
+        </div>
+        {% endif %}
+        <footer>
+          <span>Updated {{ page.updated_at.strftime('%d %b %Y %H:%M') if page.updated_at else '-' }}</span>
+          <a href="/documentation/runbook-manager/{{ page.slug }}">Open</a>
+        </footer>
+      </article>
+      {% endfor %}
+    </div>
+    <div class="runbook-table-view" data-runbook-view="table" hidden>
+      <table data-table-key="runbook-pages">
+        <thead>
+          <tr>
+            <th class="action-col" data-col="actions">Open</th>
+            <th data-col="title" data-sort>Title</th>
+            <th data-col="space" data-sort>Space</th>
+            <th data-col="summary" data-sort>Summary</th>
+            <th data-col="tags" data-sort>Tags</th>
+            <th data-col="pinned" data-sort>Pinned</th>
+            <th data-col="updated" data-sort>Updated</th>
+            <th data-col="created" data-sort>Created</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for row in table_pages %}
+          {% set page = row.page %}
+          <tr>
+            <td class="action-col"><a class="button secondary" href="/documentation/runbook-manager/{{ page.slug }}">Open</a></td>
+            <td>
+              <a class="runbook-tree-title" href="/documentation/runbook-manager/{{ page.slug }}" style="--runbook-depth: {{ row.depth }}">
+                {% if row.depth %}<span class="runbook-tree-branch" aria-hidden="true"></span>{% endif %}
+                <strong>{{ page.title }}</strong>
+              </a>
+            </td>
+            <td>{% if page.space %}<span class="table-chip">{{ page.space.name }}</span>{% else %}-{% endif %}</td>
+            <td>{{ page.summary or '-' }}</td>
+            <td>{% if page.tags %}{{ page.tags }}{% else %}-{% endif %}</td>
+            <td>{% if page.is_pinned %}Yes{% else %}No{% endif %}</td>
+            <td>{{ page.updated_at.strftime('%Y-%m-%d %H:%M') if page.updated_at else '-' }}</td>
+            <td>{{ page.created_at.strftime('%Y-%m-%d %H:%M') if page.created_at else '-' }}</td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+    {% else %}
+    <div class="empty-state">
+      <h2>No runbooks yet</h2>
+      <p class="muted">Create the first page for service notes, recovery steps, build logs or decisions. Anything really....</p>
+      {% if user.role in ['admin','editor'] %}<a class="button" href="/documentation/runbook-manager/new">Create Page</a>{% endif %}
+    </div>
+    {% endif %}
+  </section>
+</section>
+{% endblock %}
+{% block extra_scripts %}
+<script src="/static/js/runbooks.js?v={{ asset_version }}" defer></script>
+{% endblock %}

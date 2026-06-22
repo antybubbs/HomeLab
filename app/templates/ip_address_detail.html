@@ -1,7 +1,7 @@
 {% extends "base.html" %}
 {% block content %}
 {% set record_title = record.name or record.description or record.address %}
-<form method="post" action="/ip-addresses/{{ record.id }}/edit" class="inline-record" data-inline-edit>
+<form method="post" action="/networking/vlan-ip-manager/{{ record.id }}/edit" class="inline-record" data-inline-edit>
 <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
 <div class="record-hero">
   <div>
@@ -10,7 +10,7 @@
     <div class="record-chips">
       <span class="table-chip muted-chip">{{ record.assignment_type }}</span>
       {% if record.category %}<span class="table-chip">Category: {{ record.category }}</span>{% endif %}
-      <span class="table-chip muted-chip">Network Monitor {% if monitor and monitor.is_enabled %}On{% else %}Off{% endif %}</span>
+      <span class="table-chip muted-chip">IP/WAN Monitor {% if monitor and monitor.is_enabled %}On{% else %}Off{% endif %}</span>
       <span class="table-chip muted-chip">Remote Manager {% if remote and remote.is_enabled %}On{% else %}Off{% endif %}</span>
     </div>
   </div>
@@ -37,7 +37,7 @@
     <h2>Services</h2>
     <div class="service-card-list">
       <div class="service-card">
-        <div><strong>Network Monitor</strong><span>Monitors uptime and latency for this IP address.</span></div>
+        <div><strong>IP/WAN Monitor</strong><span>Monitors uptime and latency for this IP address.</span></div>
         <span data-view class="service-pill {% if monitor and monitor.is_enabled %}on{% endif %}">{% if monitor and monitor.is_enabled %}Enabled{% else %}Disabled{% endif %}</span>
         <label data-edit class="inline-toggle"><input name="monitor_enabled" type="checkbox" value="1" {% if monitor and monitor.is_enabled %}checked{% endif %}> Enabled</label>
       </div>
@@ -53,7 +53,7 @@
       {% endif %}
       <div class="service-card" data-ping-card>
         <div><strong>Ping</strong><span data-ping-message>Allows a quick ping to see if this device is up.</span></div>
-        <button class="button secondary" type="button" data-ping-url="/ip-addresses/{{ record.id }}/ping" data-csrf-token="{{ csrf_token }}">Ping</button>
+        <button class="button secondary" type="button" data-ping-url="/networking/vlan-ip-manager/{{ record.id }}/ping" data-csrf-token="{{ csrf_token }}">Ping</button>
       </div>
       <div class="service-card">
         <div><strong>Remote Manager</strong><span>Allows remote access via SSH or RDP.</span></div>
@@ -72,6 +72,35 @@
       </div>
       {% endif %}
     </div>
+  </section>
+  <section class="panel record-panel wide compute-link-panel">
+    <h2>VM / Docker Manager</h2>
+    {% if compute_matches %}
+    <div class="compute-link-list">
+      {% for workload in compute_matches %}
+      <article class="compute-link-card">
+        <div class="compute-link-identity">
+          <span class="platform-mark {{ workload.host.platform }}">{{ 'PX' if workload.host.platform == 'proxmox' else 'DK' }}</span>
+          <div><strong>{{ workload.name }}</strong><span>{{ workload.kind|upper }} on {{ workload.host.name }}</span></div>
+        </div>
+        <dl class="compute-link-facts">
+          <div><dt>Status</dt><dd><span class="compute-state {{ workload.status }}">{{ workload.status|title }}</span></dd></div>
+          <div><dt>Uptime</dt><dd>{{ uptime_label(workload.uptime_seconds) }}</dd></div>
+          <div><dt>Last seen</dt><dd>{{ workload.last_seen_at.strftime('%Y-%m-%d %H:%M') if workload.last_seen_at else '-' }}</dd></div>
+        </dl>
+        <div class="compute-link-actions">
+          <a class="button secondary" href="/infrastructure/vm-docker-manager/hosts/{{ workload.host.id }}">Host record</a>
+          <a class="button" href="/infrastructure/vm-docker-manager/workloads/{{ workload.id }}">Workload details</a>
+        </div>
+      </article>
+      {% endfor %}
+    </div>
+    {% else %}
+    <div class="compute-link-empty">
+      <div><strong>No linked workload found</strong><span>This IP has not yet been reported by a VM or Docker container.</span></div>
+      <a class="button secondary" href="/infrastructure/vm-docker-manager">Open VM / Docker Manager</a>
+    </div>
+    {% endif %}
   </section>
   <section class="panel record-panel wide">
     <h2>Notes and Custom Fields</h2>

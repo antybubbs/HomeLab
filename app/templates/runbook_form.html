@@ -1,0 +1,38 @@
+{% extends "base.html" %}
+{% block content %}
+<div class="topbar">
+  <div>
+    <h1>{% if page %}Edit Runbook Page{% else %}New Runbook Page{% endif %}</h1>
+    <p class="muted">Write in Markdown. Use headings, lists, links, bold text and fenced code blocks.</p>
+  </div>
+  <a class="button secondary" href="{% if page %}/documentation/runbook-manager/{{ page.slug }}{% else %}/documentation/runbook-manager{% endif %}">Cancel</a>
+</div>
+{% if error %}<div class="alert">{{ error }}</div>{% endif %}
+<form method="post" class="runbook-editor-form">
+  <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+  <section class="panel runbook-editor-meta">
+    <label>Title<input name="title" value="{{ page.title if page else '' }}" placeholder="How to restore the media stack" required></label>
+    <label>Space<select name="space_id"><option value=""></option>{% for space in spaces %}<option value="{{ space.id }}" {% if page and page.space_id == space.id %}selected{% endif %}>{{ space.name }}</option>{% endfor %}</select></label>
+    <label>Parent Page<select name="parent_id"><option value=""></option>{% for parent in parents %}<option value="{{ parent.id }}" {% if page and page.parent_id == parent.id %}selected{% endif %}>{{ parent.title }}</option>{% endfor %}</select></label>
+    <label>Tags<input name="tags" value="{{ page.tags if page and page.tags else '' }}" placeholder="backup, proxmox, docker"></label>
+    <label class="wide">Summary<input name="summary" value="{{ page.summary if page and page.summary else '' }}" placeholder="Short one-line description"></label>
+    <label class="runbook-check"><input name="is_pinned" type="checkbox" value="on" {% if page and page.is_pinned %}checked{% endif %}> Pin this page</label>
+  </section>
+  <section class="runbook-editor-layout">
+    <label class="panel runbook-editor-pane">Markdown
+      <textarea name="body" data-runbook-markdown placeholder="# Recovery steps&#10;&#10;- Check service health&#10;- Restore the latest backup&#10;&#10;```&#10;docker compose ps&#10;```">{{ page.body if page and page.body else '' }}</textarea>
+    </label>
+    <section class="panel runbook-editor-pane">
+      <h2>Preview</h2>
+      <div class="runbook-content" data-runbook-preview></div>
+    </section>
+  </section>
+  <div class="form-actions">
+    <button class="button secondary" type="reset">Reset</button>
+    <button type="submit">Save Page</button>
+  </div>
+</form>
+{% endblock %}
+{% block extra_scripts %}
+<script src="/static/js/runbooks.js?v={{ asset_version }}" defer></script>
+{% endblock %}

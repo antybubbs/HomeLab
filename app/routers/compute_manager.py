@@ -1,5 +1,6 @@
 import json
 import secrets
+import hmac
 from fastapi import APIRouter, Depends, Form, HTTPException, Query, Request
 from fastapi.responses import JSONResponse, RedirectResponse
 from fastapi.templating import Jinja2Templates
@@ -7,13 +8,14 @@ from sqlalchemy import or_
 from sqlalchemy.orm import Session
 from starlette import status
 from app.core.csrf import csrf_context, validate_csrf_token
-from app.core.security import encrypt_secret
+from app.core.security import encrypt_secret, decrypt_secret
 from app.db.session import get_db
 from app.models.models import ComputeEvent, ComputeHost, ComputeInventoryItem, ComputeMetric, ComputeWorkload
 from app.routers.auth import require_editor, require_user
 from app.services.audit import write_audit
 from app.services.compute_monitor import compute_summary, sync_host
 from datetime import datetime
+
 
 router=APIRouter(prefix='/infrastructure/vm-docker-manager')
 templates=Jinja2Templates(directory='app/templates')

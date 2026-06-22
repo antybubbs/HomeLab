@@ -52,6 +52,41 @@ def docker_networks(container,inspect):
         compact[name]={'addresses':network_addresses,'mac_address':data.get('MacAddress')}
     return addresses,compact
 
+def workload_identity(kind,external_id,name):
+    if kind=='container' and name:
+        return str(name)
+    return str(external_id or name)
+
+def reconcile_workload(db,host_id,kind,external_id,name):
+    stable_id=workload_identity(kind,external_id,name)
+    exact=db.query(ComputeWorkload).filter_by(host_id=host_id,kind=kind,external_id=stable_id).first()
+    matches=db.query(ComputeWorkload).filter_by(host_id=host_id,kind=kind,name=name).all()
+    row=exact
+    if row is None and matches:
+        row=max(matches,key=lambda item:(item.status!='missing',item.updated_at or item.created_at,item.id))
+        row.external_id=stable_id
+    created=row is None
+    if created:
+        row=ComputeWorkload(host_id=host_id,kind=kind,external_id=stable_id,name=name)
+        db.add(row); db.flush()
+    for duplicate in matches:
+        if duplicate.id==row.id: continue
+        if not row.owner and duplicate.owner: row.owner=duplicate.owner
+        if not row.backup_policy and duplicate.backup_policy: row.backup_policy=duplicate.backup_policy
+        db.query(ComputeMetric).filter_by(workload_id=duplicate.id).update({ComputeMetric.workload_id:row.id},synchronize_session=False)
+        db.query(ComputeEvent).filter_by(workload_id=duplicate.id).update({ComputeEvent.workload_id:row.id},synchronize_session=False)
+        db.delete(duplicate)
+    db.flush()
+    return row,created
+
+def prune_missing_workloads(db,host_id,now,retention_days=30):
+    cutoff=now-timedelta(days=retention_days)
+    stale=db.query(ComputeWorkload).filter(ComputeWorkload.host_id==host_id,ComputeWorkload.status=='missing',ComputeWorkload.last_seen_at<cutoff).all()
+    for row in stale:
+        db.query(ComputeMetric).filter_by(workload_id=row.id).delete(synchronize_session=False)
+        db.query(ComputeEvent).filter_by(workload_id=row.id).delete(synchronize_session=False)
+        db.delete(row)
+
 def collect_docker(host):
     version=request_json(host,'/version') or {}; info=request_json(host,'/info') or {}
     containers=request_json(host,'/containers/json?all=1&size=1') or []; workloads=[]; compose={}
@@ -66,7 +101,8 @@ def collect_docker(host):
             except Exception: pass
         mem=stats.get('memory_stats') or {}
         addresses,networks=docker_networks(c,inspect); state=inspect.get('State') or {}
-        workloads.append({'external_id':c.get('Id'),'name':(c.get('Names') or [c.get('Id','')[:12]])[0].lstrip('/'),'kind':'container','node':host.name,'status':c.get('State') or 'unknown','cpu_percent':docker_cpu(stats),'cpu_total':None,'memory_used':mem.get('usage'),'memory_total':mem.get('limit'),'storage_used':c.get('SizeRw'),'storage_total':None,'uptime_seconds':docker_uptime(state.get('StartedAt')) if state.get('Running') else None,'tags':project,'metadata':{'image':c.get('Image'),'ports':c.get('Ports') or [],'mounts':c.get('Mounts') or [],'summary':c.get('Status'),'ip_addresses':addresses,'networks':networks}})
+        name=(c.get('Names') or [c.get('Id','')[:12]])[0].lstrip('/')
+        workloads.append({'external_id':name,'name':name,'kind':'container','node':host.name,'status':c.get('State') or 'unknown','cpu_percent':docker_cpu(stats),'cpu_total':None,'memory_used':mem.get('usage'),'memory_total':mem.get('limit'),'storage_used':c.get('SizeRw'),'storage_total':None,'uptime_seconds':docker_uptime(state.get('StartedAt')) if state.get('Running') else None,'tags':project,'metadata':{'image':c.get('Image'),'ports':c.get('Ports') or [],'mounts':c.get('Mounts') or [],'summary':c.get('Status'),'ip_addresses':addresses,'networks':networks}})
     items=[]
     for x in request_json(host,'/images/json') or []: items.append({'external_id':x.get('Id'),'name':(x.get('RepoTags') or ['<untagged>'])[0],'kind':'image','status':None,'size_bytes':x.get('Size'),'metadata':{'tags':x.get('RepoTags') or []}})
     for x in request_json(host,'/networks') or []: items.append({'external_id':x.get('Id') or x.get('Name'),'name':x.get('Name'),'kind':'network','status':x.get('Scope'),'size_bytes':None,'metadata':{'driver':x.get('Driver'),'internal':x.get('Internal')}})
@@ -163,13 +199,14 @@ def sync_host(db,host):
         for key in ('cpu_percent','memory_used','memory_total','storage_used','storage_total'): setattr(host,key,snap.get(key))
         host.metadata_json=json.dumps(snap.get('metadata') or {}); seen=set()
         for data in result['workloads']:
-            row=db.query(ComputeWorkload).filter_by(host_id=host.id,kind=data['kind'],external_id=data['external_id']).first()
-            if not row: row=ComputeWorkload(host_id=host.id,kind=data['kind'],external_id=data['external_id'],name=data['name']); db.add(row); db.flush(); db.add(ComputeEvent(host_id=host.id,workload_id=row.id,event_type='discovered',detail=f"Discovered {data['kind']} {data['name']}"))
+            row,created=reconcile_workload(db,host.id,data['kind'],data['external_id'],data['name'])
+            if created: db.add(ComputeEvent(host_id=host.id,workload_id=row.id,event_type='discovered',detail=f"Discovered {data['kind']} {data['name']}"))
             elif row.status!=data['status']: db.add(ComputeEvent(host_id=host.id,workload_id=row.id,event_type='state_change',detail=f"{row.name}: {row.status} -> {data['status']}"))
             for key in ('name','node','status','cpu_percent','cpu_total','memory_used','memory_total','storage_used','storage_total','uptime_seconds','tags'): setattr(row,key,data.get(key))
             row.metadata_json=json.dumps(data.get('metadata') or {}); row.last_seen_at=now; row.updated_at=now; seen.add((row.kind,row.external_id))
         for row in db.query(ComputeWorkload).filter_by(host_id=host.id).all():
             if (row.kind,row.external_id) not in seen and row.status!='missing': row.status='missing'; db.add(ComputeEvent(host_id=host.id,workload_id=row.id,event_type='missing',detail=f'{row.name} is no longer reported'))
+        prune_missing_workloads(db,host.id,now)
         db.query(ComputeInventoryItem).filter_by(host_id=host.id).delete(synchronize_session=False)
         inventory_seen=set()
         for data in result['items']:

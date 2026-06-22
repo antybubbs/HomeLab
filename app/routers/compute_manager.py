@@ -14,8 +14,8 @@ from app.db.session import get_db
 from app.models.models import ComputeEvent, ComputeHost, ComputeInventoryItem, ComputeMetric, ComputeWorkload, IPAddress
 from app.routers.auth import require_editor, require_user
 from app.services.audit import write_audit
-from app.services.compute_monitor import compute_summary, sync_host
-from datetime import datetime
+from app.services.compute_monitor import compute_summary, prune_missing_workloads, reconcile_workload, sync_host, workload_identity
+from datetime import datetime, timedelta
 
 
 router=APIRouter(prefix='/infrastructure/vm-docker-manager')
@@ -257,29 +257,11 @@ async def agent_checkin(
     seen = set()
 
     for data in payload.get('workloads') or []:
-        external_id = str(data.get('external_id') or data.get('name'))
         kind = data.get('kind') or 'container'
-        name = data.get('name') or external_id
-
-        row = (
-            db.query(ComputeWorkload)
-            .filter_by(
-                host_id=host.id,
-                kind=kind,
-                external_id=external_id,
-            )
-            .first()
-        )
-
-        if not row:
-            row = ComputeWorkload(
-                host_id=host.id,
-                kind=kind,
-                external_id=external_id,
-                name=name,
-            )
-            db.add(row)
-            db.flush()
+        reported_id = str(data.get('external_id') or data.get('name'))
+        name = data.get('name') or reported_id
+        external_id = workload_identity(kind,reported_id,name)
+        row,_ = reconcile_workload(db,host.id,kind,external_id,name)
 
         row.name = name
         row.node = host.name
@@ -313,6 +295,7 @@ async def agent_checkin(
                     detail=f'{row.name} is no longer reported by the agent',
                 )
             )
+    prune_missing_workloads(db,host.id,now)
 
     db.query(ComputeInventoryItem).filter_by(host_id=host.id).delete(
         synchronize_session=False
@@ -353,6 +336,13 @@ async def agent_checkin(
             recorded_at=now,
         )
     )
+
+    db.query(ComputeMetric).filter(
+        ComputeMetric.recorded_at < now - timedelta(days=7)
+    ).delete(synchronize_session=False)
+    db.query(ComputeEvent).filter(
+        ComputeEvent.created_at < now - timedelta(days=90)
+    ).delete(synchronize_session=False)
 
     db.commit()
 

@@ -50,3 +50,8 @@ def main():
 
 if __name__ == "__main__":
     main()
+
+if not column_exists(cur, "compute_hosts", "encrypted_agent_token"):
+    cur.execute(
+        "ALTER TABLE compute_hosts ADD COLUMN encrypted_agent_token TEXT"
+    )

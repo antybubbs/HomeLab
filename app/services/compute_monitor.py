@@ -101,6 +101,9 @@ def collect_proxmox(host):
     return {'version':version.get('version'),'warning':warning,'host':{'cpu_percent':round(cpu,2) if cpu is not None else None,'memory_used':sum(x.get('mem') or 0 for x in nodes),'memory_total':sum(x.get('maxmem') or 0 for x in nodes),'storage_used':sum(x.get('disk') or 0 for x in nodes),'storage_total':sum(x.get('maxdisk') or 0 for x in nodes),'metadata':{'release':version.get('release'),'nodes':len(nodes)}},'workloads':workloads,'items':items}
 
 def sync_host(db,host):
+    if host.platform == 'docker_agent':
+        return
+
     now=datetime.utcnow(); old_host_status=host.status
     try:
         result=collect_docker(host) if host.platform=='docker' else collect_proxmox(host); snap=result['host']; host.status='online'; host.version=result.get('version'); host.last_error=result.get('warning')

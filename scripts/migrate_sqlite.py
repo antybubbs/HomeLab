@@ -11,6 +11,14 @@ def column_exists(cursor, table, column):
     return column in [row[1] for row in cursor.fetchall()]
 
 
+def table_exists(cursor, table):
+    cursor.execute(
+        "SELECT 1 FROM sqlite_master WHERE type = 'table' AND name = ?",
+        (table,),
+    )
+    return cursor.fetchone() is not None
+
+
 def main():
     if not DB_PATH.exists():
         print("Database does not exist yet. Skipping migrations.")
@@ -21,17 +29,21 @@ def main():
 
     migrations_applied = []
 
-    if not column_exists(cur, "compute_hosts", "agent_last_seen_at"):
-        cur.execute(
-            "ALTER TABLE compute_hosts ADD COLUMN agent_last_seen_at DATETIME"
-        )
-        migrations_applied.append("compute_hosts.agent_last_seen_at")
+    # Public releases before v0.18 do not have compute_hosts yet. In that case,
+    # application startup creates the complete current table via SQLAlchemy.
+    # May the migration God bless us all.
+    if table_exists(cur, "compute_hosts"):
+        if not column_exists(cur, "compute_hosts", "agent_last_seen_at"):
+            cur.execute(
+                "ALTER TABLE compute_hosts ADD COLUMN agent_last_seen_at DATETIME"
+            )
+            migrations_applied.append("compute_hosts.agent_last_seen_at")
 
-    if not column_exists(cur, "compute_hosts", "encrypted_agent_token"):
-        cur.execute(
-            "ALTER TABLE compute_hosts ADD COLUMN encrypted_agent_token TEXT"
-        )
-        migrations_applied.append("compute_hosts.encrypted_agent_token")
+        if not column_exists(cur, "compute_hosts", "encrypted_agent_token"):
+            cur.execute(
+                "ALTER TABLE compute_hosts ADD COLUMN encrypted_agent_token TEXT"
+            )
+            migrations_applied.append("compute_hosts.encrypted_agent_token")
 
     conn.commit()
     conn.close()

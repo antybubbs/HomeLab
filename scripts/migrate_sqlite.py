@@ -21,21 +21,17 @@ def main():
 
     migrations_applied = []
 
-    # ------------------------------------------------------------------
-    # ComputeHost Docker Agent fields
-    # ------------------------------------------------------------------
-
-    if not column_exists(cur, "compute_hosts", "agent_token"):
-        cur.execute(
-            "ALTER TABLE compute_hosts ADD COLUMN agent_token VARCHAR(128)"
-        )
-        migrations_applied.append("compute_hosts.agent_token")
-
     if not column_exists(cur, "compute_hosts", "agent_last_seen_at"):
         cur.execute(
             "ALTER TABLE compute_hosts ADD COLUMN agent_last_seen_at DATETIME"
         )
         migrations_applied.append("compute_hosts.agent_last_seen_at")
+
+    if not column_exists(cur, "compute_hosts", "encrypted_agent_token"):
+        cur.execute(
+            "ALTER TABLE compute_hosts ADD COLUMN encrypted_agent_token TEXT"
+        )
+        migrations_applied.append("compute_hosts.encrypted_agent_token")
 
     conn.commit()
     conn.close()
@@ -50,8 +46,3 @@ def main():
 
 if __name__ == "__main__":
     main()
-
-if not column_exists(cur, "compute_hosts", "encrypted_agent_token"):
-    cur.execute(
-        "ALTER TABLE compute_hosts ADD COLUMN encrypted_agent_token TEXT"
-    )

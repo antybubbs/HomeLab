@@ -139,45 +139,32 @@ def sync_host_by_id(host_id):
     db=SessionLocal()
     try:
         host=db.get(ComputeHost,host_id)
-        if host and host.is_enabled: sync_host(db,host)
+        if host and host.is_enabled and host.platform != 'docker_agent':
+            sync_host(db,host)
     except Exception:
         db.rollback()
-    finally: db.close()
+    finally:
+        db.close()
 
-    async def compute_monitor_loop():
+async def compute_monitor_loop():
     await asyncio.sleep(20)
 
     while True:
-        db = SessionLocal()
-        now = datetime.utcnow()
-
+        db=SessionLocal(); now=datetime.utcnow()
         try:
-            ids = [
-                h.id
-                for h in db.query(ComputeHost).filter_by(is_enabled=True).all()
-                if h.platform != "docker_agent"
+            ids=[
+                h.id for h in db.query(ComputeHost).filter_by(is_enabled=True).all()
+                if h.platform != 'docker_agent'
                 and (
                     not h.last_synced_at
-                    or h.last_synced_at
-                    <= now - timedelta(
-                        seconds=max(
-                            15,
-                            min(h.poll_interval_seconds, 3600)
-                        )
-                    )
+                    or h.last_synced_at <= now - timedelta(seconds=max(15,min(h.poll_interval_seconds,3600)))
                 )
             ]
         finally:
             db.close()
 
         if ids:
-            await asyncio.gather(
-                *(
-                    asyncio.to_thread(sync_host_by_id, i)
-                    for i in ids[:3]
-                ),
-                return_exceptions=True,
-            )
+            await asyncio.gather(*(asyncio.to_thread(sync_host_by_id,i) for i in ids[:3]),return_exceptions=True)
 
         await asyncio.sleep(5)
 
@@ -186,4 +173,3 @@ def compute_summary(db):
     pct=lambda used,total: round(used/total*100,1) if used is not None and total else None
     cpu=[h.cpu_percent for h in hosts if h.cpu_percent is not None]; mu=sum(h.memory_used or 0 for h in hosts); mt=sum(h.memory_total or 0 for h in hosts); su=sum(h.storage_used or 0 for h in hosts); st=sum(h.storage_total or 0 for h in hosts)
     return {'hosts':len(hosts),'online_hosts':sum(h.status=='online' for h in hosts),'workloads':len(workloads),'running':sum(w.status.lower() in running for w in workloads),'stopped':sum(w.status.lower() in stopped for w in workloads),'warnings':sum(h.status=='offline' for h in hosts)+sum(w.status.lower() not in running|stopped for w in workloads),'cpu_percent':round(sum(cpu)/len(cpu),1) if cpu else None,'memory_percent':pct(mu,mt),'storage_percent':pct(su,st),'updated_at':max((h.last_synced_at for h in hosts if h.last_synced_at),default=None)}
-    

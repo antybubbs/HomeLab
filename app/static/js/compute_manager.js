@@ -2,8 +2,18 @@
   const platform = document.querySelector("[data-compute-platform]");
 
   const togglePlatform = () => {
+    const value = platform?.value;
+
     document.querySelectorAll("[data-proxmox-field]").forEach((field) => {
-      field.hidden = platform?.value !== "proxmox";
+      field.hidden = value !== "proxmox";
+    });
+
+    document.querySelectorAll("[data-direct-connection-field]").forEach((field) => {
+      field.hidden = value === "docker_agent";
+    });
+
+    document.querySelectorAll("[data-docker-agent-field]").forEach((field) => {
+      field.hidden = value !== "docker_agent";
     });
   };
 

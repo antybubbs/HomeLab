@@ -70,13 +70,15 @@ def create_host(request:Request,name:str=Form(...,max_length=255),platform:str=F
     elif platform=='proxmox' and (not token_id.strip() or not token_secret.strip()): error='Proxmox requires an API token ID and secret.'
     elif db.query(ComputeHost).filter(ComputeHost.name==clean_name).first(): error='A host with that name already exists.'
     if error: return templates.TemplateResponse(request,'compute_host_form.html',context(user=user,host=None,error=error,**csrf_context(request)),status_code=400)
+    agent_token = secrets.token_urlsafe(32) if platform == 'docker_agent' else None
+
     row=ComputeHost(
         name=clean_name,
         platform=platform,
         base_url=clean_url if platform != 'docker_agent' else f'agent://{clean_name}',
         token_id=token_id.strip() or None,
         encrypted_token=encrypt_secret(token_secret.strip()) if token_secret.strip() else None,
-        agent_token=secrets.token_urlsafe(32) if platform == 'docker_agent' else None,
+        encrypted_agent_token=encrypt_secret(agent_token) if agent_token else None,
         verify_tls=bool(verify_tls),
         is_enabled=bool(is_enabled),
         poll_interval_seconds=max(15,min(poll_interval_seconds,3600)),

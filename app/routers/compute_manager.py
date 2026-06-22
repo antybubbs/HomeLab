@@ -160,22 +160,125 @@ async def agent_checkin(
         )
 
     payload = await request.json()
-
     now = datetime.utcnow()
+
+    host_data = payload.get('host') or {}
 
     host.status = 'online'
     host.last_synced_at = now
     host.agent_last_seen_at = now
     host.last_error = None
+    host.version = payload.get('version') or host.version
+    host.cpu_percent = host_data.get('cpu_percent')
+    host.memory_used = host_data.get('memory_used')
+    host.memory_total = host_data.get('memory_total')
+    host.storage_used = host_data.get('storage_used')
+    host.storage_total = host_data.get('storage_total')
+    host.metadata_json = json.dumps(host_data.get('metadata') or {})
 
-    if payload.get('version'):
-        host.version = payload['version']
+    seen = set()
+
+    for data in payload.get('workloads') or []:
+        external_id = str(data.get('external_id') or data.get('name'))
+        kind = data.get('kind') or 'container'
+        name = data.get('name') or external_id
+
+        row = (
+            db.query(ComputeWorkload)
+            .filter_by(
+                host_id=host.id,
+                kind=kind,
+                external_id=external_id,
+            )
+            .first()
+        )
+
+        if not row:
+            row = ComputeWorkload(
+                host_id=host.id,
+                kind=kind,
+                external_id=external_id,
+                name=name,
+            )
+            db.add(row)
+            db.flush()
+
+        row.name = name
+        row.node = host.name
+        row.status = data.get('status') or 'unknown'
+        row.cpu_percent = data.get('cpu_percent')
+        row.cpu_total = data.get('cpu_total')
+        row.memory_used = data.get('memory_used')
+        row.memory_total = data.get('memory_total')
+        row.storage_used = data.get('storage_used')
+        row.storage_total = data.get('storage_total')
+        row.uptime_seconds = data.get('uptime_seconds')
+        row.tags = data.get('tags')
+        row.metadata_json = json.dumps(data.get('metadata') or {})
+        row.last_seen_at = now
+        row.updated_at = now
+
+        seen.add((row.kind, row.external_id))
+
+    for row in db.query(ComputeWorkload).filter_by(host_id=host.id).all():
+        if (row.kind, row.external_id) not in seen and row.status != 'missing':
+            row.status = 'missing'
+            db.add(
+                ComputeEvent(
+                    host_id=host.id,
+                    workload_id=row.id,
+                    event_type='missing',
+                    detail=f'{row.name} is no longer reported by the agent',
+                )
+            )
+
+    db.query(ComputeInventoryItem).filter_by(host_id=host.id).delete(
+        synchronize_session=False
+    )
+
+    inventory_seen = set()
+
+    for data in payload.get('items') or []:
+        external_id = str(data.get('external_id') or data.get('name'))
+        kind = data.get('kind') or 'item'
+
+        if (kind, external_id) in inventory_seen:
+            continue
+
+        inventory_seen.add((kind, external_id))
+
+        db.add(
+            ComputeInventoryItem(
+                host_id=host.id,
+                external_id=external_id,
+                name=data.get('name') or external_id,
+                kind=kind,
+                status=data.get('status'),
+                size_bytes=data.get('size_bytes'),
+                metadata_json=json.dumps(data.get('metadata') or {}),
+                last_seen_at=now,
+            )
+        )
+
+    db.add(
+        ComputeMetric(
+            host_id=host.id,
+            cpu_percent=host.cpu_percent,
+            memory_used=host.memory_used,
+            memory_total=host.memory_total,
+            storage_used=host.storage_used,
+            storage_total=host.storage_total,
+            recorded_at=now,
+        )
+    )
 
     db.commit()
 
     return JSONResponse({
         'ok': True,
         'host': host.name,
+        'workloads': len(payload.get('workloads') or []),
+        'items': len(payload.get('items') or []),
     })
 
 @router.get('/workloads/{workload_id}')

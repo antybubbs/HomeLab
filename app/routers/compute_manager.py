@@ -1,4 +1,5 @@
 import json
+import secrets
 from fastapi import APIRouter, Depends, Form, HTTPException, Query, Request
 from fastapi.responses import JSONResponse, RedirectResponse
 from fastapi.templating import Jinja2Templates
@@ -57,12 +58,28 @@ def new_host(request:Request,user=Depends(require_editor)):
 def create_host(request:Request,name:str=Form(...,max_length=255),platform:str=Form(...),base_url:str=Form(...,max_length=500),token_id:str=Form('',max_length=255),token_secret:str=Form('',max_length=2000),verify_tls:str=Form(''),is_enabled:str=Form(''),poll_interval_seconds:int=Form(30),owner:str=Form('',max_length=255),notes:str=Form('',max_length=10000),csrf_token:str=Form(...),db:Session=Depends(get_db),user=Depends(require_editor)):
     validate_csrf_token(request,csrf_token); platform=platform.strip().lower(); clean_name=name.strip(); clean_url=base_url.strip()
     error=None
-    if platform not in {'docker','proxmox'}: error='Choose Docker or Proxmox.'
-    elif not clean_name or not clean_url: error='Name and connection URL are required.'
+    if platform not in {'docker','docker_agent','proxmox'}:
+        error='Choose Docker, Docker Agent or Proxmox.'
+    elif not clean_name:
+        error='Name is required.'
+    elif platform != 'docker_agent' and not clean_url:
+        error='Connection URL is required.'
     elif platform=='proxmox' and (not token_id.strip() or not token_secret.strip()): error='Proxmox requires an API token ID and secret.'
     elif db.query(ComputeHost).filter(ComputeHost.name==clean_name).first(): error='A host with that name already exists.'
     if error: return templates.TemplateResponse(request,'compute_host_form.html',context(user=user,host=None,error=error,**csrf_context(request)),status_code=400)
-    row=ComputeHost(name=clean_name,platform=platform,base_url=clean_url,token_id=token_id.strip() or None,encrypted_token=encrypt_secret(token_secret.strip()),verify_tls=bool(verify_tls),is_enabled=bool(is_enabled),poll_interval_seconds=max(15,min(poll_interval_seconds,3600)),owner=owner.strip() or None,notes=notes.strip() or None)
+    row=ComputeHost(
+        name=clean_name,
+        platform=platform,
+        base_url=clean_url if platform != 'docker_agent' else f'agent://{clean_name}',
+        token_id=token_id.strip() or None,
+        encrypted_token=encrypt_secret(token_secret.strip()) if token_secret.strip() else None,
+        agent_token=secrets.token_urlsafe(32) if platform == 'docker_agent' else None,
+        verify_tls=bool(verify_tls),
+        is_enabled=bool(is_enabled),
+        poll_interval_seconds=max(15,min(poll_interval_seconds,3600)),
+        owner=owner.strip() or None,
+        notes=notes.strip() or None,
+    )
     db.add(row); db.commit(); write_audit(db,user,'create','compute_host',str(row.id),request.client.host if request.client else None,detail=row.name)
     return RedirectResponse(f'/infrastructure/vm-docker-manager/hosts/{row.id}',status_code=303)
 
@@ -83,8 +100,14 @@ def edit_host(request:Request,host_id:int,db:Session=Depends(get_db),user=Depend
 def update_host(request:Request,host_id:int,name:str=Form(...),platform:str=Form(...),base_url:str=Form(...),token_id:str=Form(''),token_secret:str=Form(''),verify_tls:str=Form(''),is_enabled:str=Form(''),poll_interval_seconds:int=Form(30),owner:str=Form(''),notes:str=Form(''),csrf_token:str=Form(...),db:Session=Depends(get_db),user=Depends(require_editor)):
     validate_csrf_token(request,csrf_token); host=db.get(ComputeHost,host_id)
     if not host: raise HTTPException(404,'Host not found')
-    host.name=name.strip(); host.platform=platform.strip().lower(); host.base_url=base_url.strip(); host.token_id=token_id.strip() or None
+    platform=platform.strip().lower()
+    if platform not in {'docker','docker_agent','proxmox'}:
+        raise HTTPException(400,'Invalid platform')
+    host.name=name.strip(); host.platform=platform
+    host.base_url=f'agent://{host.name}' if platform == 'docker_agent' else base_url.strip()
+    host.token_id=token_id.strip() or None
     if token_secret.strip(): host.encrypted_token=encrypt_secret(token_secret.strip())
+    if platform == 'docker_agent' and not host.agent_token: host.agent_token=secrets.token_urlsafe(32)
     host.verify_tls=bool(verify_tls); host.is_enabled=bool(is_enabled); host.poll_interval_seconds=max(15,min(poll_interval_seconds,3600)); host.owner=owner.strip() or None; host.notes=notes.strip() or None; db.commit(); write_audit(db,user,'update','compute_host',str(host.id),request.client.host if request.client else None,detail=host.name)
     return RedirectResponse(f'/infrastructure/vm-docker-manager/hosts/{host.id}',status_code=303)
 

@@ -38,10 +38,8 @@
 
       const data = await response.json();
 
-      lastUpdate = data.updated_at
-        ? new Date(data.updated_at).getTime()
-        : Date.now();
-
+      lastUpdate = Date.now();
+      
       document.querySelectorAll("[data-summary]").forEach((el) => {
         const value = data[el.dataset.summary];
 

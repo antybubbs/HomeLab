@@ -7,8 +7,9 @@ from sqlalchemy.orm import Session
 from starlette import status
 from app.core.csrf import csrf_context, validate_csrf_token
 from app.db.session import get_db
-from app.models.models import IPAddress, NetworkMonitor, RemoteAccess, VLAN
+from app.models.models import ComputeWorkload, IPAddress, NetworkMonitor, RemoteAccess, VLAN
 from app.routers.auth import require_editor, require_user
+from app.routers.compute_manager import uptime_label, workload_addresses
 from app.routers.remote_manager import RDP_SETTING_KEYS, SETTINGS as REMOTE_MANAGER_DEFAULTS, TERMINAL_SETTING_KEYS, clean_global_setting, decode_settings_blob, encode_settings_blob
 from app.services.audit import write_audit
 from app.services.custom_fields import active_fields, field_values, option_list, save_custom_values, validate_custom_values
@@ -273,7 +274,14 @@ def detail_ip_address(request: Request, record_id: int, db: Session = Depends(ge
     fields = active_fields(db, MODULE)
     values = field_values(db, MODULE, ENTITY_TYPE, row.id)
     categories = list_values(db, MODULE).get("category", [])
-    return templates.TemplateResponse(request, "ip_address_detail.html", {"user": user, "record": row, "monitor": monitor_for(db, row.id), "remote": remote_for(db, row.id), "categories": categories, "assignment_types": sorted(ASSIGNMENT_TYPES), "remote_protocols": sorted(REMOTE_PROTOCOLS), "custom_fields": fields, "custom_values": values, "option_list": option_list, **remote_settings_context(remote_for(db, row.id)), **csrf_context(request)})
+    target_address = str(ip_address(row.address))
+    compute_matches = [
+        workload
+        for workload in db.query(ComputeWorkload).filter(ComputeWorkload.status != "missing").all()
+        if any(item["address"] == target_address for item in workload_addresses(workload))
+    ]
+    compute_matches.sort(key=lambda workload: (workload.host.name.lower(), workload.name.lower()))
+    return templates.TemplateResponse(request, "ip_address_detail.html", {"user": user, "record": row, "monitor": monitor_for(db, row.id), "remote": remote_for(db, row.id), "compute_matches": compute_matches, "uptime_label": uptime_label, "categories": categories, "assignment_types": sorted(ASSIGNMENT_TYPES), "remote_protocols": sorted(REMOTE_PROTOCOLS), "custom_fields": fields, "custom_values": values, "option_list": option_list, **remote_settings_context(remote_for(db, row.id)), **csrf_context(request)})
 
 
 @router.get("/{record_id}/edit")

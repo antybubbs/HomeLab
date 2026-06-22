@@ -73,6 +73,35 @@
       {% endif %}
     </div>
   </section>
+  <section class="panel record-panel wide compute-link-panel">
+    <h2>VM / Docker Manager</h2>
+    {% if compute_matches %}
+    <div class="compute-link-list">
+      {% for workload in compute_matches %}
+      <article class="compute-link-card">
+        <div class="compute-link-identity">
+          <span class="platform-mark {{ workload.host.platform }}">{{ 'PX' if workload.host.platform == 'proxmox' else 'DK' }}</span>
+          <div><strong>{{ workload.name }}</strong><span>{{ workload.kind|upper }} on {{ workload.host.name }}</span></div>
+        </div>
+        <dl class="compute-link-facts">
+          <div><dt>Status</dt><dd><span class="compute-state {{ workload.status }}">{{ workload.status|title }}</span></dd></div>
+          <div><dt>Uptime</dt><dd>{{ uptime_label(workload.uptime_seconds) }}</dd></div>
+          <div><dt>Last seen</dt><dd>{{ workload.last_seen_at.strftime('%Y-%m-%d %H:%M') if workload.last_seen_at else '-' }}</dd></div>
+        </dl>
+        <div class="compute-link-actions">
+          <a class="button secondary" href="/infrastructure/vm-docker-manager/hosts/{{ workload.host.id }}">Host record</a>
+          <a class="button" href="/infrastructure/vm-docker-manager/workloads/{{ workload.id }}">Workload details</a>
+        </div>
+      </article>
+      {% endfor %}
+    </div>
+    {% else %}
+    <div class="compute-link-empty">
+      <div><strong>No linked workload found</strong><span>This IP has not yet been reported by a VM or Docker container.</span></div>
+      <a class="button secondary" href="/infrastructure/vm-docker-manager">Open VM / Docker Manager</a>
+    </div>
+    {% endif %}
+  </section>
   <section class="panel record-panel wide">
     <h2>Notes and Custom Fields</h2>
     <dl class="record-kv-list full">

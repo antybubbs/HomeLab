@@ -1,7 +1,99 @@
 {% extends "base.html" %}
 {% block content %}
-<div class="topbar"><div><h1>Audit log</h1><p class="muted">Recent security and data access events.</p></div></div>
-<section class="panel"><table><thead><tr><th>Time</th><th>User</th><th>Action</th><th>Entity</th><th>Detail</th></tr></thead><tbody>
-{% for log in logs %}<tr><td>{{ log.created_at }}</td><td>{{ log.user.email if log.user else '-' }}</td><td>{{ log.action }}</td><td>{{ log.entity }} {{ log.entity_id or '' }}</td><td>{{ log.detail or '-' }}</td></tr>{% endfor %}
-</tbody></table></section>
+<section class="panel module-header audit-hero">
+  <div class="module-title-row">
+    <div class="module-heading">
+      <h1>Audit Logs</h1>
+      <p class="muted">A complete, chronological record of user activity, security events, data changes and failed requests.</p>
+    </div>
+    <span class="audit-live-label"><i></i> Recording</span>
+  </div>
+</section>
+
+<section class="audit-summary-grid">
+  <article><span>Total events</span><strong>{{ summary.total }}</strong><small>all recorded history</small></article>
+  <article><span>Last 24 hours</span><strong>{{ summary.last_24h }}</strong><small>recent activity</small></article>
+  <article class="{% if summary.attention %}warn{% endif %}"><span>Needs attention</span><strong>{{ summary.attention }}</strong><small>warnings and errors</small></article>
+  <article><span>Known actors</span><strong>{{ summary.actors }}</strong><small>authenticated users</small></article>
+</section>
+
+<section class="panel audit-filter-panel">
+  <form class="audit-filters" method="get">
+    <label class="audit-search">Search
+      <input name="q" value="{{ q }}" placeholder="Actor, action, target, IP, path, request ID...">
+    </label>
+    <label>Category
+      <select name="category"><option value="">All categories</option>{% for value in categories %}<option value="{{ value }}" {% if active_category == value %}selected{% endif %}>{{ value|replace('_',' ')|title }}</option>{% endfor %}</select>
+    </label>
+    <label>Severity
+      <select name="severity"><option value="">All severities</option>{% for value in ['info','warning','error','critical'] %}<option value="{{ value }}" {% if active_severity == value %}selected{% endif %}>{{ value|title }}</option>{% endfor %}</select>
+    </label>
+    <label>Action
+      <select name="action"><option value="">All actions</option>{% for value in actions %}<option value="{{ value }}" {% if active_action == value %}selected{% endif %}>{{ value|replace('_',' ')|title }}</option>{% endfor %}</select>
+    </label>
+    <label>Target type
+      <select name="entity"><option value="">All targets</option>{% for value in entities %}<option value="{{ value }}" {% if active_entity == value %}selected{% endif %}>{{ value|replace('_',' ')|title }}</option>{% endfor %}</select>
+    </label>
+    <label>Actor
+      <select name="actor"><option value="">All actors</option>{% for value in actors %}<option value="{{ value }}" {% if active_actor == value %}selected{% endif %}>{{ value }}</option>{% endfor %}</select>
+    </label>
+    <label>From
+      <input type="date" name="date_from" value="{{ date_from }}">
+    </label>
+    <label>To
+      <input type="date" name="date_to" value="{{ date_to }}">
+    </label>
+    <label>Rows
+      <select name="per_page">{% for value in [25,50,100] %}<option value="{{ value }}" {% if per_page == value %}selected{% endif %}>{{ value }}</option>{% endfor %}</select>
+    </label>
+    <div class="audit-filter-actions">
+      <button type="submit">Apply filters</button>
+      <a class="button secondary" href="/system/audit-logs">Reset</a>
+    </div>
+  </form>
+</section>
+
+<section class="panel audit-log-panel">
+  <div class="audit-table-heading">
+    <div><h2>Event stream</h2><p class="muted">{{ filtered_total }} matching event{% if filtered_total != 1 %}s{% endif %}</p></div>
+    <span>Page {{ page }} of {{ pages }}</span>
+  </div>
+  <div class="audit-table-wrap">
+    <table class="audit-table">
+      <thead><tr><th>Time</th><th>Level</th><th>Actor</th><th>Event</th><th>Target</th><th>Request</th><th>Source</th><th>Detail</th></tr></thead>
+      <tbody>
+      {% for log in logs %}
+        <tr>
+          <td class="audit-time"><strong>{{ log.created_at.strftime('%Y-%m-%d') }}</strong><span>{{ log.created_at.strftime('%H:%M:%S') }}</span></td>
+          <td><span class="audit-severity {{ log.severity }}">{{ log.severity|title }}</span></td>
+          <td class="audit-actor">{% if log.user %}<strong>{{ log.user.email }}</strong><span>User #{{ log.user.id }}</span>{% else %}<strong>System / anonymous</strong><span>Unauthenticated</span>{% endif %}</td>
+          <td><span class="audit-action">{{ log.action|replace('_',' ')|title }}</span><small>{{ log.category|replace('_',' ')|title }}</small></td>
+          <td><strong>{{ log.entity|replace('_',' ')|title }}</strong>{% if log.entity_id %}<span class="mono">#{{ log.entity_id }}</span>{% endif %}</td>
+          <td class="audit-request">{% if log.request_method %}<span class="audit-method">{{ log.request_method }}</span>{% endif %}<span class="mono">{{ log.request_path or '-' }}</span>{% if log.status_code %}<small class="{% if log.status_code >= 400 %}attention{% endif %}">HTTP {{ log.status_code }}</small>{% endif %}</td>
+          <td class="mono">{{ log.ip_address or '-' }}</td>
+          <td class="audit-detail-cell">
+            <span>{{ log.detail or 'No additional detail' }}</span>
+            <details class="audit-inspector">
+              <summary>Inspect event</summary>
+              <dl>
+                <div><dt>Request ID</dt><dd class="mono">{{ log.request_id or '-' }}</dd></div>
+                <div><dt>User agent</dt><dd>{{ log.user_agent or '-' }}</dd></div>
+                <div><dt>Recorded</dt><dd>{{ log.created_at.strftime('%Y-%m-%d %H:%M:%S') }}</dd></div>
+                {% for key,value in log.metadata_data.items() %}<div><dt>{{ key|replace('_',' ')|title }}</dt><dd class="mono">{{ value }}</dd></div>{% endfor %}
+              </dl>
+            </details>
+          </td>
+        </tr>
+      {% else %}
+        <tr><td colspan="8"><div class="audit-empty"><strong>No audit events match these filters.</strong><span>Try widening the date range or clearing one of the filters.</span></div></td></tr>
+      {% endfor %}
+      </tbody>
+    </table>
+  </div>
+  <nav class="audit-pagination" aria-label="Audit log pages">
+    {% if previous_url %}<a class="button secondary" href="{{ previous_url }}">Previous</a>{% else %}<span></span>{% endif %}
+    <span>Showing {% if filtered_total %}{{ ((page - 1) * per_page) + 1 }}–{{ [page * per_page, filtered_total]|min }}{% else %}0{% endif %} of {{ filtered_total }}</span>
+    {% if next_url %}<a class="button secondary" href="{{ next_url }}">Next</a>{% else %}<span></span>{% endif %}
+  </nav>
+</section>
 {% endblock %}

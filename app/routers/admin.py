@@ -1,9 +1,12 @@
 from pathlib import Path
 import tempfile
+import json
+from datetime import datetime, timedelta
 
-from fastapi import APIRouter, Depends, File, Form, HTTPException, Request, UploadFile
+from fastapi import APIRouter, Depends, File, Form, HTTPException, Query, Request, UploadFile
 from fastapi.responses import PlainTextResponse, RedirectResponse
 from fastapi.templating import Jinja2Templates
+from sqlalchemy import func, or_
 from sqlalchemy.orm import Session
 from sqlalchemy.orm import selectinload
 from starlette import status
@@ -1072,24 +1075,130 @@ def disable_2fa(
 
 
 @router.get("/admin/audit")
-def audit(
+def legacy_audit(user=Depends(require_admin)):
+    return RedirectResponse("/system/audit-logs", status_code=302)
+
+
+@router.get("/system/audit-logs")
+def audit_logs(
     request: Request,
+    q: str = Query("", max_length=200),
+    category: str = Query("", max_length=40),
+    severity: str = Query("", max_length=20),
+    action: str = Query("", max_length=80),
+    entity: str = Query("", max_length=80),
+    actor: str = Query("", max_length=255),
+    date_from: str = Query("", max_length=10),
+    date_to: str = Query("", max_length=10),
+    page: int = Query(1, ge=1),
+    per_page: int = Query(50, ge=25, le=100),
     db: Session = Depends(get_db),
     user=Depends(require_admin),
 ):
+    if per_page not in {25, 50, 100}:
+        per_page = 50
+    query = db.query(AuditLog)
+    clean_q = q.strip()
+    if clean_q:
+        like = f"%{clean_q}%"
+        query = query.filter(or_(
+            AuditLog.action.ilike(like),
+            AuditLog.entity.ilike(like),
+            AuditLog.entity_id.ilike(like),
+            AuditLog.detail.ilike(like),
+            AuditLog.ip_address.ilike(like),
+            AuditLog.request_path.ilike(like),
+            AuditLog.request_id.ilike(like),
+            AuditLog.user.has(User.email.ilike(like)),
+        ))
+    if category:
+        query = query.filter(AuditLog.category == category)
+    if severity:
+        query = query.filter(AuditLog.severity == severity)
+    if action:
+        query = query.filter(AuditLog.action == action)
+    if entity:
+        query = query.filter(AuditLog.entity == entity)
+    if actor:
+        query = query.filter(AuditLog.user.has(User.email == actor))
+    if date_from:
+        try:
+            query = query.filter(AuditLog.created_at >= datetime.strptime(date_from, "%Y-%m-%d"))
+        except ValueError:
+            date_from = ""
+    if date_to:
+        try:
+            query = query.filter(AuditLog.created_at < datetime.strptime(date_to, "%Y-%m-%d") + timedelta(days=1))
+        except ValueError:
+            date_to = ""
+
+    filtered_total = query.count()
+    pages = max(1, (filtered_total + per_page - 1) // per_page)
+    page = min(page, pages)
     logs = (
-        db.query(AuditLog)
-        .order_by(AuditLog.created_at.desc())
-        .limit(200)
+        query
+        .options(selectinload(AuditLog.user))
+        .order_by(AuditLog.created_at.desc(), AuditLog.id.desc())
+        .offset((page - 1) * per_page)
+        .limit(per_page)
         .all()
     )
+    for log in logs:
+        try:
+            parsed_metadata = json.loads(log.metadata_json or "{}")
+            log.metadata_data = parsed_metadata if isinstance(parsed_metadata, dict) else {"value": parsed_metadata}
+        except json.JSONDecodeError:
+            log.metadata_data = {"raw": log.metadata_json}
 
+    now = datetime.utcnow()
+    summary = {
+        "total": db.query(func.count(AuditLog.id)).scalar() or 0,
+        "last_24h": db.query(func.count(AuditLog.id)).filter(AuditLog.created_at >= now - timedelta(days=1)).scalar() or 0,
+        "attention": db.query(func.count(AuditLog.id)).filter(AuditLog.severity.in_(["warning", "error", "critical"])).scalar() or 0,
+        "actors": db.query(func.count(func.distinct(AuditLog.user_id))).filter(AuditLog.user_id.is_not(None)).scalar() or 0,
+    }
+    categories = [value for value, in db.query(AuditLog.category).distinct().order_by(AuditLog.category) if value]
+    actions = [value for value, in db.query(AuditLog.action).distinct().order_by(AuditLog.action) if value]
+    entities = [value for value, in db.query(AuditLog.entity).distinct().order_by(AuditLog.entity) if value]
+    actors = [email for email, in db.query(User.email).join(AuditLog, AuditLog.user_id == User.id).distinct().order_by(User.email)]
+    params = {
+        "q": clean_q,
+        "category": category,
+        "severity": severity,
+        "action": action,
+        "entity": entity,
+        "actor": actor,
+        "date_from": date_from,
+        "date_to": date_to,
+        "per_page": per_page,
+    }
+    params = {key: value for key, value in params.items() if value not in ("", None)}
+    page_url = lambda target: "/system/audit-logs?" + urlencode({**params, "page": target})
     return templates.TemplateResponse(
         request,
         "audit.html",
         {
             "user": user,
             "logs": logs,
+            "summary": summary,
+            "filtered_total": filtered_total,
+            "categories": categories,
+            "actions": actions,
+            "entities": entities,
+            "actors": actors,
+            "q": clean_q,
+            "active_category": category,
+            "active_severity": severity,
+            "active_action": action,
+            "active_entity": entity,
+            "active_actor": actor,
+            "date_from": date_from,
+            "date_to": date_to,
+            "page": page,
+            "pages": pages,
+            "per_page": per_page,
+            "previous_url": page_url(page - 1) if page > 1 else None,
+            "next_url": page_url(page + 1) if page < pages else None,
             **csrf_context(request),
         },
     )

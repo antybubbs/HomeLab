@@ -1,5 +1,7 @@
 from pathlib import Path
 import asyncio
+from time import perf_counter
+from uuid import uuid4
 from fastapi import FastAPI, Request
 from fastapi.responses import PlainTextResponse, RedirectResponse
 from fastapi.staticfiles import StaticFiles
@@ -10,13 +12,14 @@ from sqlalchemy.orm import Session
 from app.core.config import get_settings, trusted_hosts
 from app.core.security import decrypt_secret, hash_password
 from app.db.session import Base, engine, SessionLocal
-from app.models.models import User, VLAN
+from app.models.models import AuditLog, User, VLAN
 from app.routers import auth, dashboard, licences, admin, ip_addresses, hardware_assets, network_monitor, remote_manager, runbooks, domain_manager, compute_manager
 from app.services.guacamole_bridge import stop_guacamole_bridge
 from app.services.homelab_remote_service import start_homelab_remote_service, stop_homelab_remote_service
 from app.services.network_monitor import monitor_loop
 from app.services.domain_polling import domain_poll_loop
 from app.services.compute_monitor import compute_monitor_loop
+from app.services.audit import begin_request_context, end_request_context, request_event_written, write_audit
 
 settings = get_settings()
 app = FastAPI(
@@ -81,6 +84,90 @@ async def security_headers(request: Request, call_next):
     if settings.session_cookie_secure:
         response.headers["Strict-Transport-Security"] = "max-age=31536000; includeSubDomains"
     return response
+
+
+def audit_entity_for_path(path: str) -> str:
+    parts = [part for part in path.split("/") if part]
+    return parts[0].replace("-", "_") if parts else "application"
+
+
+@app.middleware("http")
+async def audit_requests(request: Request, call_next):
+    path = request.url.path
+    if path.startswith("/static/") or path == "/healthz":
+        return await call_next(request)
+    request_id = (request.headers.get("x-request-id") or uuid4().hex)[:64]
+    token, context = begin_request_context(
+        request_id=request_id,
+        method=request.method,
+        path=path,
+        ip_address=request.client.host if request.client else None,
+        user_agent=(request.headers.get("user-agent") or "")[:2000] or None,
+    )
+    started = perf_counter()
+    response = None
+    try:
+        response = await call_next(request)
+        context["status_code"] = response.status_code
+        context["user_id"] = (request.scope.get("session") or {}).get("user_id")
+        duration_ms = round((perf_counter() - started) * 1000, 1)
+        high_frequency_success = response.status_code < 400 and (
+            path.endswith("/api/summary") or path.endswith("/api/agent/checkin")
+        )
+        should_log = not request_event_written(context) and (
+            response.status_code >= 400
+            or (
+                request.method not in {"GET", "HEAD", "OPTIONS"}
+                and not high_frequency_success
+            )
+        )
+        db = SessionLocal()
+        try:
+            if context["row_ids"]:
+                db.query(AuditLog).filter(AuditLog.id.in_(context["row_ids"])).update(
+                    {AuditLog.status_code: response.status_code},
+                    synchronize_session=False,
+                )
+                db.commit()
+            if should_log:
+                user = db.get(User, context["user_id"]) if context.get("user_id") else None
+                action = "request_failed" if response.status_code >= 400 else request.method.lower()
+                write_audit(
+                    db,
+                    user,
+                    action,
+                    audit_entity_for_path(path),
+                    ip_address=context.get("ip_address"),
+                    detail=f"{request.method} {path} returned {response.status_code}",
+                    status_code=response.status_code,
+                    metadata={"duration_ms": duration_ms, "query_keys": sorted(request.query_params.keys())},
+                )
+        finally:
+            db.close()
+        response.headers["X-Request-ID"] = request_id
+        return response
+    except Exception as exc:
+        context["status_code"] = 500
+        context["user_id"] = (request.scope.get("session") or {}).get("user_id")
+        db = SessionLocal()
+        try:
+            user = db.get(User, context["user_id"]) if context.get("user_id") else None
+            write_audit(
+                db,
+                user,
+                "request_error",
+                audit_entity_for_path(path),
+                ip_address=context.get("ip_address"),
+                detail=f"{request.method} {path} raised {type(exc).__name__}",
+                severity="error",
+                status_code=500,
+                metadata={"duration_ms": round((perf_counter() - started) * 1000, 1)},
+            )
+        finally:
+            db.close()
+        raise
+    finally:
+        end_request_context(token)
 
 Path("/app/uploads").mkdir(parents=True, exist_ok=True)
 Path("/app/data").mkdir(parents=True, exist_ok=True)
@@ -225,6 +312,29 @@ def migrate_existing_database():
             }.items():
                 if column not in domain_columns:
                     conn.execute(text(f"ALTER TABLE domain_records ADD COLUMN {column} {definition}"))
+
+        audit_columns = {row[1] for row in conn.execute(text("PRAGMA table_info(audit_logs)"))}
+        if audit_columns:
+            for column, definition in {
+                "category": "VARCHAR(40) DEFAULT 'activity' NOT NULL",
+                "severity": "VARCHAR(20) DEFAULT 'info' NOT NULL",
+                "request_method": "VARCHAR(10)",
+                "request_path": "VARCHAR(500)",
+                "status_code": "INTEGER",
+                "user_agent": "TEXT",
+                "request_id": "VARCHAR(64)",
+                "metadata_json": "TEXT",
+            }.items():
+                if column not in audit_columns:
+                    conn.execute(text(f"ALTER TABLE audit_logs ADD COLUMN {column} {definition}"))
+            conn.execute(text("UPDATE audit_logs SET category = 'activity' WHERE category IS NULL"))
+            conn.execute(text("UPDATE audit_logs SET severity = 'info' WHERE severity IS NULL"))
+            conn.execute(text("CREATE INDEX IF NOT EXISTS ix_audit_logs_category ON audit_logs (category)"))
+            conn.execute(text("CREATE INDEX IF NOT EXISTS ix_audit_logs_severity ON audit_logs (severity)"))
+            conn.execute(text("CREATE INDEX IF NOT EXISTS ix_audit_logs_user_id ON audit_logs (user_id)"))
+            conn.execute(text("CREATE INDEX IF NOT EXISTS ix_audit_logs_status_code ON audit_logs (status_code)"))
+            conn.execute(text("CREATE INDEX IF NOT EXISTS ix_audit_logs_request_id ON audit_logs (request_id)"))
+            conn.execute(text("CREATE INDEX IF NOT EXISTS ix_audit_logs_created_at ON audit_logs (created_at)"))
 
         compute_host_columns = {row[1] for row in conn.execute(text("PRAGMA table_info(compute_hosts)"))}
         if compute_host_columns:

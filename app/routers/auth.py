@@ -169,6 +169,15 @@ def setup_submit(
 
     db.add(user)
     db.commit()
+    write_audit(
+        db,
+        user,
+        "create_initial_admin",
+        "user",
+        str(user.id),
+        request.client.host if request.client else None,
+        detail="Created the initial administrator account",
+    )
 
     return RedirectResponse("/login", status_code=303)
 
@@ -177,6 +186,17 @@ def login(request: Request, email: str = Form(""), password: str = Form(""), tot
     validate_csrf_token(request, csrf_token)
     key = client_key(request)
     if login_is_limited(key):
+        write_audit(
+            db,
+            None,
+            "login_blocked",
+            "user",
+            ip_address=request.client.host if request.client else None,
+            detail="Login blocked by rate limit",
+            severity="warning",
+            status_code=429,
+            metadata={"attempted_email": email.strip().lower()[:255]},
+        )
         return templates.TemplateResponse(request, "login.html", {"error": "Too many failed sign-in attempts. Try again later.", **csrf_context(request, include_version=False)}, status_code=429)
 
     pending_user_id = request.session.get("pending_2fa_user_id")
@@ -184,6 +204,17 @@ def login(request: Request, email: str = Form(""), password: str = Form(""), tot
         user = db.query(User).filter(User.id == pending_user_id, User.is_active == True).first()
         if not user or not user.totp_enabled or not verify_totp(decrypted_totp_secret(user.totp_secret), totp_code):
             record_login_failure(key)
+            write_audit(
+                db,
+                user,
+                "2fa_failed",
+                "user",
+                str(user.id) if user else None,
+                request.client.host if request.client else None,
+                detail="Invalid authentication code",
+                severity="warning",
+                status_code=401,
+            )
             return templates.TemplateResponse(request, "login.html", {"error": "Invalid authentication code", "requires_2fa": True, **csrf_context(request, include_version=False)}, status_code=401)
         request.session.clear()
         request.session["user_id"] = user.id
@@ -196,10 +227,30 @@ def login(request: Request, email: str = Form(""), password: str = Form(""), tot
     password_hash = user.password_hash if user else DUMMY_PASSWORD_HASH
     if not verify_password(password, password_hash) or not user:
         record_login_failure(key)
+        write_audit(
+            db,
+            None,
+            "login_failed",
+            "user",
+            ip_address=request.client.host if request.client else None,
+            detail="Invalid email or password",
+            severity="warning",
+            status_code=401,
+            metadata={"attempted_email": email.strip().lower()[:255]},
+        )
         return templates.TemplateResponse(request, "login.html", {"error": "Invalid email or password", **csrf_context(request, include_version=False)}, status_code=401)
     if user.totp_enabled:
         request.session.clear()
         request.session["pending_2fa_user_id"] = user.id
+        write_audit(
+            db,
+            user,
+            "2fa_challenge",
+            "user",
+            str(user.id),
+            request.client.host if request.client else None,
+            detail="Password verified; awaiting authentication code",
+        )
         return templates.TemplateResponse(request, "login.html", {"error": None, "requires_2fa": True, **csrf_context(request, include_version=False)})
     request.session.clear()
     request.session["user_id"] = user.id
@@ -212,7 +263,17 @@ def login(request: Request, email: str = Form(""), password: str = Form(""), tot
 @router.post("/logout")
 def logout(request: Request, csrf_token: str = Form(...), db: Session = Depends(get_db)):
     validate_csrf_token(request, csrf_token)
+    user_id = request.session.get("user_id")
+    user = db.get(User, user_id) if user_id else None
     end_user_session(db, request)
+    write_audit(
+        db,
+        user,
+        "logout",
+        "user",
+        str(user.id) if user else None,
+        request.client.host if request.client else None,
+    )
     request.session.clear()
     return RedirectResponse("/login", status_code=303)
 

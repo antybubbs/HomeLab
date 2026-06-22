@@ -1,6 +1,6 @@
 import json
 import secrets
-import hmac
+import hashlib
 from fastapi import APIRouter, Depends, Form, HTTPException, Query, Request
 from fastapi.responses import JSONResponse, RedirectResponse
 from fastapi.templating import Jinja2Templates
@@ -8,7 +8,7 @@ from sqlalchemy import or_
 from sqlalchemy.orm import Session
 from starlette import status
 from app.core.csrf import csrf_context, validate_csrf_token
-from app.core.security import encrypt_secret, decrypt_secret
+from app.core.security import encrypt_secret
 from app.db.session import get_db
 from app.models.models import ComputeEvent, ComputeHost, ComputeInventoryItem, ComputeMetric, ComputeWorkload
 from app.routers.auth import require_editor, require_user
@@ -33,6 +33,9 @@ def bytes_label(value):
     return f'{number:.1f} EB'
 
 def pct(used,total): return round(used/total*100,1) if used is not None and total else None
+
+def hash_agent_token(token: str) -> str:
+    return hashlib.sha256(token.encode('utf-8')).hexdigest()
 
 def context(**extra): return {**extra,'metadata':metadata,'bytes_label':bytes_label,'pct':pct}
 
@@ -78,7 +81,7 @@ def create_host(request:Request,name:str=Form(...,max_length=255),platform:str=F
         base_url=clean_url if platform != 'docker_agent' else f'agent://{clean_name}',
         token_id=token_id.strip() or None,
         encrypted_token=encrypt_secret(token_secret.strip()) if token_secret.strip() else None,
-        encrypted_agent_token=encrypt_secret(agent_token) if agent_token else None,
+        agent_token_hash=hash_agent_token(agent_token) if agent_token else None,
         verify_tls=bool(verify_tls),
         is_enabled=bool(is_enabled),
         poll_interval_seconds=max(15,min(poll_interval_seconds,3600)),
@@ -86,14 +89,21 @@ def create_host(request:Request,name:str=Form(...,max_length=255),platform:str=F
         notes=notes.strip() or None,
     )
     db.add(row); db.commit(); write_audit(db,user,'create','compute_host',str(row.id),request.client.host if request.client else None,detail=row.name)
+    if agent_token:
+        return render_host_detail(request,row,db,user,agent_token=agent_token,status_code=201)
     return RedirectResponse(f'/infrastructure/vm-docker-manager/hosts/{row.id}',status_code=303)
+
+def render_host_detail(request:Request,host:ComputeHost,db:Session,user,agent_token:str|None=None,status_code:int=200):
+    workloads=db.query(ComputeWorkload).filter_by(host_id=host.id).order_by(ComputeWorkload.kind,ComputeWorkload.name).all()
+    items=db.query(ComputeInventoryItem).filter_by(host_id=host.id).order_by(ComputeInventoryItem.kind,ComputeInventoryItem.name).all()
+    metrics=db.query(ComputeMetric).filter(ComputeMetric.host_id==host.id,ComputeMetric.workload_id.is_(None)).order_by(ComputeMetric.recorded_at.desc()).limit(120).all()[::-1]
+    return templates.TemplateResponse(request,'compute_host_detail.html',context(user=user,host=host,workloads=workloads,items=items,metrics=metrics,agent_token=agent_token,**csrf_context(request)),status_code=status_code)
 
 @router.get('/hosts/{host_id}')
 def host_detail(request:Request,host_id:int,db:Session=Depends(get_db),user=Depends(require_user)):
     host=db.get(ComputeHost,host_id)
     if not host: raise HTTPException(404,'Host not found')
-    workloads=db.query(ComputeWorkload).filter_by(host_id=host.id).order_by(ComputeWorkload.kind,ComputeWorkload.name).all(); items=db.query(ComputeInventoryItem).filter_by(host_id=host.id).order_by(ComputeInventoryItem.kind,ComputeInventoryItem.name).all(); metrics=db.query(ComputeMetric).filter(ComputeMetric.host_id==host.id,ComputeMetric.workload_id.is_(None)).order_by(ComputeMetric.recorded_at.desc()).limit(120).all()[::-1]
-    return templates.TemplateResponse(request,'compute_host_detail.html',context(user=user,host=host,workloads=workloads,items=items,metrics=metrics,**csrf_context(request)))
+    return render_host_detail(request,host,db,user)
 
 @router.get('/hosts/{host_id}/edit')
 def edit_host(request:Request,host_id:int,db:Session=Depends(get_db),user=Depends(require_editor)):
@@ -112,9 +122,28 @@ def update_host(request:Request,host_id:int,name:str=Form(...),platform:str=Form
     host.base_url=f'agent://{host.name}' if platform == 'docker_agent' else base_url.strip()
     host.token_id=token_id.strip() or None
     if token_secret.strip(): host.encrypted_token=encrypt_secret(token_secret.strip())
-    if platform == 'docker_agent' and not host.agent_token: host.agent_token=secrets.token_urlsafe(32)
+    if platform == 'docker_agent' and not host.agent_token_hash:
+        agent_token=secrets.token_urlsafe(32)
+        host.agent_token_hash=hash_agent_token(agent_token)
+        host.encrypted_agent_token=None
+    else:
+        agent_token=None
     host.verify_tls=bool(verify_tls); host.is_enabled=bool(is_enabled); host.poll_interval_seconds=max(15,min(poll_interval_seconds,3600)); host.owner=owner.strip() or None; host.notes=notes.strip() or None; db.commit(); write_audit(db,user,'update','compute_host',str(host.id),request.client.host if request.client else None,detail=host.name)
+    if agent_token:
+        return render_host_detail(request,host,db,user,agent_token=agent_token)
     return RedirectResponse(f'/infrastructure/vm-docker-manager/hosts/{host.id}',status_code=303)
+
+@router.post('/hosts/{host_id}/regenerate-agent-token')
+def regenerate_agent_token(request:Request,host_id:int,csrf_token:str=Form(...),db:Session=Depends(get_db),user=Depends(require_editor)):
+    validate_csrf_token(request,csrf_token); host=db.get(ComputeHost,host_id)
+    if not host: raise HTTPException(404,'Host not found')
+    if host.platform != 'docker_agent': raise HTTPException(400,'Host does not use a Docker agent')
+    agent_token=secrets.token_urlsafe(32)
+    host.agent_token_hash=hash_agent_token(agent_token)
+    host.encrypted_agent_token=None
+    db.commit()
+    write_audit(db,user,'regenerate_agent_token','compute_host',str(host.id),request.client.host if request.client else None,detail=host.name)
+    return render_host_detail(request,host,db,user,agent_token=agent_token)
 
 @router.post('/hosts/{host_id}/sync')
 def sync_now(request:Request,host_id:int,csrf_token:str=Form(...),db:Session=Depends(get_db),user=Depends(require_editor)):
@@ -148,14 +177,11 @@ async def agent_checkin(
 
     token = auth.split(' ', 1)[1].strip()
 
-    host = (
-        db.query(ComputeHost)
-        .filter(
-            ComputeHost.platform == 'docker_agent',
-            ComputeHost.agent_token == token,
-        )
-        .first()
-    )
+    token_hash = hash_agent_token(token)
+    host = db.query(ComputeHost).filter(
+        ComputeHost.platform == 'docker_agent',
+        ComputeHost.agent_token_hash == token_hash,
+    ).first()
 
     if not host:
         raise HTTPException(

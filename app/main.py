@@ -8,7 +8,7 @@ from starlette.middleware.trustedhost import TrustedHostMiddleware
 from sqlalchemy import text
 from sqlalchemy.orm import Session
 from app.core.config import get_settings, trusted_hosts
-from app.core.security import hash_password
+from app.core.security import decrypt_secret, hash_password
 from app.db.session import Base, engine, SessionLocal
 from app.models.models import User, VLAN
 from app.routers import auth, dashboard, licences, admin, ip_addresses, hardware_assets, network_monitor, remote_manager, runbooks, domain_manager, compute_manager
@@ -225,6 +225,28 @@ def migrate_existing_database():
             }.items():
                 if column not in domain_columns:
                     conn.execute(text(f"ALTER TABLE domain_records ADD COLUMN {column} {definition}"))
+
+        compute_host_columns = {row[1] for row in conn.execute(text("PRAGMA table_info(compute_hosts)"))}
+        if compute_host_columns:
+            if "agent_token_hash" not in compute_host_columns:
+                conn.execute(text("ALTER TABLE compute_hosts ADD COLUMN agent_token_hash VARCHAR(64)"))
+                compute_host_columns.add("agent_token_hash")
+            conn.execute(text("CREATE UNIQUE INDEX IF NOT EXISTS ix_compute_hosts_agent_token_hash ON compute_hosts (agent_token_hash)"))
+
+            legacy_columns = [name for name in ("agent_token", "encrypted_agent_token") if name in compute_host_columns]
+            if legacy_columns:
+                import hashlib
+                selected = ", ".join(["id", "agent_token_hash", *legacy_columns])
+                rows = conn.execute(text(f"SELECT {selected} FROM compute_hosts")).mappings().all()
+                for row in rows:
+                    token = row.get("agent_token") or ""
+                    if not token and row.get("encrypted_agent_token"):
+                        token = decrypt_secret(row["encrypted_agent_token"])
+                    token_hash = row["agent_token_hash"]
+                    if token and token != "[decryption failed]":
+                        token_hash = hashlib.sha256(token.encode("utf-8")).hexdigest()
+                    assignments = ["agent_token_hash = :token_hash", *[f"{name} = NULL" for name in legacy_columns]]
+                    conn.execute(text(f"UPDATE compute_hosts SET {', '.join(assignments)} WHERE id = :id"), {"token_hash": token_hash, "id": row["id"]})
 
 
 @app.on_event("startup")

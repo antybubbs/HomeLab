@@ -294,6 +294,9 @@ class ComputeHost(Base):
     base_url: Mapped[str] = mapped_column(String(500))
     token_id: Mapped[str | None] = mapped_column(String(255), nullable=True)
     encrypted_token: Mapped[str | None] = mapped_column(Text, nullable=True)
+    agent_token_hash: Mapped[str | None] = mapped_column(String(64), nullable=True, unique=True, index=True)
+    # Retained only so startup can migrate tokens created by early agent builds.
+    # New and regenerated tokens never write to this column.
     encrypted_agent_token: Mapped[str | None] = mapped_column(Text, nullable=True)
     agent_last_seen_at: Mapped[datetime | None] = mapped_column(DateTime, nullable=True, index=True)
     verify_tls: Mapped[bool] = mapped_column(Boolean, default=True)

@@ -27,6 +27,7 @@ COPY docker-entrypoint.sh /usr/local/bin/homelab-entrypoint
 
 RUN mkdir -p /app/data /app/uploads \
     && chown -R homelab:homelab /app \
+    && sed -i 's/\r$//' /usr/local/bin/homelab-entrypoint \
     && chmod +x /usr/local/bin/homelab-entrypoint
 
 EXPOSE 8080

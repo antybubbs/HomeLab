@@ -29,18 +29,44 @@ def docker_cpu(stats):
     system=cur.get('system_cpu_usage',0)-prev.get('system_cpu_usage',0); cpus=cur.get('online_cpus') or 1
     return round(cpu/system*cpus*100,2) if cpu>0 and system>0 else None
 
+def docker_uptime(started_at):
+    if not started_at or str(started_at).startswith('0001-01-01'):
+        return None
+    try:
+        started=datetime.fromisoformat(str(started_at).replace('Z','+00:00'))
+        now=datetime.now(started.tzinfo) if started.tzinfo else datetime.utcnow()
+        return max(0,int((now-started).total_seconds()))
+    except (TypeError,ValueError):
+        return None
+
+def docker_networks(container,inspect):
+    networks=((inspect.get('NetworkSettings') or {}).get('Networks') or (container.get('NetworkSettings') or {}).get('Networks') or {})
+    addresses=[]; compact={}
+    for name,data in networks.items():
+        data=data or {}; network_addresses=[]
+        for key in ('IPAddress','GlobalIPv6Address'):
+            value=data.get(key)
+            if value and value not in network_addresses:
+                network_addresses.append(value)
+                addresses.append({'address':value,'network':name})
+        compact[name]={'addresses':network_addresses,'mac_address':data.get('MacAddress')}
+    return addresses,compact
+
 def collect_docker(host):
     version=request_json(host,'/version') or {}; info=request_json(host,'/info') or {}
     containers=request_json(host,'/containers/json?all=1&size=1') or []; workloads=[]; compose={}
     for c in containers:
         labels=c.get('Labels') or {}; project=labels.get('com.docker.compose.project')
         if project: compose[project]={'working_dir':labels.get('com.docker.compose.project.working_dir'),'config_files':labels.get('com.docker.compose.project.config_files')}
-        stats={}
+        stats={}; inspect={}
+        try: inspect=request_json(host,f"/containers/{c.get('Id')}/json") or {}
+        except Exception: pass
         if c.get('State')=='running':
             try: stats=request_json(host,f"/containers/{c.get('Id')}/stats?stream=false") or {}
             except Exception: pass
         mem=stats.get('memory_stats') or {}
-        workloads.append({'external_id':c.get('Id'),'name':(c.get('Names') or [c.get('Id','')[:12]])[0].lstrip('/'),'kind':'container','node':host.name,'status':c.get('State') or 'unknown','cpu_percent':docker_cpu(stats),'cpu_total':None,'memory_used':mem.get('usage'),'memory_total':mem.get('limit'),'storage_used':c.get('SizeRw'),'storage_total':None,'uptime_seconds':None,'tags':project,'metadata':{'image':c.get('Image'),'ports':c.get('Ports') or [],'mounts':c.get('Mounts') or [],'summary':c.get('Status')}})
+        addresses,networks=docker_networks(c,inspect); state=inspect.get('State') or {}
+        workloads.append({'external_id':c.get('Id'),'name':(c.get('Names') or [c.get('Id','')[:12]])[0].lstrip('/'),'kind':'container','node':host.name,'status':c.get('State') or 'unknown','cpu_percent':docker_cpu(stats),'cpu_total':None,'memory_used':mem.get('usage'),'memory_total':mem.get('limit'),'storage_used':c.get('SizeRw'),'storage_total':None,'uptime_seconds':docker_uptime(state.get('StartedAt')) if state.get('Running') else None,'tags':project,'metadata':{'image':c.get('Image'),'ports':c.get('Ports') or [],'mounts':c.get('Mounts') or [],'summary':c.get('Status'),'ip_addresses':addresses,'networks':networks}})
     items=[]
     for x in request_json(host,'/images/json') or []: items.append({'external_id':x.get('Id'),'name':(x.get('RepoTags') or ['<untagged>'])[0],'kind':'image','status':None,'size_bytes':x.get('Size'),'metadata':{'tags':x.get('RepoTags') or []}})
     for x in request_json(host,'/networks') or []: items.append({'external_id':x.get('Id') or x.get('Name'),'name':x.get('Name'),'kind':'network','status':x.get('Scope'),'size_bytes':None,'metadata':{'driver':x.get('Driver'),'internal':x.get('Internal')}})
@@ -51,6 +77,29 @@ def collect_docker(host):
 
 def pve(host,path):
     data=request_json(host,'/api2/json'+path); return data.get('data') if isinstance(data,dict) else data
+
+def proxmox_guest_addresses(host,node_name,endpoint,guest):
+    vmid=guest.get('vmid'); addresses=[]
+    if not vmid or guest.get('status')!='running': return addresses
+    try:
+        if endpoint=='qemu':
+            result=pve(host,f'/nodes/{node_name}/qemu/{vmid}/agent/network-get-interfaces') or {}
+            interfaces=result.get('result') if isinstance(result,dict) else result
+            for interface in interfaces or []:
+                name=interface.get('name')
+                for item in interface.get('ip-addresses') or []:
+                    value=item.get('ip-address')
+                    if value: addresses.append({'address':value,'interface':name})
+        else:
+            interfaces=pve(host,f'/nodes/{node_name}/lxc/{vmid}/interfaces') or []
+            for interface in interfaces:
+                name=interface.get('name')
+                for key in ('inet','inet6'):
+                    value=interface.get(key)
+                    if value: addresses.append({'address':str(value).split('/')[0],'interface':name})
+    except Exception:
+        pass
+    return addresses
 
 def collect_proxmox(host):
     version=pve(host,'/version') or {}
@@ -69,8 +118,12 @@ def collect_proxmox(host):
         for endpoint,kind in (('qemu','qemu'),('lxc','lxc')):
             try:
                 for guest in pve(host,f'/nodes/{node_name}/{endpoint}') or []:
+                    guest['_ip_addresses']=proxmox_guest_addresses(host,node_name,endpoint,guest)
                     key=(kind,str(kind)+'/'+str(guest.get('vmid')))
-                    if key not in seen:
+                    existing=next((item for item in resources if (item.get('type'),str(item.get('id') or item.get('vmid') or item.get('node') or item.get('storage')))==key),None)
+                    if existing is not None:
+                        existing.update(guest)
+                    else:
                         guest.update({'type':kind,'node':node_name,'id':f'{kind}/{guest.get("vmid")}'})
                         if guest.get('maxcpu') is None: guest['maxcpu']=guest.get('cpus')
                         resources.append(guest); seen.add(key)
@@ -89,7 +142,7 @@ def collect_proxmox(host):
         kind=x.get('type')
         if kind=='node': nodes.append(x)
         if kind in {'node','qemu','lxc'}:
-            workloads.append({'external_id':str(x.get('vmid') or x.get('node') or x.get('id')),'name':x.get('name') or x.get('node') or x.get('id'),'kind':'vm' if kind=='qemu' else kind,'node':x.get('node'),'status':x.get('status') or 'unknown','cpu_percent':round(float(x.get('cpu') or 0)*100,2),'cpu_total':float(x.get('maxcpu') or x.get('cpus') or 0),'memory_used':x.get('mem'),'memory_total':x.get('maxmem'),'storage_used':x.get('disk'),'storage_total':x.get('maxdisk'),'uptime_seconds':x.get('uptime'),'tags':x.get('tags'),'metadata':{'id':x.get('id'),'pool':x.get('pool'),'template':x.get('template')}})
+            workloads.append({'external_id':str(x.get('vmid') or x.get('node') or x.get('id')),'name':x.get('name') or x.get('node') or x.get('id'),'kind':'vm' if kind=='qemu' else kind,'node':x.get('node'),'status':x.get('status') or 'unknown','cpu_percent':round(float(x.get('cpu') or 0)*100,2),'cpu_total':float(x.get('maxcpu') or x.get('cpus') or 0),'memory_used':x.get('mem'),'memory_total':x.get('maxmem'),'storage_used':x.get('disk'),'storage_total':x.get('maxdisk'),'uptime_seconds':x.get('uptime'),'tags':x.get('tags'),'metadata':{'id':x.get('id'),'pool':x.get('pool'),'template':x.get('template'),'ip_addresses':x.get('_ip_addresses') or []}})
         elif kind=='storage': items.append({'external_id':x.get('id'),'name':x.get('storage') or x.get('id'),'kind':'storage','status':x.get('status'),'size_bytes':x.get('maxdisk'),'metadata':{'node':x.get('node'),'used':x.get('disk'),'type':x.get('plugintype')}})
     try: jobs=pve(host,'/cluster/backup') or []
     except Exception: jobs=[]

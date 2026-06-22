@@ -1,6 +1,7 @@
 import json
 import secrets
 import hashlib
+from ipaddress import ip_address
 from fastapi import APIRouter, Depends, Form, HTTPException, Query, Request
 from fastapi.responses import JSONResponse, RedirectResponse
 from fastapi.templating import Jinja2Templates
@@ -10,7 +11,7 @@ from starlette import status
 from app.core.csrf import csrf_context, validate_csrf_token
 from app.core.security import encrypt_secret
 from app.db.session import get_db
-from app.models.models import ComputeEvent, ComputeHost, ComputeInventoryItem, ComputeMetric, ComputeWorkload
+from app.models.models import ComputeEvent, ComputeHost, ComputeInventoryItem, ComputeMetric, ComputeWorkload, IPAddress
 from app.routers.auth import require_editor, require_user
 from app.services.audit import write_audit
 from app.services.compute_monitor import compute_summary, sync_host
@@ -34,10 +35,57 @@ def bytes_label(value):
 
 def pct(used,total): return round(used/total*100,1) if used is not None and total else None
 
+def uptime_label(value):
+    if value is None: return '-'
+    seconds=max(0,int(value)); days,seconds=divmod(seconds,86400); hours,seconds=divmod(seconds,3600); minutes,_=divmod(seconds,60)
+    if days: return f'{days}d {hours}h'
+    if hours: return f'{hours}h {minutes}m'
+    if minutes: return f'{minutes}m'
+    return '<1m'
+
+def normalize_address(value):
+    try:
+        parsed=ip_address(str(value).strip().split('/')[0].split('%')[0])
+    except (TypeError,ValueError):
+        return None
+    if parsed.is_loopback or parsed.is_link_local or parsed.is_unspecified:
+        return None
+    return str(parsed)
+
+def workload_addresses(row):
+    data=metadata(row.metadata_json); found=[]; seen=set()
+    def add(value,label=None):
+        address=normalize_address(value)
+        if not address or address in seen: return
+        seen.add(address); found.append({'address':address,'label':label})
+    raw=data.get('ip_addresses') or []
+    if isinstance(raw,(str,dict)): raw=[raw]
+    for item in raw:
+        if isinstance(item,dict): add(item.get('address') or item.get('ip_address') or item.get('ip-address'),item.get('network') or item.get('interface') or item.get('name'))
+        else: add(item)
+    networks=data.get('networks') or {}
+    if isinstance(networks,dict):
+        for name,network in networks.items():
+            network=network or {}; values=network.get('addresses') or [network.get('IPAddress'),network.get('GlobalIPv6Address'),network.get('ip_address')]
+            if isinstance(values,str): values=[values]
+            for value in values: add(value,name)
+    return found
+
+def workload_network_context(db,rows):
+    result={row.id:workload_addresses(row) for row in rows}; addresses={item['address'] for items in result.values() for item in items}
+    records={}
+    if addresses:
+        for record in db.query(IPAddress).all():
+            normalized=normalize_address(record.address)
+            if normalized in addresses: records[normalized]=record
+    for items in result.values():
+        for item in items: item['record']=records.get(item['address'])
+    return result
+
 def hash_agent_token(token: str) -> str:
     return hashlib.sha256(token.encode('utf-8')).hexdigest()
 
-def context(**extra): return {**extra,'metadata':metadata,'bytes_label':bytes_label,'pct':pct}
+def context(**extra): return {**extra,'metadata':metadata,'bytes_label':bytes_label,'pct':pct,'uptime_label':uptime_label}
 
 @router.get('')
 def overview(request:Request,q:str=Query('',max_length=200),view:str=Query('overview',max_length=30),db:Session=Depends(get_db),user=Depends(require_user)):
@@ -244,7 +292,11 @@ async def agent_checkin(
         row.storage_total = data.get('storage_total')
         row.uptime_seconds = data.get('uptime_seconds')
         row.tags = data.get('tags')
-        row.metadata_json = json.dumps(data.get('metadata') or {})
+        workload_meta = dict(data.get('metadata') or {})
+        for key in ('ip_addresses', 'networks'):
+            if data.get(key) and not workload_meta.get(key):
+                workload_meta[key] = data.get(key)
+        row.metadata_json = json.dumps(workload_meta)
         row.last_seen_at = now
         row.updated_at = now
 
@@ -316,7 +368,8 @@ def workload_detail(request:Request,workload_id:int,db:Session=Depends(get_db),u
     row=db.get(ComputeWorkload,workload_id)
     if not row: raise HTTPException(404,'Workload not found')
     metrics=db.query(ComputeMetric).filter_by(workload_id=row.id).order_by(ComputeMetric.recorded_at.desc()).limit(120).all()[::-1]; events=db.query(ComputeEvent).filter_by(workload_id=row.id).order_by(ComputeEvent.created_at.desc()).limit(50).all()
-    return templates.TemplateResponse(request,'compute_workload_detail.html',context(user=user,row=row,metrics=metrics,events=events,**csrf_context(request)))
+    network=workload_network_context(db,[row]).get(row.id,[])
+    return templates.TemplateResponse(request,'compute_workload_detail.html',context(user=user,row=row,network=network,metrics=metrics,events=events,**csrf_context(request)))
 
 @router.post('/workloads/{workload_id}')
 def update_workload(request:Request,workload_id:int,owner:str=Form(''),backup_policy:str=Form(''),csrf_token:str=Form(...),db:Session=Depends(get_db),user=Depends(require_editor)):

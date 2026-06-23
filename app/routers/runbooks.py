@@ -62,12 +62,31 @@ def markdown_to_html(markdown: str | None) -> str:
     lines = markdown.replace("\r\n", "\n").split("\n")
     output: list[str] = []
     paragraph: list[str] = []
-    in_list = False
+    list_type: str | None = None
     in_code = False
+    code_language = ""
     code_lines: list[str] = []
+
+    def clean_code_language(value: str) -> str:
+        return re.sub(r"[^a-z0-9_+#.-]", "", value.strip().lower())[:40]
 
     def inline(text: str) -> str:
         escaped = html.escape(text)
+        links: list[str] = []
+
+        def replace_link(match: re.Match) -> str:
+            label = match.group(1)
+            href = match.group(2)
+            external = href.startswith("http")
+            attributes = ' target="_blank" rel="noopener noreferrer"' if external else ""
+            links.append(f'<a href="{href}"{attributes}>{label}</a>')
+            return f"@@RUNBOOKLINK{len(links) - 1}@@"
+
+        escaped = re.sub(
+            r"\[([^\]]+)\]\((https?://[^\s)]+|/[^\s)]+|#[^\s)]+)\)",
+            replace_link,
+            escaped,
+        )
         escaped = re.sub(r"`([^`]+)`", r"<code>\1</code>", escaped)
         escaped = re.sub(r"\*\*([^*]+)\*\*", r"<strong>\1</strong>", escaped)
         escaped = re.sub(r"\*([^*]+)\*", r"<em>\1</em>", escaped)
@@ -76,7 +95,21 @@ def markdown_to_html(markdown: str | None) -> str:
             r'<a href="\1" target="_blank" rel="noopener noreferrer">\1</a>',
             escaped,
         )
+        for index, link in enumerate(links):
+            escaped = escaped.replace(f"@@RUNBOOKLINK{index}@@", link)
         return escaped
+
+    def render_code_block() -> str:
+        language = clean_code_language(code_language)
+        label = html.escape(language or "auto")
+        language_class = f' class="language-{html.escape(language)}"' if language else ""
+        code = html.escape(chr(10).join(code_lines))
+        return (
+            f'<div class="runbook-code-block" data-code-language="{label}">'
+            f'<div class="runbook-code-header"><span class="runbook-code-language-label">{label}</span>'
+            '<button class="runbook-code-copy" type="button" data-runbook-copy-code aria-label="Copy code">Copy</button>'
+            f'</div><pre><code{language_class}>{code}</code></pre></div>'
+        )
 
     def flush_paragraph() -> None:
         nonlocal paragraph
@@ -85,23 +118,26 @@ def markdown_to_html(markdown: str | None) -> str:
             paragraph = []
 
     def close_list() -> None:
-        nonlocal in_list
-        if in_list:
-            output.append("</ul>")
-            in_list = False
+        nonlocal list_type
+        if list_type:
+            output.append(f"</{list_type}>")
+            list_type = None
 
     for line in lines:
         stripped = line.strip()
+        fence = re.match(r"^```([A-Za-z0-9_+#.-]*)\s*$", stripped)
 
-        if stripped.startswith("```"):
+        if fence:
             if in_code:
-                output.append(f"<pre><code>{html.escape(chr(10).join(code_lines))}</code></pre>")
+                output.append(render_code_block())
                 code_lines = []
+                code_language = ""
                 in_code = False
             else:
                 flush_paragraph()
                 close_list()
                 in_code = True
+                code_language = clean_code_language(fence.group(1))
             continue
 
         if in_code:
@@ -121,24 +157,25 @@ def markdown_to_html(markdown: str | None) -> str:
             output.append(f"<h{level}>{inline(heading.group(2))}</h{level}>")
             continue
 
-        bullet = re.match(r"^[-*]\s+(.+)$", stripped)
-        if bullet:
+        list_item = re.match(r"^([-*]|\d+\.)\s+(.+)$", stripped)
+        if list_item:
             flush_paragraph()
-            if not in_list:
-                output.append("<ul>")
-                in_list = True
-            output.append(f"<li>{inline(bullet.group(1))}</li>")
+            next_type = "ol" if list_item.group(1)[0].isdigit() else "ul"
+            if list_type and list_type != next_type:
+                close_list()
+            if not list_type:
+                output.append(f"<{next_type}>")
+                list_type = next_type
+            output.append(f"<li>{inline(list_item.group(2))}</li>")
             continue
 
         paragraph.append(stripped)
 
     if in_code:
-        output.append(f"<pre><code>{html.escape(chr(10).join(code_lines))}</code></pre>")
+        output.append(render_code_block())
     flush_paragraph()
     close_list()
     return "\n".join(output)
-
-
 def spaces_for_select(db: Session) -> list[RunbookSpace]:
     return db.query(RunbookSpace).order_by(RunbookSpace.sort_order.asc(), RunbookSpace.name.asc()).all()
 

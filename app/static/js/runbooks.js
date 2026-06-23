@@ -208,7 +208,8 @@
         const nextType = /^\d/.test(listItem[1]) ? "ol" : "ul";
         if (listType && listType !== nextType) closeList();
         if (!listType) {
-          output.push(`<${nextType}>`);
+          const start = nextType === "ol" ? Number.parseInt(listItem[1], 10) : 1;
+          output.push(nextType === "ol" && start > 1 ? `<ol start="${start}">` : `<${nextType}>`);
           listType = nextType;
         }
         output.push(`<li>${inline(listItem[2])}</li>`);
@@ -310,6 +311,147 @@
     textarea.dispatchEvent(new Event("input", { bubbles: true }));
   });
 
+  const languageAliases = {
+    sh: "bash",
+    shell: "bash",
+    console: "bash",
+    terminal: "bash",
+    ps1: "powershell",
+    pwsh: "powershell",
+    yml: "yaml",
+    js: "javascript",
+    jsx: "javascript",
+    ts: "typescript",
+    tsx: "typescript",
+    py: "python",
+    cs: "csharp",
+    c: "c",
+    cpp: "cpp",
+    html: "html",
+    xml: "html",
+  };
+
+  function inferCodeLanguage(element) {
+    const candidates = [];
+    let current = element;
+    for (let depth = 0; current && depth < 3; depth += 1, current = current.parentElement) {
+      candidates.push(current.dataset?.language, current.dataset?.lang, current.getAttribute?.("data-code-language"));
+      candidates.push(current.className);
+    }
+    const combined = candidates.filter(Boolean).join(" ");
+    const match = combined.match(/(?:language|lang|highlight-source)-([A-Za-z0-9_+#.-]+)/i);
+    const raw = cleanLanguage(match?.[1] || candidates.find((value) => value && !String(value).includes(" ")) || "");
+    return languageAliases[raw] || raw;
+  }
+
+  function fencedCode(code, language) {
+    const normalized = code.replace(/\r\n?/g, "\n").replace(/^\n/, "").replace(/\n\s*$/, "");
+    const longestRun = Math.max(0, ...(normalized.match(/`+/g) || []).map((run) => run.length));
+    const fence = "`".repeat(Math.max(3, longestRun + 1));
+    return `${fence}${cleanLanguage(language)}\n${normalized}\n${fence}`;
+  }
+
+  function inlineHtmlToMarkdown(node) {
+    if (node.nodeType === Node.TEXT_NODE) return (node.nodeValue || "").replace(/[\t\r\n ]+/g, " ");
+    if (node.nodeType !== Node.ELEMENT_NODE) return "";
+    const tag = node.tagName.toLowerCase();
+    const content = Array.from(node.childNodes).map(inlineHtmlToMarkdown).join("");
+    if (tag === "br") return "\n";
+    if (tag === "strong" || tag === "b") return `**${content.trim()}**`;
+    if (tag === "em" || tag === "i") return `*${content.trim()}*`;
+    if (tag === "code" && node.parentElement?.tagName.toLowerCase() !== "pre") return `\`${content.trim()}\``;
+    if (tag === "a") {
+      const href = node.getAttribute("href") || "";
+      if (/^(https?:\/\/|\/|#)/i.test(href)) return `[${content.trim() || href}](${href})`;
+    }
+    if (tag === "img") return node.getAttribute("alt") || "";
+    return content;
+  }
+
+  function isStandaloneCode(element) {
+    if (element.tagName.toLowerCase() === "pre") return true;
+    if (element.tagName.toLowerCase() !== "code" || element.closest("pre")) return false;
+    const classes = `${element.className || ""} ${element.parentElement?.className || ""}`;
+    return element.textContent.includes("\n") || /(?:code-block|highlight|source-code|language-|lang-)/i.test(classes);
+  }
+
+  function blockHtmlToMarkdown(node) {
+    if (node.nodeType === Node.TEXT_NODE) return (node.nodeValue || "").trim();
+    if (node.nodeType !== Node.ELEMENT_NODE) return "";
+    const tag = node.tagName.toLowerCase();
+
+    if (tag === "pre") {
+      const code = node.querySelector("code") || node;
+      return fencedCode(code.textContent || "", inferCodeLanguage(code));
+    }
+    if (tag === "code" && isStandaloneCode(node)) {
+      return fencedCode(node.textContent || "", inferCodeLanguage(node));
+    }
+    if (/^h[1-6]$/.test(tag)) {
+      const sourceLevel = Number.parseInt(tag.slice(1), 10);
+      const level = Math.min(3, Math.max(1, sourceLevel - 1));
+      return `${"#".repeat(level)} ${inlineHtmlToMarkdown(node).trim()}`;
+    }
+    if (tag === "p") return inlineHtmlToMarkdown(node).trim();
+    if (tag === "ul" || tag === "ol") {
+      return Array.from(node.children)
+        .filter((child) => child.tagName.toLowerCase() === "li")
+        .map((item, index) => {
+          const contentClone = item.cloneNode(true);
+          contentClone.querySelectorAll("ul, ol").forEach((nested) => nested.remove());
+          Array.from(contentClone.querySelectorAll("pre, code")).filter(isStandaloneCode).forEach((code) => code.remove());
+          const content = inlineHtmlToMarkdown(contentClone).trim();
+          const blocks = Array.from(item.querySelectorAll("pre, code"))
+            .filter(isStandaloneCode)
+            .map((code) => code.tagName.toLowerCase() === "pre"
+              ? fencedCode((code.querySelector("code") || code).textContent || "", inferCodeLanguage(code.querySelector("code") || code))
+              : fencedCode(code.textContent || "", inferCodeLanguage(code)));
+          const itemLine = `${tag === "ol" ? `${index + 1}.` : "-"} ${content}`.trimEnd();
+          return blocks.length ? `${itemLine}\n\n${blocks.join("\n\n")}` : itemLine;
+        })
+        .join("\n");
+    }
+    if (tag === "li") return `- ${inlineHtmlToMarkdown(node).trim()}`;
+    if (tag === "blockquote") {
+      return inlineHtmlToMarkdown(node).trim();
+    }
+    if (["table", "thead", "tbody", "tr"].includes(tag)) {
+      return Array.from(node.childNodes).map(blockHtmlToMarkdown).filter(Boolean).join("\n");
+    }
+    if (["th", "td"].includes(tag)) return inlineHtmlToMarkdown(node).trim();
+
+    const children = Array.from(node.childNodes).map(blockHtmlToMarkdown).filter(Boolean);
+    if (children.length) return children.join("\n\n");
+    return inlineHtmlToMarkdown(node).trim();
+  }
+
+  function pastedHtmlToMarkdown(html) {
+    const documentFragment = new DOMParser().parseFromString(html, "text/html");
+    const codeBlocks = Array.from(documentFragment.body.querySelectorAll("pre, code")).filter(isStandaloneCode);
+    if (!codeBlocks.length) return "";
+    return Array.from(documentFragment.body.childNodes)
+      .map(blockHtmlToMarkdown)
+      .filter(Boolean)
+      .join("\n\n")
+      .replace(/[ \t]+\n/g, "\n")
+      .replace(/\n{3,}/g, "\n\n")
+      .trim();
+  }
+
+  textarea.addEventListener("paste", (event) => {
+    const html = event.clipboardData?.getData("text/html") || "";
+    if (!html) return;
+    const markdown = pastedHtmlToMarkdown(html);
+    if (!markdown) return;
+    event.preventDefault();
+    const start = textarea.selectionStart;
+    const end = textarea.selectionEnd;
+    const before = start > 0 && textarea.value[start - 1] !== "\n" ? "\n\n" : "";
+    const after = end < textarea.value.length && textarea.value[end] !== "\n" ? "\n\n" : "";
+    const replacement = `${before}${markdown}${after}`;
+    textarea.setRangeText(replacement, start, end, "end");
+    textarea.dispatchEvent(new Event("input", { bubbles: true }));
+  });
   textarea.addEventListener("keydown", (event) => {
     if (!(event.ctrlKey || event.metaKey)) return;
     const key = event.key.toLowerCase();

@@ -164,7 +164,8 @@ def markdown_to_html(markdown: str | None) -> str:
             if list_type and list_type != next_type:
                 close_list()
             if not list_type:
-                output.append(f"<{next_type}>")
+                start = int(list_item.group(1)[:-1]) if next_type == "ol" else 1
+                output.append(f'<ol start="{start}">' if next_type == "ol" and start > 1 else f"<{next_type}>")
                 list_type = next_type
             output.append(f"<li>{inline(list_item.group(2))}</li>")
             continue

@@ -11,7 +11,7 @@
 <div class="topbar">
   <div>
     <h1>Remote Manager Settings</h1>
-    <p class="muted">Global defaults for RDP and SSH sessions. Per-host overrides live on each IP record.</p>
+    <p class="muted">Global defaults for RDP and SSH sessions.</p>
   </div>
 </div>
 
@@ -20,21 +20,14 @@
 <form class="remote-settings-shell" method="post" action="/remote-manager/settings">
   <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
 
-  <nav class="remote-settings-tabs" aria-label="Remote settings sections">
-    <a href="#general">General</a>
-    <a href="#terminal" class="active">Terminal</a>
-    <a href="#rdp">RDP</a>
-    <a href="#redirection">Redirection</a>
-  </nav>
-
   <section class="remote-settings-card" id="general">
     <header><span>General</span></header>
     <div class="remote-settings-grid">
-      {{ switch('guacamole_enabled', 'Enable Guacamole for RDP', 'Use the browser RDP display pipeline') }}
-      <label>GUACD host
+      {{ switch('guacamole_enabled', 'Enable Guacamole for RDP', 'You will need to configure Guacamole separately - more information available in the documentation') }}
+      <label>guacd host
         <input name="guacd_host" value="{{ settings.guacd_host }}" placeholder="192.168.1.91">
       </label>
-      <label>GUACD port
+      <label>guacd port
         <input name="guacd_port" type="number" min="1" max="65535" value="{{ settings.guacd_port or '4822' }}">
       </label>
     </div>

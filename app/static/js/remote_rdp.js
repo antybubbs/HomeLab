@@ -20,6 +20,7 @@ if (root) {
   let connected = false;
   let displayReady = false;
   let resizeObserver = null;
+  let lastRequestedSize = "";
 
   const writeLog = (lines) => {
     if (!log) return;
@@ -66,10 +67,14 @@ if (root) {
   };
 
   const refreshDisplay = () => {
-    if (!client) return;
+    if (!client || !connected) return;
     fitDisplay();
     const size = displaySize();
-    client.sendSize(size.width, size.height);
+    const requestedSize = `${size.width}x${size.height}`;
+    if (requestedSize !== lastRequestedSize) {
+      lastRequestedSize = requestedSize;
+      client.sendSize(size.width, size.height);
+    }
     client.getDisplay().flush(fitDisplay);
   };
 
@@ -96,6 +101,7 @@ if (root) {
     displayElement = null;
     tunnel = null;
     currentScale = 1;
+    lastRequestedSize = "";
     connected = false;
     displayReady = false;
   };
@@ -211,6 +217,10 @@ if (root) {
     if (event.data && event.data.type === "homelab:remote-tab-active") {
       window.setTimeout(refreshDisplay, 50);
       if (displayElement) displayElement.focus({ preventScroll: true });
+    }
+    if (event.data && event.data.type === "homelab:remote-display-refresh") {
+      lastRequestedSize = "";
+      scheduleResize();
     }
   });
   document.addEventListener("visibilitychange", () => {

@@ -104,7 +104,13 @@
 
   const refreshTab = (id) => {
     const iframe = panels.querySelector(`[data-remote-panel="${CSS.escape(id)}"] iframe`);
-    if (iframe) iframe.src = iframe.src;
+    const tab = tabs.find((candidate) => candidate.id === id);
+    if (!iframe || !tab) return;
+    if (tab.protocol === "rdp" && iframe.contentWindow) {
+      iframe.contentWindow.postMessage({ type: "homelab:remote-display-refresh" }, window.location.origin);
+      return;
+    }
+    iframe.src = iframe.src;
   };
 
   const ensurePanel = (tab) => {
@@ -184,7 +190,7 @@
       const refresh = document.createElement("button");
       refresh.type = "button";
       refresh.className = "remote-tab-tool";
-      refresh.title = "Refresh connection";
+      refresh.title = tab.protocol === "rdp" ? "Refresh display size" : "Refresh connection";
       refresh.textContent = "R";
       refresh.addEventListener("click", (event) => {
         event.stopPropagation();

@@ -37,14 +37,14 @@
       <label>Password
         <input name="rdp_password" type="password" autocomplete="current-password">
       </label>
-      <button type="button">Start RDP session</button>
+      <button type="button">Start session</button>
     </form>
     <div class="rdp-display-shell" data-rdp-shell tabindex="0">
       <div class="rdp-session-placeholder" data-rdp-placeholder>
         <div>
           <h2>RDP session</h2>
           {% if settings.guacamole_enabled == '1' and settings.guacd_host %}
-          <p class="muted">Guacamole is configured at {{ settings.guacd_host }}:{{ settings.guacd_port }}. Passwords are used for the browser session only.</p>
+          <p class="muted">Guacamole is configured at {{ settings.guacd_host }}:{{ settings.guacd_port }}. Passwords are used for the browser session only and are not stored!!</p>
           {% else %}
           <p class="muted">Enable Guacamole in Remote Manager Settings before using browser RDP sessions.</p>
           {% endif %}

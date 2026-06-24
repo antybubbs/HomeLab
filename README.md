@@ -88,6 +88,58 @@ If HomeLab is served from a path prefix such as `/homelab`, also set:
 ROOT_PATH=/homelab
 ```
 
+## Public demo deployment
+
+The demo deployment uses the current release image, synthetic seed data and three
+fixed role accounts:
+
+| Username | Password | Role |
+| --- | --- | --- |
+| `Admin` | `Admin` | Administrator |
+| `Editor` | `Editor` | Editor |
+| `Viewer` | `Viewer` | Viewer |
+
+Identity, security, live remote connections, network checks, domain lookups and
+agent operations are disabled when `DEMO_MODE=true`. Normal inventory and
+runbook edits remain available until the next reset.
+
+Deploy it on an isolated server with no route to a private LAN or VPN:
+
+```bash
+cp .env.demo.example .env.demo
+# Set BASE_URL and ALLOWED_HOSTS in .env.demo.
+docker compose -f docker-compose.demo.yml pull
+docker compose -f docker-compose.demo.yml up -d
+```
+
+The first start creates `demo/seed/homelab.db` and copies it into the live demo
+data directory. To restore that baseline manually:
+
+```bash
+sh ./demo/reset-demo.sh
+```
+
+Run it every day at 03:00 with the host's cron:
+
+```cron
+0 3 * * * cd /opt/homelab && sh ./demo/reset-demo.sh >> /var/log/homelab-demo-reset.log 2>&1
+```
+
+After changing to a newer HomeLab release, rebuild the seed against that image
+and immediately reset the live instance:
+
+```bash
+docker compose -f docker-compose.demo.yml pull
+docker compose -f docker-compose.demo.yml run --rm --no-deps \
+  -e DEMO_REBUILD_SEED=true homelab true
+sh ./demo/reset-demo.sh
+```
+
+Keep the demo behind HTTPS and reverse-proxy rate limiting. The Compose network
+is internal, the published port binds only to loopback, all Linux capabilities
+are dropped, and resource limits are applied. Do not attach this deployment to
+NetBird, a home network, or any network containing real infrastructure.
+
 ## Credit
 
 HomeLab Remote Manager is based on the same core architecture used by Termix:

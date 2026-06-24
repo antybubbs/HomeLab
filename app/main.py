@@ -10,6 +10,7 @@ from starlette.middleware.trustedhost import TrustedHostMiddleware
 from sqlalchemy import text
 from sqlalchemy.orm import Session
 from app.core.config import get_settings, trusted_hosts
+from app.core.demo import demo_request_is_blocked
 from app.core.security import decrypt_secret, hash_password
 from app.db.session import Base, engine, SessionLocal
 from app.models.models import AuditLog, User, VLAN
@@ -30,6 +31,8 @@ app = FastAPI(
 monitor_task = None
 domain_poll_task = None
 compute_monitor_task = None
+app.state.demo_mode = settings.demo_mode
+app.state.demo_reset_schedule = settings.demo_reset_schedule
 
 if settings.app_env == "production":
     app.add_middleware(
@@ -50,6 +53,16 @@ async def permission_handler(request: Request, exc: PermissionError):
     if request.session.get("user_id"):
         return PlainTextResponse("Forbidden", status_code=403)
     return RedirectResponse("/login", status_code=303)
+
+
+@app.middleware("http")
+async def protect_public_demo(request: Request, call_next):
+    if demo_request_is_blocked(request.method, request.url.path):
+        return PlainTextResponse(
+            "This action is disabled in the public demo. Demo inventory changes are restored at the next daily reset.",
+            status_code=403,
+        )
+    return await call_next(request)
 
 @app.middleware("http")
 async def security_headers(request: Request, call_next):
@@ -362,6 +375,8 @@ def migrate_existing_database():
 @app.on_event("startup")
 async def on_startup():
     bootstrap()
+    if settings.demo_mode:
+        return
     start_homelab_remote_service()
     global monitor_task, domain_poll_task, compute_monitor_task
     monitor_task = asyncio.create_task(monitor_loop())

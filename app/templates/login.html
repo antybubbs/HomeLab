@@ -3,7 +3,21 @@
 <div class="login-wrap">
   <div class="login-card">
     <div class="brand large"><span class="brand-mark">H</span><span>HomeLab</span></div>
-    <h1>Your HomeLab Manager</h1>
+    <h1>{{ 'Explore the HomeLab demo' if demo_accounts else 'Your HomeLab Manager' }}</h1>
+    {% if demo_accounts %}
+    <p class="muted">Choose a role or sign in manually. Changes to sample inventory are welcome and reset daily.</p>
+    <div class="demo-login-grid">
+      {% for name, account in demo_accounts.items() %}
+      <form method="post" action="/login" class="demo-login-option">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+        <input type="hidden" name="email" value="{{ name|title }}">
+        <input type="hidden" name="password" value="{{ account.password }}">
+        <strong>{{ name|title }}</strong><span>{{ account.role|title }} access</span>
+        <button type="submit">Sign in as {{ name|title }}</button>
+      </form>
+      {% endfor %}
+    </div>
+    {% endif %}
     {% if error %}<div class="alert">{{ error }}</div>{% endif %}
     <form method="post" action="/login" class="stack">
       <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
@@ -11,7 +25,7 @@
       <label>Authentication code<input name="totp_code" inputmode="numeric" pattern="[0-9]{6}" autocomplete="one-time-code" required autofocus></label>
       <button type="submit">Verify code</button>
       {% else %}
-      <label>Email<input name="email" type="email" required autofocus></label>
+      <label>{{ 'Username or email' if demo_accounts else 'Email' }}<input name="email" type="{{ 'text' if demo_accounts else 'email' }}" required autofocus></label>
       <label>Password<input name="password" type="password" required></label>
       <button type="submit">Sign in</button>
       {% endif %}

@@ -5,6 +5,7 @@ from fastapi import APIRouter, Depends, Form, HTTPException, Query, Request
 from fastapi.responses import RedirectResponse
 from fastapi.templating import Jinja2Templates
 from sqlalchemy import or_
+from app.core.config import get_settings
 from sqlalchemy.orm import Session
 from starlette import status
 
@@ -206,7 +207,7 @@ def create_domain(
         nameservers=json.dumps(clean_lines(nameservers)),
         notes=notes.strip() or None,
     )
-    if lookup_now:
+    if lookup_now and not get_settings().demo_mode:
         save_lookup(record, lookup_domain(clean_name))
     db.add(record)
     db.commit()

@@ -1,0 +1,57 @@
+.demo-banner {
+  align-items: center;
+  background: #f59e0b;
+  color: #1f2937;
+  display: flex;
+  font-size: 13px;
+  gap: 12px;
+  justify-content: center;
+  min-height: 38px;
+  padding: 7px 16px;
+  position: relative;
+  z-index: 100;
+}
+
+.demo-banner strong { text-transform: uppercase; }
+
+.demo-login-grid {
+  display: grid;
+  gap: 10px;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  margin: 16px 0;
+}
+
+.demo-login-option {
+  background: rgba(148, 163, 184, .08);
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  display: grid;
+  gap: 7px;
+  padding: 12px;
+}
+
+.demo-login-option > span {
+  color: var(--muted);
+  font-size: 12px;
+}
+
+.demo-login-option button {
+  font-size: 12px;
+  padding: 8px;
+}
+
+.demo-banner ~ .app-topbar { top: 38px; }
+.demo-banner ~ .sidebar {
+  height: calc(100vh - 38px);
+  top: 38px;
+}
+
+@media (max-width: 720px) {
+  .demo-banner {
+    align-items: flex-start;
+    flex-direction: column;
+    gap: 2px;
+  }
+
+  .demo-login-grid { grid-template-columns: 1fr; }
+}

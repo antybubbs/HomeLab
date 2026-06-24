@@ -606,6 +606,9 @@ async def rdp_start(request: Request, remote_id: int, db: Session = Depends(get_
 
 @router.websocket("/{remote_id}/ssh/ws")
 async def ssh_websocket(websocket: WebSocket, remote_id: int):
+    if get_settings().demo_mode:
+        await websocket.close(code=1008, reason="Remote connections are disabled in the public demo")
+        return
     if not websocket_origin_allowed(websocket):
         await websocket.close(code=1008)
         return
@@ -690,6 +693,9 @@ async def ssh_websocket(websocket: WebSocket, remote_id: int):
 
 @router.websocket("/{remote_id}/rdp/ws")
 async def rdp_websocket(websocket: WebSocket, remote_id: int):
+    if get_settings().demo_mode:
+        await websocket.close(code=1008, reason="Remote connections are disabled in the public demo")
+        return
     if not websocket_origin_allowed(websocket):
         await websocket.close(code=1008)
         return

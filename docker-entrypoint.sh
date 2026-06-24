@@ -50,6 +50,30 @@ set +a
 export SECRET_KEY
 export ENCRYPTION_KEY
 
+if [ "${DEMO_MODE:-false}" = "true" ]; then
+    DEMO_SEED_DIR="${DEMO_SEED_DIR:-/app/demo-seed}"
+    DEMO_SEED_DATABASE="$DEMO_SEED_DIR/homelab.db"
+    DEMO_DATABASE="/app/data/homelab.db"
+    mkdir -p "$DEMO_SEED_DIR" "$DEMO_SEED_DIR/uploads"
+    chown -R homelab:homelab "$DEMO_SEED_DIR"
+
+    if [ "${DEMO_REBUILD_SEED:-false}" = "true" ] || [ ! -f "$DEMO_SEED_DATABASE" ]; then
+        echo "Creating public demo seed database..."
+        gosu homelab python -m scripts.seed_demo --database "$DEMO_SEED_DATABASE"
+    fi
+
+    if [ ! -f "$DEMO_DATABASE" ]; then
+        echo "Initialising public demo from seed..."
+        cp "$DEMO_SEED_DATABASE" "$DEMO_DATABASE"
+        chown homelab:homelab "$DEMO_DATABASE"
+    fi
+
+    if [ ! -s "${DEMO_GENERATION_FILE:-/app/data/.demo-generation}" ]; then
+        printf '%s-%s\n' "$(date +%s)" "$$" > "${DEMO_GENERATION_FILE:-/app/data/.demo-generation}"
+        chown homelab:homelab "${DEMO_GENERATION_FILE:-/app/data/.demo-generation}"
+    fi
+fi
+
 echo "Starting HomeLab with ENCRYPTION_KEY length: ${#ENCRYPTION_KEY}"
 
 echo "Running database migrations..."

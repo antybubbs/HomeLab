@@ -57,6 +57,7 @@ SETTINGS = {
     # The GFX pipeline can stall on lossy/high-latency VPN paths. The classic
     # bitmap pipeline is the safer default and still supports bitmap caching.
     "rdp_enable_gfx": "0",
+    "rdp_resize_method": "display-update",
     "rdp_enable_printing": "0",
     "rdp_enable_drive": "0",
 }
@@ -166,6 +167,8 @@ def clean_global_setting(key: str, value: str) -> str:
         return clean_int_text(value, 0, 0, 4)
     if key == "terminal_scrollback":
         return clean_int_text(value, 10000, 1000, 100000)
+    if key == "rdp_resize_method":
+        return clean_choice(value, {"display-update", "reconnect"}, SETTINGS[key])
     if key == "terminal_line_height":
         return clean_float_text(value, 1, 0.8, 2)
     if key == "terminal_theme":
@@ -368,7 +371,7 @@ def create_rdp_guacamole_token(row: RemoteAccess, username: str, password: str, 
                     "enable-gfx": enabled("rdp_enable_gfx"),
                     "enable-printing": enabled("rdp_enable_printing"),
                     "enable-drive": enabled("rdp_enable_drive"),
-                    "resize-method": "display-update",
+                    "resize-method": rdp_settings.get("rdp_resize_method", SETTINGS["rdp_resize_method"]),
                 },
             }
         }

@@ -121,6 +121,12 @@
     {{ switch('rdp_disable_offscreen_caching', 'Disable Offscreen Caching', 'Turn off offscreen cache') }}
     {{ switch('rdp_disable_glyph_caching', 'Disable Glyph Caching', 'Turn off glyph cache') }}
     {{ switch('rdp_enable_gfx', 'Enable GFX', 'Use RemoteFX graphics pipeline') }}
+    <label>Resize method <span>How remote resolution changes are applied</span>
+      <select name="rdp_resize_method">
+        <option value="display-update" {% if settings.rdp_resize_method == 'display-update' %}selected{% endif %}>Display Update (fast)</option>
+        <option value="reconnect" {% if settings.rdp_resize_method == 'reconnect' %}selected{% endif %}>Reconnect (VPN-safe)</option>
+      </select>
+    </label>
   </section>
 
   <section class="remote-settings-card" id="redirection">

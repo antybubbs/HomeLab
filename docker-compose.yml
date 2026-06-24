@@ -18,7 +18,15 @@ services:
     tmpfs:
       - /tmp
   guacd:
-    image: guacamole/guacd:latest
+    # Guacamole 1.6.0 defaults to FreeRDP 2, whose resize path can assert if
+    # display-update arrives while a frame is being painted. Build against
+    # FreeRDP 3.8.0, which flushes/releases the update lock before resizing.
+    build:
+      context: https://github.com/apache/guacamole-server.git#1.6.0
+      args:
+        FREERDP_VERSION: "3"
+        WITH_FREERDP: '3\.8\.0'
+    image: homelab-guacd:1.6.0-freerdp3.8.0
     container_name: guacd
     restart: unless-stopped
 

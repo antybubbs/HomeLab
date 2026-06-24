@@ -54,7 +54,9 @@ SETTINGS = {
     "rdp_disable_bitmap_caching": "0",
     "rdp_disable_offscreen_caching": "0",
     "rdp_disable_glyph_caching": "0",
-    "rdp_enable_gfx": "1",
+    # The GFX pipeline can stall on lossy/high-latency VPN paths. The classic
+    # bitmap pipeline is the safer default and still supports bitmap caching.
+    "rdp_enable_gfx": "0",
     "rdp_enable_printing": "0",
     "rdp_enable_drive": "0",
 }

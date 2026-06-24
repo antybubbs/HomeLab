@@ -44,7 +44,9 @@ const server = new GuacamoleLite(
         "enable-desktop-composition": false,
         "disable-audio": false,
         "enable-drive": false,
-        "enable-gfx": true,
+        // Prefer the classic bitmap pipeline for reliable sessions across
+        // VPN and offsite links. Per-connection settings may still opt in.
+        "enable-gfx": false,
         "resize-method": "display-update",
         width: 1280,
         height: 720,

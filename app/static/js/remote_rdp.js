@@ -78,6 +78,15 @@ if (root) {
     client.getDisplay().flush(fitDisplay);
   };
 
+  const forceDisplayRefresh = () => {
+    if (!client || !connected) return;
+    // Re-sending the current size forces guacd/FreeRDP to issue a display
+    // update. This recovers a stale canvas after a hidden iframe or browser
+    // window is restored, even when its dimensions have not changed.
+    lastRequestedSize = "";
+    refreshDisplay();
+  };
+
   const scheduleResize = () => {
     window.clearTimeout(resizeTimer);
     resizeTimer = window.setTimeout(refreshDisplay, 150);
@@ -211,11 +220,11 @@ if (root) {
   };
 
   window.addEventListener("resize", scheduleResize);
-  window.addEventListener("focus", refreshDisplay);
+  window.addEventListener("focus", forceDisplayRefresh);
   window.addEventListener("message", (event) => {
     if (event.origin !== window.location.origin) return;
     if (event.data && event.data.type === "homelab:remote-tab-active") {
-      window.setTimeout(refreshDisplay, 50);
+      window.setTimeout(forceDisplayRefresh, 50);
       if (displayElement) displayElement.focus({ preventScroll: true });
     }
     if (event.data && event.data.type === "homelab:remote-display-refresh") {
@@ -225,7 +234,7 @@ if (root) {
   });
   document.addEventListener("visibilitychange", () => {
     if (document.visibilityState === "visible" && connected) {
-      refreshDisplay();
+      forceDisplayRefresh();
     }
   });
   window.addEventListener("beforeunload", stopSession);

@@ -1,5 +1,7 @@
 import Guacamole from "/static/vendor/guacamole/guacamole-common.min.js";
 
+const RDP_RESIZE_SETTLE_MS = 600;
+
 const root = document.querySelector("[data-rdp-session]");
 if (root) {
   const form = root.querySelector(".rdp-credential-form");
@@ -68,6 +70,11 @@ if (root) {
 
   const refreshDisplay = () => {
     if (!client || !connected) return;
+    const shellRect = shell.getBoundingClientRect();
+    // A hidden workspace panel reports 0x0. Do not turn that into the
+    // minimum 640x480 RDP size, as doing so causes two rapid remote display
+    // changes when switching between split and single layouts.
+    if (shellRect.width < 1 || shellRect.height < 1) return;
     fitDisplay();
     const size = displaySize();
     const requestedSize = `${size.width}x${size.height}`;
@@ -78,18 +85,12 @@ if (root) {
     client.getDisplay().flush(fitDisplay);
   };
 
-  const forceDisplayRefresh = () => {
-    if (!client || !connected) return;
-    // Re-sending the current size forces guacd/FreeRDP to issue a display
-    // update. This recovers a stale canvas after a hidden iframe or browser
-    // window is restored, even when its dimensions have not changed.
-    lastRequestedSize = "";
-    refreshDisplay();
-  };
-
   const scheduleResize = () => {
+    // Scale the existing canvas immediately, but wait until the workspace
+    // layout has settled before changing the remote desktop resolution.
+    fitDisplay();
     window.clearTimeout(resizeTimer);
-    resizeTimer = window.setTimeout(refreshDisplay, 150);
+    resizeTimer = window.setTimeout(refreshDisplay, RDP_RESIZE_SETTLE_MS);
   };
 
   const disconnectCurrentSession = () => {
@@ -170,6 +171,9 @@ if (root) {
     setStatus("Connecting", "Opening browser display tunnel.");
     await waitForLayout();
     const size = displaySize();
+    // The initial dimensions are already part of the connection request.
+    // Avoid sending the same display-update again as soon as CONNECTED fires.
+    lastRequestedSize = `${size.width}x${size.height}`;
     const params = new URLSearchParams({
       token,
       width: String(size.width),
@@ -220,11 +224,11 @@ if (root) {
   };
 
   window.addEventListener("resize", scheduleResize);
-  window.addEventListener("focus", forceDisplayRefresh);
+  window.addEventListener("focus", scheduleResize);
   window.addEventListener("message", (event) => {
     if (event.origin !== window.location.origin) return;
     if (event.data && event.data.type === "homelab:remote-tab-active") {
-      window.setTimeout(forceDisplayRefresh, 50);
+      window.setTimeout(scheduleResize, 50);
       if (displayElement) displayElement.focus({ preventScroll: true });
     }
     if (event.data && event.data.type === "homelab:remote-display-refresh") {
@@ -234,7 +238,7 @@ if (root) {
   });
   document.addEventListener("visibilitychange", () => {
     if (document.visibilityState === "visible" && connected) {
-      forceDisplayRefresh();
+      scheduleResize();
     }
   });
   window.addEventListener("beforeunload", stopSession);

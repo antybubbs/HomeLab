@@ -7,7 +7,6 @@
   const empty = root.querySelector("[data-remote-empty]");
   const searchInput = root.querySelector("[data-remote-search]");
   const groupToggle = root.querySelector("[data-remote-group-toggle]");
-  const refreshTabsButton = root.querySelector("[data-remote-refresh-tabs]");
   const hostList = root.querySelector(".remote-host-list");
   const hostRail = root.querySelector(".remote-host-rail");
   const hostResizer = root.querySelector("[data-remote-host-resizer]");
@@ -16,13 +15,16 @@
   const storageKey = `homelab.remote.tabs.${sessionVersion}`;
   const railWidthStorageKey = "homelab.remote.hostRailWidth";
   const groupViewStorageKey = "homelab.remote.groupView";
+  const collapsedGroupsStorageKey = "homelab.remote.collapsedGroups";
+  const minimumHostRailWidth = 200;
   if (!tabbar || !panels || !empty) return;
 
   let tabs = [];
   let activeId = "";
   let splitEnabled = false;
   let splitIds = [];
-  let groupViewEnabled = localStorage.getItem(groupViewStorageKey) === "1";
+  let groupViewEnabled = localStorage.getItem(groupViewStorageKey) !== "0";
+  let collapsedGroups = new Set();
 
   const safeParse = (value) => {
     try {
@@ -36,7 +38,7 @@
 
   const setHostRailWidth = (width) => {
     if (!hostRail) return;
-    const nextWidth = clamp(width, 96, 520);
+    const nextWidth = clamp(width, minimumHostRailWidth, 520);
     root.style.setProperty("--remote-host-rail-width", `${nextWidth}px`);
     root.classList.toggle("remote-rail-compact", nextWidth < 230);
     root.classList.toggle("remote-rail-mini", nextWidth < 150);
@@ -261,21 +263,25 @@
 
   const filterHosts = () => {
     const query = (searchInput?.value || "").trim().toLowerCase();
-    let visible = 0;
+    let matches = 0;
     root.querySelectorAll(".remote-host-card").forEach((card) => {
       const text = (card.dataset.remoteSearchText || "").toLowerCase();
-      const hidden = query.length > 0 && !text.includes(query);
-      card.hidden = hidden;
-      if (!hidden) visible += 1;
+      const matchesQuery = query.length === 0 || text.includes(query);
+      const collapsed = groupViewEnabled && query.length === 0 && collapsedGroups.has(card.dataset.remoteCategory);
+      card.hidden = !matchesQuery || collapsed;
+      if (matchesQuery) matches += 1;
     });
     root.querySelectorAll(".remote-host-group-heading").forEach((heading) => {
       const category = heading.dataset.remoteCategory;
       heading.hidden = !Array.from(root.querySelectorAll(".remote-host-card")).some(
-        (card) => card.dataset.remoteCategory === category && !card.hidden,
+        (card) => card.dataset.remoteCategory === category
+          && (query.length === 0 || (card.dataset.remoteSearchText || "").toLowerCase().includes(query)),
       );
     });
-    if (noResults) noResults.hidden = visible > 0;
+    if (noResults) noResults.hidden = matches > 0;
   };
+  const storedCollapsedGroups = safeParse(localStorage.getItem(collapsedGroupsStorageKey));
+  collapsedGroups = new Set(Array.isArray(storedCollapsedGroups) ? storedCollapsedGroups : []);
 
   const applyHostGrouping = () => {
     if (!hostList) return;
@@ -289,13 +295,23 @@
         groups.get(category).push(card);
       });
       Array.from(groups.keys()).sort((a, b) => a.localeCompare(b, undefined, { sensitivity: "base" })).forEach((category) => {
-        const heading = document.createElement("div");
+        const heading = document.createElement("button");
+        heading.type = "button";
         heading.className = "remote-host-group-heading";
         heading.dataset.remoteCategory = category;
         const name = document.createElement("strong");
         const count = document.createElement("span");
-        name.textContent = category;
+        const collapsed = collapsedGroups.has(category);
+        name.textContent = `${collapsed ? "▸" : "▾"} ${category}`;
         count.textContent = String(groups.get(category).length);
+        heading.classList.toggle("collapsed", collapsed);
+        heading.setAttribute("aria-expanded", collapsed ? "false" : "true");
+        heading.addEventListener("click", () => {
+          if (collapsedGroups.has(category)) collapsedGroups.delete(category);
+          else collapsedGroups.add(category);
+          localStorage.setItem(collapsedGroupsStorageKey, JSON.stringify(Array.from(collapsedGroups)));
+          applyHostGrouping();
+        });
         heading.append(name, count);
         hostList.append(heading, ...groups.get(category));
       });
@@ -359,12 +375,6 @@
       groupViewEnabled = !groupViewEnabled;
       localStorage.setItem(groupViewStorageKey, groupViewEnabled ? "1" : "0");
       applyHostGrouping();
-    });
-  }
-
-  if (refreshTabsButton) {
-    refreshTabsButton.addEventListener("click", () => {
-      visibleIds().forEach((id) => refreshTab(id));
     });
   }
 

@@ -61,8 +61,12 @@ async def protect_public_demo(request: Request, call_next):
         message = "This action is disabled in the public demo. Sample data resets daily."
         accepts_html = "text/html" in request.headers.get("accept", "")
         if accepts_html:
-            request.session["demo_notice"] = message
+            from urllib.parse import urlencode, urlsplit, urlunsplit, parse_qsl
             redirect_to = request.headers.get("referer") or "/dashboard"
+            parts = urlsplit(redirect_to)
+            query = dict(parse_qsl(parts.query, keep_blank_values=True))
+            query["demo_notice"] = "1"
+            redirect_to = urlunsplit((parts.scheme, parts.netloc, parts.path, urlencode(query), parts.fragment))
             return RedirectResponse(redirect_to, status_code=303)
         if "application/json" in request.headers.get("accept", ""):
             return JSONResponse({"error": message}, status_code=403)

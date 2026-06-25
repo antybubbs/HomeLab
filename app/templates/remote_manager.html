@@ -2,13 +2,13 @@
 {% block extra_head %}<link rel="stylesheet" href="/static/css/remote.css?v={{ asset_version }}">{% endblock %}
 {% block main_class %}remote-main{% endblock %}
 {% block content %}
+{% if remote_manager_locked %}
+<section class="panel demo-remote-lock">
+  <h1>Remote Manager is locked in the public demo</h1>
+  <p class="muted">Live SSH, RDP, connection checks and remote host configuration are disabled here to protect this site and other people's infrastructure.</p>
+</section>
+{% else %}
 <div class="remote-workspace" data-remote-tabs data-remote-session-version="homelab-split-ui-1">
-  {% if remote_manager_locked %}
-  <section class="panel demo-remote-lock">
-    <h1>Remote Manager is locked in the public demo</h1>
-    <p class="muted">Live SSH, RDP, connection checks and remote host configuration are disabled here to protect this site and other people's infrastructure.</p>
-  </section>
-  {% endif %}
   {% include "_remote_host_rail.html" %}
   <section class="remote-tab-workspace">
     <div class="remote-tabbar" data-remote-tabbar aria-label="Remote sessions"></div>
@@ -23,4 +23,5 @@
   </section>
 </div>
 <script src="/static/js/remote_workspace.js?v={{ asset_version }}&remote-ui=host-groups-3" defer></script>
+{% endif %}
 {% endblock %}

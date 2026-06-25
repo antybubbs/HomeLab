@@ -14,6 +14,26 @@
 
 .demo-banner strong { text-transform: uppercase; }
 
+.demo-toast {
+  animation: demo-toast-in .18s ease-out;
+  background: #111827;
+  border: 1px solid rgba(245, 158, 11, .45);
+  border-radius: 12px;
+  box-shadow: 0 20px 45px rgba(15, 23, 42, .28);
+  color: #f9fafb;
+  font-size: 14px;
+  max-width: min(520px, calc(100vw - 32px));
+  padding: 14px 16px;
+  position: fixed;
+  right: 18px;
+  top: 54px;
+  z-index: 2000;
+}
+
+@keyframes demo-toast-in {
+  from { opacity: 0; transform: translateY(-6px); }
+  to { opacity: 1; transform: translateY(0); }
+}
 .demo-login-grid {
   display: grid;
   gap: 10px;

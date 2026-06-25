@@ -3,7 +3,7 @@ import asyncio
 from time import perf_counter
 from uuid import uuid4
 from fastapi import FastAPI, Request
-from fastapi.responses import PlainTextResponse, RedirectResponse
+from fastapi.responses import JSONResponse, PlainTextResponse, RedirectResponse
 from fastapi.staticfiles import StaticFiles
 from starlette.middleware.sessions import SessionMiddleware
 from starlette.middleware.trustedhost import TrustedHostMiddleware
@@ -58,10 +58,15 @@ async def permission_handler(request: Request, exc: PermissionError):
 @app.middleware("http")
 async def protect_public_demo(request: Request, call_next):
     if demo_request_is_blocked(request.method, request.url.path):
-        return PlainTextResponse(
-            "This action is disabled in the public demo. Demo inventory changes are restored at the next daily reset.",
-            status_code=403,
-        )
+        message = "This action is disabled in the public demo. Sample data resets daily."
+        accepts_html = "text/html" in request.headers.get("accept", "")
+        if accepts_html:
+            request.session["demo_notice"] = message
+            redirect_to = request.headers.get("referer") or "/dashboard"
+            return RedirectResponse(redirect_to, status_code=303)
+        if "application/json" in request.headers.get("accept", ""):
+            return JSONResponse({"error": message}, status_code=403)
+        return PlainTextResponse(message, status_code=403)
     return await call_next(request)
 
 @app.middleware("http")
@@ -114,8 +119,8 @@ async def audit_requests(request: Request, call_next):
         request_id=request_id,
         method=request.method,
         path=path,
-        ip_address=request.client.host if request.client else None,
-        user_agent=(request.headers.get("user-agent") or "")[:2000] or None,
+        ip_address=None if settings.demo_mode else (request.client.host if request.client else None),
+        user_agent=None if settings.demo_mode else ((request.headers.get("user-agent") or "")[:2000] or None),
     )
     started = perf_counter()
     response = None

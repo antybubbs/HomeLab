@@ -135,10 +135,10 @@ docker compose -f docker-compose.demo.yml run --rm --no-deps \
 sh ./demo/reset-demo.sh
 ```
 
-Keep the demo behind HTTPS and reverse-proxy rate limiting. The Compose network
-is internal, the published port binds only to loopback, all Linux capabilities
-are dropped, and resource limits are applied. Do not attach this deployment to
-NetBird, a home network, or any network containing real infrastructure.
+Keep the demo behind HTTPS and reverse-proxy rate limiting. The published port
+defaults to `8080`, and resource limits are applied. Do not attach this
+deployment to NetBird, a home network, or any network containing real
+infrastructure.
 
 ## Credit
 

@@ -1213,19 +1213,22 @@ def about(
     db: Session = Depends(get_db),
     user=Depends(require_admin),
 ):
-    sessions = (
-        db.query(AppSession)
-        .filter(
-            AppSession.ended_at.is_(None),
-            AppSession.last_seen_at >= active_since(),
+    if get_settings().demo_mode:
+        sessions = []
+        current_session_id = None
+    else:
+        sessions = (
+            db.query(AppSession)
+            .filter(
+                AppSession.ended_at.is_(None),
+                AppSession.last_seen_at >= active_since(),
+            )
+            .options(selectinload(AppSession.user))
+            .order_by(AppSession.last_seen_at.desc())
+            .limit(100)
+            .all()
         )
-        .options(selectinload(AppSession.user))
-        .order_by(AppSession.last_seen_at.desc())
-        .limit(100)
-        .all()
-    )
-
-    current_session_id = request.session.get("session_id")
+        current_session_id = request.session.get("session_id")
 
     return templates.TemplateResponse(
         request,

@@ -26,7 +26,14 @@ def demo_generation() -> str:
 
 
 def demo_request_is_blocked(method: str, path: str) -> bool:
-    if not get_settings().demo_mode or method.upper() in {"GET", "HEAD", "OPTIONS"}:
+    if not get_settings().demo_mode:
+        return False
+
+    clean_path = path.rstrip("/") or "/"
+    if clean_path.startswith("/remote-manager/"):
+        return True
+
+    if method.upper() in {"GET", "HEAD", "OPTIONS"}:
         return False
 
     protected_prefixes = (
@@ -35,7 +42,7 @@ def demo_request_is_blocked(method: str, path: str) -> bool:
         "/team/users",
         "/admin/security",
         "/system/site-administration",
-        "/remote-manager/settings",
+        "/remote-manager",
     )
     if path.startswith(protected_prefixes):
         return True

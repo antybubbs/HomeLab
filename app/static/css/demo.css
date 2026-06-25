@@ -75,3 +75,12 @@
 
   .demo-login-grid { grid-template-columns: 1fr; }
 }
+
+.demo-remote-lock {
+  border-color: rgba(245, 158, 11, .35);
+  margin-bottom: 16px;
+}
+
+.demo-remote-lock h1 {
+  margin-bottom: 6px;
+}

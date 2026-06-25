@@ -78,6 +78,8 @@ class RDPSessionToken:
 rdp_tokens: dict[str, RDPSessionToken] = {}
 
 
+
+
 def remote_label(row: RemoteAccess) -> str:
     if row.display_name:
         return row.display_name
@@ -448,8 +450,9 @@ async def tcp_check(host: str, port: int, timeout: float = 5) -> tuple[bool, str
 
 @router.get("")
 def remote_list(request: Request, db: Session = Depends(get_db), user=Depends(require_user)):
-    rows = db.query(RemoteAccess).filter(RemoteAccess.is_enabled == True).options(selectinload(RemoteAccess.ip_address)).order_by(RemoteAccess.protocol.asc(), RemoteAccess.display_name.asc(), RemoteAccess.id.asc()).all()
-    return templates.TemplateResponse(request, "remote_manager.html", {"user": user, "rows": rows, "remote_label": remote_label, **csrf_context(request)})
+    demo_mode = get_settings().demo_mode
+    rows = [] if demo_mode else db.query(RemoteAccess).filter(RemoteAccess.is_enabled == True).options(selectinload(RemoteAccess.ip_address)).order_by(RemoteAccess.protocol.asc(), RemoteAccess.display_name.asc(), RemoteAccess.id.asc()).all()
+    return templates.TemplateResponse(request, "remote_manager.html", {"user": user, "rows": rows, "remote_label": remote_label, "remote_manager_locked": demo_mode, **csrf_context(request)})
 
 
 @router.get("/settings")

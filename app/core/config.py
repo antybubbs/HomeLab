@@ -26,6 +26,9 @@ class Settings(BaseSettings):
     guacd_host: str = ""
     guacd_port: str = ""
     version_check_interval_seconds: int = 1800
+    demo_mode: bool = False
+    demo_reset_schedule: str = "03:00 UTC"
+    demo_generation_file: str = "/app/data/.demo-generation"
 
     model_config = {
     "extra": "ignore"

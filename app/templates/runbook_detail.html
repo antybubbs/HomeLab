@@ -1,4 +1,7 @@
 {% extends "base.html" %}
+{% block extra_head %}
+<link rel="stylesheet" href="/static/vendor/highlight/github-dark.min.css?v=11.11.1">
+{% endblock %}
 {% block content %}
 <article class="runbook-detail">
   <header class="record-hero">
@@ -71,4 +74,8 @@
     </aside>
   </section>
 </article>
+{% endblock %}
+{% block extra_scripts %}
+<script src="/static/vendor/highlight/highlight.min.js?v=11.11.1" defer></script>
+<script src="/static/js/runbooks.js?v={{ asset_version }}&runbook-editor=smart-paste-2" defer></script>
 {% endblock %}

@@ -1098,19 +1098,22 @@ def audit_logs(
     if per_page not in {25, 50, 100}:
         per_page = 50
     query = db.query(AuditLog)
+    settings = get_settings()
     clean_q = q.strip()
     if clean_q:
         like = f"%{clean_q}%"
-        query = query.filter(or_(
+        search_fields = [
             AuditLog.action.ilike(like),
             AuditLog.entity.ilike(like),
             AuditLog.entity_id.ilike(like),
             AuditLog.detail.ilike(like),
-            AuditLog.ip_address.ilike(like),
             AuditLog.request_path.ilike(like),
             AuditLog.request_id.ilike(like),
             AuditLog.user.has(User.email.ilike(like)),
-        ))
+        ]
+        if not settings.demo_mode:
+            search_fields.append(AuditLog.ip_address.ilike(like))
+        query = query.filter(or_(*search_fields))
     if category:
         query = query.filter(AuditLog.category == category)
     if severity:
@@ -1210,19 +1213,22 @@ def about(
     db: Session = Depends(get_db),
     user=Depends(require_admin),
 ):
-    sessions = (
-        db.query(AppSession)
-        .filter(
-            AppSession.ended_at.is_(None),
-            AppSession.last_seen_at >= active_since(),
+    if get_settings().demo_mode:
+        sessions = []
+        current_session_id = None
+    else:
+        sessions = (
+            db.query(AppSession)
+            .filter(
+                AppSession.ended_at.is_(None),
+                AppSession.last_seen_at >= active_since(),
+            )
+            .options(selectinload(AppSession.user))
+            .order_by(AppSession.last_seen_at.desc())
+            .limit(100)
+            .all()
         )
-        .options(selectinload(AppSession.user))
-        .order_by(AppSession.last_seen_at.desc())
-        .limit(100)
-        .all()
-    )
-
-    current_session_id = request.session.get("session_id")
+        current_session_id = request.session.get("session_id")
 
     return templates.TemplateResponse(
         request,

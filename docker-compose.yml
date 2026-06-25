@@ -18,6 +18,14 @@ services:
     tmpfs:
       - /tmp
   guacd:
-    image: guacamole/guacd:latest
+    image: guacamole/guacd:1.6.0
     container_name: guacd
     restart: unless-stopped
+
+networks:
+  default:
+    driver: bridge
+    driver_opts:
+      # Match NetBird's default WireGuard MTU so large RDP graphics packets do
+      # not enter the VPN through a 1500-byte Docker bridge and black-hole.
+      com.docker.network.driver.mtu: "1280"

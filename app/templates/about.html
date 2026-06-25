@@ -87,6 +87,7 @@
   </table>
 </section>
 
+{% if not request.app.state.demo_mode %}
 <section class="panel about-panel">
   <h2>Open Sessions</h2>
   <table data-table-key="about-sessions">
@@ -107,4 +108,5 @@
     </tbody>
   </table>
 </section>
+{% endif %}
 {% endblock %}

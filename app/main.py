@@ -3,13 +3,14 @@ import asyncio
 from time import perf_counter
 from uuid import uuid4
 from fastapi import FastAPI, Request
-from fastapi.responses import PlainTextResponse, RedirectResponse
+from fastapi.responses import JSONResponse, PlainTextResponse, RedirectResponse
 from fastapi.staticfiles import StaticFiles
 from starlette.middleware.sessions import SessionMiddleware
 from starlette.middleware.trustedhost import TrustedHostMiddleware
 from sqlalchemy import text
 from sqlalchemy.orm import Session
 from app.core.config import get_settings, trusted_hosts
+from app.core.demo import demo_request_is_blocked
 from app.core.security import decrypt_secret, hash_password
 from app.db.session import Base, engine, SessionLocal
 from app.models.models import AuditLog, User, VLAN
@@ -30,6 +31,8 @@ app = FastAPI(
 monitor_task = None
 domain_poll_task = None
 compute_monitor_task = None
+app.state.demo_mode = settings.demo_mode
+app.state.demo_reset_schedule = settings.demo_reset_schedule
 
 if settings.app_env == "production":
     app.add_middleware(
@@ -50,6 +53,25 @@ async def permission_handler(request: Request, exc: PermissionError):
     if request.session.get("user_id"):
         return PlainTextResponse("Forbidden", status_code=403)
     return RedirectResponse("/login", status_code=303)
+
+
+@app.middleware("http")
+async def protect_public_demo(request: Request, call_next):
+    if demo_request_is_blocked(request.method, request.url.path):
+        message = "This action is disabled in the public demo. Sample data resets daily."
+        accepts_html = "text/html" in request.headers.get("accept", "")
+        if accepts_html:
+            from urllib.parse import urlencode, urlsplit, urlunsplit, parse_qsl
+            redirect_to = request.headers.get("referer") or "/dashboard"
+            parts = urlsplit(redirect_to)
+            query = dict(parse_qsl(parts.query, keep_blank_values=True))
+            query["demo_notice"] = "1"
+            redirect_to = urlunsplit((parts.scheme, parts.netloc, parts.path, urlencode(query), parts.fragment))
+            return RedirectResponse(redirect_to, status_code=303)
+        if "application/json" in request.headers.get("accept", ""):
+            return JSONResponse({"error": message}, status_code=403)
+        return PlainTextResponse(message, status_code=403)
+    return await call_next(request)
 
 @app.middleware("http")
 async def security_headers(request: Request, call_next):
@@ -101,8 +123,8 @@ async def audit_requests(request: Request, call_next):
         request_id=request_id,
         method=request.method,
         path=path,
-        ip_address=request.client.host if request.client else None,
-        user_agent=(request.headers.get("user-agent") or "")[:2000] or None,
+        ip_address=None if settings.demo_mode else (request.client.host if request.client else None),
+        user_agent=None if settings.demo_mode else ((request.headers.get("user-agent") or "")[:2000] or None),
     )
     started = perf_counter()
     response = None
@@ -362,6 +384,8 @@ def migrate_existing_database():
 @app.on_event("startup")
 async def on_startup():
     bootstrap()
+    if settings.demo_mode:
+        return
     start_homelab_remote_service()
     global monitor_task, domain_poll_task, compute_monitor_task
     monitor_task = asyncio.create_task(monitor_loop())

@@ -3,7 +3,9 @@ from fastapi import APIRouter, Depends, Form, Request
 from fastapi.responses import RedirectResponse
 from fastapi.templating import Jinja2Templates
 from sqlalchemy.orm import Session
+from app.core.config import get_settings
 from app.core.csrf import csrf_context, validate_csrf_token
+from app.core.demo import DEMO_ACCOUNTS, demo_generation, demo_login_email
 from app.core.security import hash_password, verify_password
 from app.core.totp import decrypted_totp_secret, encrypted_totp_secret, generate_totp_secret, provisioning_uri, qr_code_data_uri, verify_totp
 from app.db.session import get_db
@@ -17,6 +19,7 @@ MAX_LOGIN_ATTEMPTS = 5
 LOGIN_WINDOW_SECONDS = 15 * 60
 LOGIN_FAILURES: dict[str, list[float]] = {}
 DUMMY_PASSWORD_HASH = hash_password("not-the-real-password")
+settings = get_settings()
 
 
 def client_key(request: Request) -> str:
@@ -40,6 +43,9 @@ def record_login_failure(key: str) -> None:
 def current_user(request: Request, db: Session = Depends(get_db)) -> User | None:
     user_id = request.session.get("user_id")
     if not user_id:
+        return None
+    if settings.demo_mode and request.session.get("demo_generation") != demo_generation():
+        request.session.clear()
         return None
     user = db.query(User).filter(User.id == user_id, User.is_active == True).first()
     if user:
@@ -83,7 +89,7 @@ def login_page(
     return templates.TemplateResponse(
         request,
         "login.html",
-        {"error": None, **csrf_context(request, include_version=False)}
+        {"error": None, "demo_accounts": DEMO_ACCOUNTS if settings.demo_mode else None, **csrf_context(request, include_version=False)}
     )
 @router.get("/setup")
 def setup_page(
@@ -197,7 +203,7 @@ def login(request: Request, email: str = Form(""), password: str = Form(""), tot
             status_code=429,
             metadata={"attempted_email": email.strip().lower()[:255]},
         )
-        return templates.TemplateResponse(request, "login.html", {"error": "Too many failed sign-in attempts. Try again later.", **csrf_context(request, include_version=False)}, status_code=429)
+        return templates.TemplateResponse(request, "login.html", {"error": "Too many failed sign-in attempts. Try again later.", "demo_accounts": DEMO_ACCOUNTS if settings.demo_mode else None, **csrf_context(request, include_version=False)}, status_code=429)
 
     pending_user_id = request.session.get("pending_2fa_user_id")
     if pending_user_id:
@@ -223,7 +229,8 @@ def login(request: Request, email: str = Form(""), password: str = Form(""), tot
         write_audit(db, user, "login", "user", str(user.id), request.client.host if request.client else None, detail="2FA verified")
         return RedirectResponse("/dashboard", status_code=303)
 
-    user = db.query(User).filter(User.email == email.strip().lower(), User.is_active == True).first()
+    login_email = demo_login_email(email) if settings.demo_mode else email.strip().lower()
+    user = db.query(User).filter(User.email == login_email, User.is_active == True).first()
     password_hash = user.password_hash if user else DUMMY_PASSWORD_HASH
     if not verify_password(password, password_hash) or not user:
         record_login_failure(key)
@@ -238,7 +245,7 @@ def login(request: Request, email: str = Form(""), password: str = Form(""), tot
             status_code=401,
             metadata={"attempted_email": email.strip().lower()[:255]},
         )
-        return templates.TemplateResponse(request, "login.html", {"error": "Invalid email or password", **csrf_context(request, include_version=False)}, status_code=401)
+        return templates.TemplateResponse(request, "login.html", {"error": "Invalid email or password", "demo_accounts": DEMO_ACCOUNTS if settings.demo_mode else None, **csrf_context(request, include_version=False)}, status_code=401)
     if user.totp_enabled:
         request.session.clear()
         request.session["pending_2fa_user_id"] = user.id
@@ -254,6 +261,8 @@ def login(request: Request, email: str = Form(""), password: str = Form(""), tot
         return templates.TemplateResponse(request, "login.html", {"error": None, "requires_2fa": True, **csrf_context(request, include_version=False)})
     request.session.clear()
     request.session["user_id"] = user.id
+    if settings.demo_mode:
+        request.session["demo_generation"] = demo_generation()
     start_user_session(db, request, user)
     LOGIN_FAILURES.pop(key, None)
     write_audit(db, user, "login", "user", str(user.id), request.client.host if request.client else None)

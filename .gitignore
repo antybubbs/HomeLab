@@ -1,6 +1,10 @@
 .env
+.env.demo
 data/
 uploads/
+/demo/data/
+/demo/uploads/
+/demo/seed/
 __pycache__/
 *.py[cod]
 .pytest_cache/

@@ -1,0 +1,60 @@
+name: homelab-demo
+
+services:
+  homelab:
+    image: ${HOMELAB_IMAGE:-ghcr.io/antybubbs/homelab:latest}
+    restart: unless-stopped
+    env_file:
+      - path: .env.demo
+        required: false
+    environment:
+      APP_ENV: production
+      BASE_URL: ${BASE_URL:-https://demo.example.com}
+      ALLOWED_HOSTS: ${ALLOWED_HOSTS:-demo.example.com}
+      SESSION_COOKIE_SECURE: "true"
+      DEMO_MODE: "true"
+      DEMO_RESET_SCHEDULE: ${DEMO_RESET_SCHEDULE:-03:00 UTC}
+      DEMO_RESET_ON_START: "true"
+      DEMO_SEED_DIR: /app/demo-seed
+      DEMO_GENERATION_FILE: /app/data/.demo-generation
+      GUACD_HOST: ""
+    ports:
+      - "${HOMELAB_DEMO_PORT:-8080}:8080"
+    volumes:
+      - ./demo/data:/app/data
+      - ./demo/uploads:/app/uploads
+      - ./demo/seed:/app/demo-seed
+    read_only: true
+    tmpfs:
+      - /tmp:size=128m,noexec,nosuid
+    security_opt:
+      - no-new-privileges:true
+    pids_limit: 256
+    mem_limit: 768m
+    cpus: 1.5
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://127.0.0.1:8080/healthz', timeout=3)"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 30s
+    entrypoint:
+      - sh
+      - -c
+      - |
+        if [ -f /app/demo-seed/homelab.db ]; then
+          echo "Resetting public demo from seed before startup..."
+          cp /app/demo-seed/homelab.db /app/data/homelab.db
+          chown homelab:homelab /app/data/homelab.db
+          rm -f /app/data/homelab.db-wal /app/data/homelab.db-shm
+          find /app/uploads -mindepth 1 -maxdepth 1 -exec rm -rf -- {} +
+          if [ -d /app/demo-seed/uploads ]; then
+            cp -a /app/demo-seed/uploads/. /app/uploads/
+          fi
+          chown -R homelab:homelab /app/uploads
+          date +%s > /app/data/.demo-generation
+          chown homelab:homelab /app/data/.demo-generation
+        else
+          echo "Public demo seed database does not exist yet; HomeLab will create it during startup."
+        fi
+        exec /usr/local/bin/homelab-entrypoint sh -c 'exec uvicorn app.main:app --host 0.0.0.0 --port 8080 --proxy-headers --forwarded-allow-ips "$${FORWARDED_ALLOW_IPS:-*}"'

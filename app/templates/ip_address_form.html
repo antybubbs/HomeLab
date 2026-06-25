@@ -116,6 +116,14 @@
             <option value="0" {% if current == '0' %}selected{% endif %}>Off</option>
           </select>
         </label>
+        <label>RDP resize method
+          {% set current = remote_rdp_overrides.get('rdp_resize_method', '') %}
+          <select name="override_rdp_resize_method">
+            <option value="">Global default</option>
+            <option value="display-update" {% if current == 'display-update' %}selected{% endif %}>Display Update (fast)</option>
+            <option value="reconnect" {% if current == 'reconnect' %}selected{% endif %}>Reconnect (VPN-safe)</option>
+          </select>
+        </label>
         <label>RDP audio
           {% set current = remote_rdp_overrides.get('rdp_disable_audio', '') %}
           <select name="override_rdp_disable_audio">

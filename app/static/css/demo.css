@@ -1,0 +1,86 @@
+.demo-banner {
+  align-items: center;
+  background: #f59e0b;
+  color: #1f2937;
+  display: flex;
+  font-size: 13px;
+  gap: 12px;
+  justify-content: center;
+  min-height: 38px;
+  padding: 7px 16px;
+  position: relative;
+  z-index: 100;
+}
+
+.demo-banner strong { text-transform: uppercase; }
+
+.demo-toast {
+  animation: demo-toast-in .18s ease-out;
+  background: #111827;
+  border: 1px solid rgba(245, 158, 11, .45);
+  border-radius: 12px;
+  box-shadow: 0 20px 45px rgba(15, 23, 42, .28);
+  color: #f9fafb;
+  font-size: 14px;
+  max-width: min(520px, calc(100vw - 32px));
+  padding: 14px 16px;
+  position: fixed;
+  right: 18px;
+  top: 54px;
+  z-index: 2000;
+}
+
+@keyframes demo-toast-in {
+  from { opacity: 0; transform: translateY(-6px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+.demo-login-grid {
+  display: grid;
+  gap: 10px;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  margin: 16px 0;
+}
+
+.demo-login-option {
+  background: rgba(148, 163, 184, .08);
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  display: grid;
+  gap: 7px;
+  padding: 12px;
+}
+
+.demo-login-option > span {
+  color: var(--muted);
+  font-size: 12px;
+}
+
+.demo-login-option button {
+  font-size: 12px;
+  padding: 8px;
+}
+
+.demo-banner ~ .app-topbar { top: 38px; }
+.demo-banner ~ .sidebar {
+  height: calc(100vh - 38px);
+  top: 38px;
+}
+
+@media (max-width: 720px) {
+  .demo-banner {
+    align-items: flex-start;
+    flex-direction: column;
+    gap: 2px;
+  }
+
+  .demo-login-grid { grid-template-columns: 1fr; }
+}
+
+.demo-remote-lock {
+  border-color: rgba(245, 158, 11, .35);
+  margin-bottom: 16px;
+}
+
+.demo-remote-lock h1 {
+  margin-bottom: 6px;
+}

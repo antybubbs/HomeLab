@@ -1,69 +1,47 @@
 {% extends "base.html" %}
 
-{% block extra_head %}
-<link rel="stylesheet" href="/static/css/remote.css?v={{ asset_version }}">
-{% endblock %}
-
 {% block public %}
-<main class="content">
-  <div class="remote-card" style="max-width: 460px; margin: 80px auto;">
-    <div class="brand large"><img class="brand-logo large" src="{{ brand.logo }}" alt="{{ brand.name }}" width="220" height="76"></div>
-    <h1>Welcome to {{ brand.name }}</h1>
-    <p class="muted">Before you can log in for the first time, you need to create your administrator account.</p>
-
-    {% if error %}
-      <div class="error">{{ error }}</div>
-    {% endif %}
-
-    <form method="post" action="/setup">
-      <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
-
-       <label class="remote-setting-row">
-            <span>
-            <strong>First Name</strong>
-            <small>Your first name.</small>
-            </span>
-            <input type="text" name="first_name" required>
-        </label>
-
-        <label class="remote-setting-row">
-            <span>
-            <strong>Last Name</strong>
-            <small>Your last name.</small>
-            </span>
-            <input type="text" name="last_name" required>
-        </label>
-
-      <label class="remote-setting-row">
-        <span>
-          <strong>Email</strong>
-          <small>Your administrator login email.</small>
-        </span>
-        <input type="email" name="email" required>
-      </label>
-
-      <label class="remote-setting-row">
-        <span>
-          <strong>Password</strong>
-          <small>Minimum 12 characters.</small>
-        </span>
-        <input type="password" name="password" required minlength="12">
-      </label>
-
-      <label class="remote-setting-row">
-        <span>
-          <strong>Confirm Password</strong>
-          <small>Re-enter your password.</small>
-        </span>
-        <input type="password" name="confirm_password" required minlength="12">
-      </label>
-
-      <div style="margin-top: 1.5rem;">
-        <button type="submit" class="btn btn-primary">
-          Create administrator
-        </button>
+<main class="setup-page">
+  <section class="setup-shell" aria-labelledby="setup-title">
+    <div class="setup-brand-panel">
+      <img class="setup-logo" src="{{ brand.logo }}" alt="{{ brand.name }}" width="260" height="75">
+      <div>
+        <p class="setup-kicker">First run setup</p>
+        <h1 id="setup-title">Bring your infrastructure home.</h1>
+        <p>{{ brand.tagline }}</p>
       </div>
-    </form>
-  </div>
+      <div class="setup-status-list" aria-label="Setup checklist">
+        <span>Private by default</span>
+        <span>Persistent local storage</span>
+        <span>Administrator access</span>
+      </div>
+    </div>
+
+    <div class="setup-form-panel">
+      <div class="setup-form-heading">
+        <h2>Create administrator</h2>
+        <p>Use this account to finish configuring {{ brand.name }}.</p>
+      </div>
+
+      {% if error %}
+      <div class="alert">{{ error }}</div>
+      {% endif %}
+
+      <form class="setup-form" method="post" action="/setup">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+
+        <div class="setup-form-grid">
+          <label>First name<input type="text" name="first_name" autocomplete="given-name" required></label>
+          <label>Last name<input type="text" name="last_name" autocomplete="family-name" required></label>
+        </div>
+
+        <label>Email<input type="email" name="email" autocomplete="email" required></label>
+        <label>Password<input type="password" name="password" autocomplete="new-password" required minlength="12"></label>
+        <label>Confirm password<input type="password" name="confirm_password" autocomplete="new-password" required minlength="12"></label>
+
+        <button type="submit">Create administrator</button>
+      </form>
+    </div>
+  </section>
 </main>
 {% endblock %}

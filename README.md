@@ -1,7 +1,12 @@
-# HomeLab
+# Kaya
 
-Self-hosted home lab management solution.
-<img width="2454" height="1227" alt="image" src="https://github.com/user-attachments/assets/f584720d-59df-4f40-a67a-42464bec5c2b" />
+Kaya is a self-hosted infrastructure management platform for managing servers, services, assets, remote access, notes, licences and operational information from one place.
+
+**Your Infrastructure. Your Home.**
+
+Kaya was previously known as HomeLab. Some internal configuration keys, Docker image names, service names and database paths still use `homelab` or `HOMELAB_` for backwards compatibility.
+
+<img width="2454" height="1227" alt="Kaya branding board" src="https://github.com/user-attachments/assets/f584720d-59df-4f40-a67a-42464bec5c2b" />
 
 
 ## FEATURES
@@ -82,7 +87,7 @@ homelab.example.com {
 }
 ```
 
-If HomeLab is served from a path prefix such as `/homelab`, also set:
+If Kaya is served from a path prefix such as `/homelab`, also set:
 
 ```text
 ROOT_PATH=/homelab
@@ -125,7 +130,7 @@ Run it every day at 03:00 with the host's cron:
 0 3 * * * cd /opt/homelab && docker compose -f docker-compose.demo.yml restart homelab >> /var/log/homelab-demo-reset.log 2>&1
 ```
 
-After changing to a newer HomeLab release, rebuild the seed against that image
+After changing to a newer Kaya release, rebuild the seed against that image
 and immediately reset the live instance:
 
 ```bash
@@ -142,7 +147,7 @@ infrastructure.
 
 ## Credit
 
-HomeLab Remote Manager is based on the same core architecture used by Termix:
+Kaya Remote Manager is based on the same core architecture used by Termix:
 - WebSocket transport between browser and backend
 - Node.js SSH backend using ssh2
 - xterm-compatible PTY sessions using xterm-256color

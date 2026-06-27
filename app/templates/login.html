@@ -2,8 +2,9 @@
 {% block public %}
 <div class="login-wrap">
   <div class="login-card">
-    <div class="brand large"><span class="brand-mark">H</span><span>HomeLab</span></div>
-    <h1>{{ 'Explore the HomeLab demo' if demo_accounts else 'Your HomeLab Manager' }}</h1>
+    <div class="brand large"><img class="brand-logo large" src="{{ brand.logo }}" alt="{{ brand.name }}" width="220" height="76"></div>
+    <h1>{{ 'Explore the ' ~ brand.name ~ ' demo' if demo_accounts else brand.name }}</h1>
+    <p class="muted">{{ brand.tagline }}</p>
     {% if demo_accounts %}
     <p class="muted">Choose a role or sign in manually. Changes to sample inventory are welcome and reset daily.</p>
     <div class="demo-login-grid">

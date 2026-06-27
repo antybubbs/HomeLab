@@ -15,7 +15,7 @@ generate_encryption_key() {
 }
 
 if [ ! -f "$SECRETS_FILE" ]; then
-    echo "Initialising persistent HomeLab secrets..."
+    echo "Initialising persistent Kaya secrets..."
 
     # v0.16 (yes, there was once a time) and earlier supplied these values through Compose's .env file. (LOL, right?)
     # Preserve them on the first v0.18 start so existing encrypted data (ha ha ha, help us)
@@ -80,7 +80,7 @@ if [ "${DEMO_MODE:-false}" = "true" ]; then
     fi
 fi
 
-echo "Starting HomeLab with ENCRYPTION_KEY length: ${#ENCRYPTION_KEY}"
+echo "Starting Kaya with ENCRYPTION_KEY length: ${#ENCRYPTION_KEY}"
 
 echo "Running database migrations..."
 gosu homelab python /app/scripts/migrate_sqlite.py

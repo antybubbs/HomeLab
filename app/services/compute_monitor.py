@@ -14,7 +14,7 @@ def request_json(host,path):
         c=UnixConnection(host.base_url[7:]); c.request('GET',path); r=c.getresponse(); data=r.read()
         if r.status>=400: raise RuntimeError(f'Docker API HTTP {r.status}')
         return json.loads(data or b'null')
-    headers={'Accept':'application/json','User-Agent':'HomeLab/ComputeMonitor'}
+    headers={'Accept':'application/json','User-Agent':'Kaya/ComputeMonitor'}
     if host.platform=='proxmox':
         token=decrypt_secret(host.encrypted_token)
         if not host.token_id or not token or token=='[decryption failed]': raise RuntimeError('A valid Proxmox API token is required.')

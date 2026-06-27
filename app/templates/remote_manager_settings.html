@@ -42,12 +42,12 @@
       <div><span class="term-cyan">drwxr-xr-x</span> 3 root root 4096 Apr 15 18:44 ..</div>
       <div>-rw-r--r-- 1 deploy deploy 220 Apr 15 18:44 <span class="term-white">.bash_logout</span></div>
       <div><span class="term-green">-rwxr-xr-x</span> 1 deploy deploy 8192 May 1 08:55 deploy.sh</div>
-      <div><span class="term-green">deploy@homelab</span>:<span class="term-blue">~</span>$ <span class="term-cursor"></span></div>
+      <div><span class="term-green">deploy@kaya</span>:<span class="term-blue">~</span>$ <span class="term-cursor"></span></div>
     </div>
     <div class="remote-settings-grid two">
       <label>Color theme
         <select name="terminal_theme">
-          {% for value, label in [('homelab','HomeLab Default'),('homelabDark','HomeLab Dark'),('homelabLight','HomeLab Light'),('nightOwl','Night Owl'),('dracula','Dracula'),('monokai','Monokai'),('nord','Nord'),('oneDark','One Dark'),('tokyoNight','Tokyo Night'),('gruvboxDark','Gruvbox Dark'),('solarizedDark','Solarized Dark'),('catppuccinMocha','Catppuccin Mocha')] %}
+          {% for value, label in [('homelab','Kaya Default'),('homelabDark','Kaya Dark'),('homelabLight','Kaya Light'),('nightOwl','Night Owl'),('dracula','Dracula'),('monokai','Monokai'),('nord','Nord'),('oneDark','One Dark'),('tokyoNight','Tokyo Night'),('gruvboxDark','Gruvbox Dark'),('solarizedDark','Solarized Dark'),('catppuccinMocha','Catppuccin Mocha')] %}
           <option value="{{ value }}" {% if settings.terminal_theme == value %}selected{% endif %}>{{ label }}</option>
           {% endfor %}
         </select>

@@ -71,4 +71,4 @@ server.on("open", () => console.log("Guacamole connection opened"));
 server.on("close", () => console.log("Guacamole connection closed"));
 server.on("error", (_clientConnection, error) => console.error("Guacamole connection error", error));
 
-console.log(`HomeLab Guacamole bridge listening on ${port}, guacd ${guacdHost}:${guacdPort}`);
+console.log(`Kaya Guacamole bridge listening on ${port}, guacd ${guacdHost}:${guacdPort}`);

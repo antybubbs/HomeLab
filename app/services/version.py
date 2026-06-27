@@ -62,7 +62,7 @@ def _fetch_latest_release() -> tuple[str | None, str | None]:
         f"https://api.github.com/repos/{settings.github_repo}/releases/latest",
         headers={
             "Accept": "application/vnd.github+json",
-            "User-Agent": "HomeLab",
+            "User-Agent": "Kaya",
         },
     )
 

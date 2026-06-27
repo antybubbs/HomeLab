@@ -2,7 +2,7 @@
   "name": "homelab-remote-manager",
   "private": true,
   "version": "0.0.0",
-  "description": "HomeLab Remote Manager services",
+  "description": "Kaya Remote Manager services",
   "main": "scripts/guacamole-server.cjs",
   "dependencies": {
     "guacamole-lite": "^1.2.0",

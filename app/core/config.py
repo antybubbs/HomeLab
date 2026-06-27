@@ -3,6 +3,7 @@ from urllib.parse import urlparse
 
 from cryptography.fernet import Fernet
 from pydantic_settings import BaseSettings
+from app.core.branding import APP_BRAND_NAME
 
 
 class InvalidConfigurationError(RuntimeError):
@@ -10,7 +11,7 @@ class InvalidConfigurationError(RuntimeError):
 
 
 class Settings(BaseSettings):
-    app_name: str = "HomeLab"
+    app_name: str = APP_BRAND_NAME
     app_version: str = "dev"
     app_env: str = "production"
     base_url: str = "http://localhost:8080"

@@ -1,11 +1,12 @@
 from sqlalchemy.orm import Session
 
 from app.core.config import get_settings
+from app.core.branding import APP_BRAND_NAME
 from app.models.models import RemoteManagerSetting
 
 
 DEFAULT_SITE_SETTINGS = {
-    "app_name": "HomeLab",
+    "app_name": APP_BRAND_NAME,
     "base_url": "http://localhost:8080",
     "github_repo": "antybubbs/HomeLab",
     "version_check_interval_seconds": "1800",

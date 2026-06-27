@@ -93,8 +93,8 @@ def seed_database(database_path: Path) -> None:
         ])
 
         db.add_all([
-            Licence(licence_id="LIC-001", organisation="HomeLab Demo", product="Windows Server 2025", vendor="Microsoft", encrypted_product_key=encrypt_secret("DEMO-ONLY-AAAAA-BBBBB-CCCCC"), licence_type="Volume", activations="2", seats=4, osa_status="Active", expiry_date=date.today() + timedelta(days=210), is_favourite=True, notes="Not a real product key."),
-            Licence(licence_id="LIC-002", organisation="HomeLab Demo", product="Backup Suite", vendor="Example Software", encrypted_product_key=encrypt_secret("DEMO-ONLY-DDDDD-EEEEE-FFFFF"), licence_type="Subscription", activations="1", seats=10, osa_status="Active", expiry_date=date.today() + timedelta(days=95), notes="Not a real product key."),
+            Licence(licence_id="LIC-001", organisation="Kaya Demo", product="Windows Server 2025", vendor="Microsoft", encrypted_product_key=encrypt_secret("DEMO-ONLY-AAAAA-BBBBB-CCCCC"), licence_type="Volume", activations="2", seats=4, osa_status="Active", expiry_date=date.today() + timedelta(days=210), is_favourite=True, notes="Not a real product key."),
+            Licence(licence_id="LIC-002", organisation="Kaya Demo", product="Backup Suite", vendor="Example Software", encrypted_product_key=encrypt_secret("DEMO-ONLY-DDDDD-EEEEE-FFFFF"), licence_type="Subscription", activations="1", seats=10, osa_status="Active", expiry_date=date.today() + timedelta(days=95), notes="Not a real product key."),
         ])
 
         db.add_all([
@@ -106,7 +106,7 @@ def seed_database(database_path: Path) -> None:
         db.add(space)
         db.flush()
         db.add_all([
-            RunbookPage(space_id=space.id, title="Welcome to HomeLab", slug="welcome-to-homelab", summary="A quick tour of this public demo.", body="# Welcome\n\nTry creating and editing inventory. Everything resets during the daily refresh.\n\n> All records and credentials in this demo are synthetic.", tags="welcome,demo", is_pinned=True, created_by_id=users["admin"].id, updated_by_id=users["admin"].id),
+            RunbookPage(space_id=space.id, title="Welcome to Kaya", slug="welcome-to-kaya", summary="A quick tour of this public demo.", body="# Welcome\n\nTry creating and editing inventory. Everything resets during the daily refresh.\n\n> All records and credentials in this demo are synthetic.", tags="welcome,demo", is_pinned=True, created_by_id=users["admin"].id, updated_by_id=users["admin"].id),
             RunbookPage(space_id=space.id, title="Patch night checklist", slug="patch-night-checklist", summary="Example monthly maintenance workflow.", body="## Before maintenance\n\n- Confirm backups\n- Review monitoring\n- Notify users\n\n## After maintenance\n\n- Validate services\n- Record changes", tags="maintenance,checklist", is_pinned=True, created_by_id=users["editor"].id, updated_by_id=users["editor"].id),
             RunbookPage(space_id=space.id, title="Restore a container", slug="restore-a-container", summary="Example recovery procedure.", body="1. Select the latest verified backup.\n2. Restore into an isolated network.\n3. Validate data and configuration.\n4. Promote the restored workload.", tags="backup,recovery", created_by_id=users["editor"].id, updated_by_id=users["editor"].id),
         ])
@@ -147,7 +147,7 @@ def seed_database(database_path: Path) -> None:
 
 
 if __name__ == "__main__":
-    parser = argparse.ArgumentParser(description="Create a deterministic HomeLab public-demo database.")
+    parser = argparse.ArgumentParser(description="Create a deterministic Kaya public-demo database.")
     parser.add_argument("--database", type=Path, required=True)
     args = parser.parse_args()
     seed_database(args.database.resolve())

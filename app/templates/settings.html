@@ -11,7 +11,7 @@
 <div class="topbar">
   <div>
     <h1>Site Administration</h1>
-    <p class="muted">Global environment settings for HomeLab.</p>
+    <p class="muted">Global environment settings for {{ brand.name }}.</p>
   </div>
 </div>
 
@@ -26,7 +26,7 @@
     <div class="remote-settings-grid">
       <label>
         <strong></strong>Base URL</strong>
-        <small> The public URL used to access HomeLab. Once configured, HomeLab will automatically trust this hostname instead of allowing requests from any host.</small>
+        <small> The public URL used to access {{ brand.name }}. Once configured, {{ brand.name }} will automatically trust this hostname instead of allowing requests from any host.</small>
         <input name="base_url" type="url" value="{{ settings.get('base_url', '') }}" placeholder="http://localhost:8080">
       </label>
     </div>

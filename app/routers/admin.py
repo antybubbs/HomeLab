@@ -13,6 +13,7 @@ from starlette import status
 from urllib.parse import urlencode
 
 from app.core.config import get_settings
+from app.core.branding import APP_BRAND_NAME
 from app.core.csrf import csrf_context, validate_csrf_token
 from app.core.security import hash_password, verify_password
 from app.core.totp import (
@@ -54,7 +55,7 @@ CUSTOM_FIELD_MODULES = {
 }
 
 SITE_SETTING_KEYS = {
-    "app_name": "HomeLab",
+    "app_name": APP_BRAND_NAME,
     "base_url": "http://localhost:8080",
     "max_upload_mb": "25",
     "allowed_hosts": "",
@@ -1264,7 +1265,7 @@ def settings_page(
 @router.post("/system/site-administration")
 def save_settings(
     request: Request,
-    app_name: str = Form("HomeLab"),
+    app_name: str = Form(APP_BRAND_NAME),
     base_url: str = Form("http://localhost:8080"),
     github_repo: str = Form("antybubbs/HomeLab"),
     version_check_interval_seconds: str = Form("1800"),

@@ -11,12 +11,12 @@ if [ -z "$IMAGE" ]; then
 fi
 
 if ! command -v docker >/dev/null 2>&1; then
-  echo "Docker is required before installing HomeLab."
+  echo "Docker is required before installing Kaya."
   exit 1
 fi
 
 if ! docker compose version >/dev/null 2>&1; then
-  echo "Docker Compose v2 is required before installing HomeLab."
+  echo "Docker Compose v2 is required before installing Kaya."
   exit 1
 fi
 
@@ -67,7 +67,7 @@ PY
 cat > "$APP_DIR/.env" <<ENV
 HOMELAB_IMAGE=$IMAGE
 HOMELAB_PORT=8080
-APP_NAME=HomeLab
+APP_NAME=Kaya
 APP_ENV=production
 BASE_URL=http://localhost:8080
 ROOT_PATH=
@@ -83,7 +83,7 @@ SESSION_COOKIE_SECURE=false
 FORWARDED_ALLOW_IPS=*
 ENV
 
-echo "HomeLab has been installed to $APP_DIR"
+echo "Kaya has been installed to $APP_DIR"
 echo "Admin email: admin@example.local"
 echo "Temporary admin password: $ADMIN_PASSWORD"
 echo ""

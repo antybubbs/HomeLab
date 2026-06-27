@@ -1,6 +1,7 @@
 from ipaddress import ip_address as parse_ip_address
 import pandas as pd
 from sqlalchemy.orm import Session
+from app.core.branding import APP_BRAND_NAME
 from app.core.config import InvalidConfigurationError
 from app.core.security import encrypt_secret
 from app.models.models import CustomField, CustomFieldValue, IPAddress, Licence, User, VLAN
@@ -31,7 +32,7 @@ def read_csv_file(path: str):
         except Exception as exc:
             last_error = exc
     detail = f" {last_error}" if last_error else ""
-    raise ImportCSVError("The uploaded file could not be read as a CSV. Export a fresh template from HomeLab and save it as CSV before importing." + detail)
+    raise ImportCSVError(f"The uploaded file could not be read as a CSV. Export a fresh template from {APP_BRAND_NAME} and save it as CSV before importing." + detail)
 
 
 def clean(value):

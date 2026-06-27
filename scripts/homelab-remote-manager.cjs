@@ -138,4 +138,4 @@ server.on("connection", (ws) => {
   ws.on("close", () => cleanup(conn, null));
 });
 
-console.log(`HomeLab Remote Manager SSH service listening on ${bindHost}:${port}`);
+console.log(`Kaya Remote Manager SSH service listening on ${bindHost}:${port}`);

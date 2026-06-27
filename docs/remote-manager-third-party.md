@@ -1,6 +1,6 @@
 # Remote Manager Third-Party Notice
 
-HomeLab Remote Manager's replacement SSH service is based on the same core architecture used by Termix:
+Kaya Remote Manager's replacement SSH service is based on the same core architecture used by Termix:
 
 - WebSocket transport between browser and backend
 - Node.js SSH backend using `ssh2`

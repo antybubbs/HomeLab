@@ -538,7 +538,7 @@ async def rdp_check(request: Request, remote_id: int, db: Session = Depends(get_
     if not payload.get("username"):
         logs.append("No username was provided.")
     if not payload.get("password"):
-        logs.append("No password was provided. It is not stored by HomeLab.")
+        logs.append("No password was provided. It is not stored by Kaya.")
     if settings.get("guacamole_enabled") != "1":
         logs.append("Guacamole is disabled in Remote Manager Settings.")
         return JSONResponse({"ok": False, "logs": logs})

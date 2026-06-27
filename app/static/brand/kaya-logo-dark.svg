@@ -1,0 +1,23 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 760 220" role="img" aria-label="Kaya logo on dark"><rect width="760" height="220" fill="#0D0F13"/>
+  <defs>
+    <linearGradient id="kaya-orange" x1="42" y1="18" x2="204" y2="226" gradientUnits="userSpaceOnUse">
+      <stop offset="0" stop-color="#FFA733"/>
+      <stop offset="0.44" stop-color="#FF8A00"/>
+      <stop offset="1" stop-color="#E85A11"/>
+    </linearGradient>
+    <filter id="soft-shadow" x="-20%" y="-20%" width="140%" height="150%">
+      <feDropShadow dx="0" dy="9" stdDeviation="7" flood-color="#000" flood-opacity="0.35"/>
+    </filter>
+  </defs>
+<g transform="translate(0 0) scale(.82)">
+  <g filter="url(#soft-shadow)">
+    <path d="M70 204V82L128 34l58 48h-35l-23-19-37 31v110" fill="none" stroke="url(#kaya-orange)" stroke-width="18" stroke-linecap="round" stroke-linejoin="round"/>
+    <path d="M185 82h-54l-37 38 37 38 56 55h-43l-72-72a29 29 0 0 1 0-42l44-45h69" fill="none" stroke="url(#kaya-orange)" stroke-width="18" stroke-linecap="round" stroke-linejoin="round"/>
+    <rect x="50" y="98" width="50" height="28" rx="4" fill="#0D0F13" stroke="#2D333C" stroke-width="3"/>
+    <rect x="50" y="135" width="50" height="28" rx="4" fill="#0D0F13" stroke="#2D333C" stroke-width="3"/>
+    <rect x="50" y="172" width="50" height="28" rx="4" fill="#0D0F13" stroke="#2D333C" stroke-width="3"/>
+    <circle cx="62" cy="112" r="4" fill="#FF8A00"/><circle cx="62" cy="149" r="4" fill="#FF8A00"/><circle cx="62" cy="186" r="4" fill="#FF8A00"/>
+    <rect x="74" y="110" width="14" height="4" rx="2" fill="#687280"/><rect x="74" y="147" width="14" height="4" rx="2" fill="#687280"/><rect x="74" y="184" width="14" height="4" rx="2" fill="#687280"/>
+    <rect x="118" y="70" width="8" height="8" fill="#FF8A00"/><rect x="130" y="70" width="8" height="8" fill="#FF8A00"/><rect x="118" y="82" width="8" height="8" fill="#FF8A00"/><rect x="130" y="82" width="8" height="8" fill="#FF8A00"/>
+  </g>
+</g><g transform="translate(232 37)"><g fill="#F8FAFC"><path d="M14 84h22l35-31h28L55 92l47 45H74l-38-36v36H14z"/><path d="M142 137h-24l42-84h22l42 84h-24l-29-59z"/><path d="M259 137h-23l39-43-39-41h25l26 27 26-27h25l-39 41 39 43h-23l-28-30z"/><path d="M374 137h-24l42-84h22l42 84h-24l-29-59z"/></g><circle cx="171" cy="117" r="6" fill="#FF8A00"/><circle cx="403" cy="117" r="6" fill="#FF8A00"/></g><text x="119" y="162" fill="#CBD5E1" font-family="Inter, Arial, sans-serif" font-size="12" letter-spacing="2.6">YOUR INFRASTRUCTURE. YOUR HOME.</text></svg>

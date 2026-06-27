@@ -1,6 +1,7 @@
 import secrets
 import time
 from fastapi import HTTPException, Request, status
+from app.core.branding import BRAND_CONTEXT
 from app.services.version import version_status
 
 CSRF_SESSION_KEY = "csrf_token"
@@ -19,6 +20,7 @@ def csrf_context(request: Request, include_version: bool = True) -> dict[str, ob
     context: dict[str, object] = {
         "csrf_token": csrf_token(request),
         "asset_version": ASSET_VERSION,
+        "brand": BRAND_CONTEXT,
     }
 
     if include_version:

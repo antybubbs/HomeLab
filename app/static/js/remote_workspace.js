@@ -329,13 +329,43 @@
 
   const closeMenus = (except = null) => {
     root.querySelectorAll(".remote-connect-menu[open]").forEach((menu) => {
-      if (menu !== except) menu.open = false;
+      if (menu !== except) {
+        menu.open = false;
+        const panel = menu.querySelector("div");
+        if (panel) {
+          panel.style.left = "";
+          panel.style.top = "";
+        }
+      }
     });
+  };
+
+  const positionConnectMenu = (menu) => {
+    const summary = menu?.querySelector("summary");
+    const panel = menu?.querySelector("div");
+    if (!summary || !panel || !menu.open) return;
+
+    panel.style.left = "0px";
+    panel.style.top = "0px";
+    const summaryRect = summary.getBoundingClientRect();
+    const panelRect = panel.getBoundingClientRect();
+    const margin = 8;
+    const left = clamp(summaryRect.right - panelRect.width, margin, window.innerWidth - panelRect.width - margin);
+    const top = clamp(summaryRect.bottom + 4, margin, window.innerHeight - panelRect.height - margin);
+    panel.style.left = `${left}px`;
+    panel.style.top = `${top}px`;
+  };
+
+  const positionOpenConnectMenu = () => {
+    positionConnectMenu(root.querySelector(".remote-connect-menu[open]"));
   };
 
   root.addEventListener("toggle", (event) => {
     const menu = event.target.closest(".remote-connect-menu");
-    if (menu && menu.open) closeMenus(menu);
+    if (menu && menu.open) {
+      closeMenus(menu);
+      positionConnectMenu(menu);
+    }
   }, true);
 
   root.addEventListener("click", (event) => {
@@ -358,6 +388,9 @@
   document.addEventListener("keydown", (event) => {
     if (event.key === "Escape") closeMenus();
   });
+
+  window.addEventListener("resize", positionOpenConnectMenu);
+  hostList?.addEventListener("scroll", positionOpenConnectMenu, { passive: true });
 
   if (searchInput) {
     searchInput.addEventListener("input", filterHosts);
@@ -391,6 +424,7 @@
 
       const move = (moveEvent) => {
         setHostRailWidth(startWidth + moveEvent.clientX - startX);
+        positionOpenConnectMenu();
       };
 
       const stop = () => {

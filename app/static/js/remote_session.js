@@ -20,7 +20,7 @@
   };
 
   const terminalThemes = {
-    homelab: {
+    kaya: {
       background: "#011627",
       foreground: "#d6deeb",
       cursor: "#d6deeb",
@@ -43,7 +43,7 @@
       brightCyan: "#7fdbca",
       brightWhite: "#ffffff",
     },
-    homelabDark: {
+    kayaDark: {
       background: "#011627",
       foreground: "#d6deeb",
       cursor: "#d6deeb",
@@ -66,7 +66,7 @@
       brightCyan: "#7fdbca",
       brightWhite: "#ffffff",
     },
-    homelabLight: {
+    kayaLight: {
       background: "#ffffff",
       foreground: "#18181b",
       cursor: "#18181b",
@@ -469,7 +469,7 @@
   };
 
   const terminalSettings = {
-    theme: root.dataset.terminalTheme || "homelab",
+    theme: root.dataset.terminalTheme || "kaya",
     fontFamily: terminalFonts[root.dataset.terminalFontFamily] || terminalFonts["Caskaydia Cove Nerd Font Mono"],
     fontSize: readInt(root.dataset.terminalFontSize, 14, 8, 28),
     cursorStyle: root.dataset.terminalCursorStyle || "bar",
@@ -524,9 +524,12 @@
     });
   };
 
-  const selectedTheme = terminalThemes[terminalSettings.theme] || terminalThemes.homelab;
+  terminalThemes.homelab = terminalThemes.kaya;
+  terminalThemes.homelabDark = terminalThemes.kayaDark;
+  terminalThemes.homelabLight = terminalThemes.kayaLight;
+  const selectedTheme = terminalThemes[terminalSettings.theme] || terminalThemes.kaya;
   terminalEl.style.backgroundColor = selectedTheme.background;
-  terminalEl.dataset.homelabSshRenderer = "rewrite-2";
+  terminalEl.dataset.kayaSshRenderer = "rewrite-2";
 
   const term = new window.Terminal({
     allowTransparency: false,
@@ -637,7 +640,7 @@
   });
   window.addEventListener("message", (event) => {
     if (event.origin !== window.location.origin) return;
-    if (event.data && event.data.type === "homelab:remote-tab-active") {
+    if (event.data && event.data.type === "kaya:remote-tab-active") {
       window.setTimeout(fit, 50);
       if (connected) term.focus();
     }

@@ -1,8 +1,8 @@
-name: homelab-demo
+name: kaya-demo
 
 services:
-  homelab:
-    image: ${HOMELAB_IMAGE:-ghcr.io/antybubbs/homelab:latest}
+  kaya:
+    image: ${KAYA_IMAGE:-ghcr.io/antybubbs/kaya:latest}
     restart: unless-stopped
     env_file:
       - path: .env.demo
@@ -19,7 +19,7 @@ services:
       DEMO_GENERATION_FILE: /app/data/.demo-generation
       GUACD_HOST: ""
     ports:
-      - "${HOMELAB_DEMO_PORT:-8080}:8080"
+      - "${KAYA_DEMO_PORT:-8080}:8080"
     volumes:
       - ./demo/data:/app/data
       - ./demo/uploads:/app/uploads
@@ -42,19 +42,19 @@ services:
       - sh
       - -c
       - |
-        if [ -f /app/demo-seed/homelab.db ]; then
+        if [ -f /app/demo-seed/kaya.db ]; then
           echo "Resetting public demo from seed before startup..."
-          cp /app/demo-seed/homelab.db /app/data/homelab.db
-          chown homelab:homelab /app/data/homelab.db
-          rm -f /app/data/homelab.db-wal /app/data/homelab.db-shm
+          cp /app/demo-seed/kaya.db /app/data/kaya.db
+          chown kaya:kaya /app/data/kaya.db
+          rm -f /app/data/kaya.db-wal /app/data/kaya.db-shm
           find /app/uploads -mindepth 1 -maxdepth 1 -exec rm -rf -- {} +
           if [ -d /app/demo-seed/uploads ]; then
             cp -a /app/demo-seed/uploads/. /app/uploads/
           fi
-          chown -R homelab:homelab /app/uploads
+          chown -R kaya:kaya /app/uploads
           date +%s > /app/data/.demo-generation
-          chown homelab:homelab /app/data/.demo-generation
+          chown kaya:kaya /app/data/.demo-generation
         else
           echo "Public demo seed database does not exist yet; Kaya will create it during startup."
         fi
-        exec /usr/local/bin/homelab-entrypoint sh -c 'exec uvicorn app.main:app --host 0.0.0.0 --port 8080 --proxy-headers --forwarded-allow-ips "$${FORWARDED_ALLOW_IPS:-*}"'
+        exec /usr/local/bin/kaya-entrypoint sh -c 'exec uvicorn app.main:app --host 0.0.0.0 --port 8080 --proxy-headers --forwarded-allow-ips "$${FORWARDED_ALLOW_IPS:-*}"'

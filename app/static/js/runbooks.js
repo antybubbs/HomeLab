@@ -1,5 +1,5 @@
 (function () {
-  const viewStorageKey = "homelab.runbook.view";
+  const viewStorageKey = "kaya.runbook.view";
   const viewButtons = Array.from(document.querySelectorAll("[data-runbook-view-button]"));
   const views = Array.from(document.querySelectorAll("[data-runbook-view]"));
   const codeLanguages = [

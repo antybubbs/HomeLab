@@ -9,8 +9,8 @@ ENV PYTHONDONTWRITEBYTECODE=1 \
 
 WORKDIR /app
 
-RUN addgroup --system homelab \
-    && adduser --system --ingroup homelab homelab \
+RUN addgroup --system kaya \
+    && adduser --system --ingroup kaya kaya \
     && apt-get update \
     && apt-get install -y --no-install-recommends gosu iputils-ping nodejs npm \
     && rm -rf /var/lib/apt/lists/*
@@ -23,14 +23,14 @@ RUN npm install --omit=dev --no-audit --no-fund
 
 COPY app ./app
 COPY scripts ./scripts
-COPY docker-entrypoint.sh /usr/local/bin/homelab-entrypoint
+COPY docker-entrypoint.sh /usr/local/bin/kaya-entrypoint
 
 RUN mkdir -p /app/data /app/uploads \
-    && chown -R homelab:homelab /app \
-    && sed -i 's/\r$//' /usr/local/bin/homelab-entrypoint \
-    && chmod +x /usr/local/bin/homelab-entrypoint
+    && chown -R kaya:kaya /app \
+    && sed -i 's/\r$//' /usr/local/bin/kaya-entrypoint \
+    && chmod +x /usr/local/bin/kaya-entrypoint
 
 EXPOSE 8080
 
-ENTRYPOINT ["/usr/local/bin/homelab-entrypoint"]
+ENTRYPOINT ["/usr/local/bin/kaya-entrypoint"]
 CMD ["sh", "-c", "exec uvicorn app.main:app --host 0.0.0.0 --port 8080 --proxy-headers --forwarded-allow-ips \"${FORWARDED_ALLOW_IPS:-*}\""]

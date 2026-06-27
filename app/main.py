@@ -16,7 +16,7 @@ from app.db.session import Base, engine, SessionLocal
 from app.models.models import AuditLog, User, VLAN
 from app.routers import auth, dashboard, licences, admin, ip_addresses, hardware_assets, network_monitor, remote_manager, runbooks, domain_manager, compute_manager, rack_manager
 from app.services.guacamole_bridge import stop_guacamole_bridge
-from app.services.homelab_remote_service import start_homelab_remote_service, stop_homelab_remote_service
+from app.services.kaya_remote_service import start_kaya_remote_service, stop_kaya_remote_service
 from app.services.network_monitor import monitor_loop
 from app.services.domain_polling import domain_poll_loop
 from app.services.compute_monitor import compute_monitor_loop
@@ -399,7 +399,7 @@ async def on_startup():
     bootstrap()
     if settings.demo_mode:
         return
-    start_homelab_remote_service()
+    start_kaya_remote_service()
     global monitor_task, domain_poll_task, compute_monitor_task
     monitor_task = asyncio.create_task(monitor_loop())
     domain_poll_task = asyncio.create_task(domain_poll_loop())
@@ -414,7 +414,7 @@ async def on_shutdown():
         domain_poll_task.cancel()
     if compute_monitor_task:
         compute_monitor_task.cancel()
-    stop_homelab_remote_service()
+    stop_kaya_remote_service()
     stop_guacamole_bridge()
 
 

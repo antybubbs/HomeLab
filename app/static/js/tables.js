@@ -1,5 +1,5 @@
 (function () {
-  const storagePrefix = "homelab.table.columns.";
+  const storagePrefix = "kaya.table.columns.";
 
   function cellValue(row, index) {
     return (row.cells[index]?.textContent || "").trim().toLowerCase();

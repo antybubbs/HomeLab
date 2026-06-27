@@ -227,11 +227,11 @@ if (root) {
   window.addEventListener("focus", scheduleResize);
   window.addEventListener("message", (event) => {
     if (event.origin !== window.location.origin) return;
-    if (event.data && event.data.type === "homelab:remote-tab-active") {
+    if (event.data && event.data.type === "kaya:remote-tab-active") {
       window.setTimeout(scheduleResize, 50);
       if (displayElement) displayElement.focus({ preventScroll: true });
     }
-    if (event.data && event.data.type === "homelab:remote-display-refresh") {
+    if (event.data && event.data.type === "kaya:remote-display-refresh") {
       lastRequestedSize = "";
       scheduleResize();
     }

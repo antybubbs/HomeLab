@@ -4,6 +4,9 @@
   if (!form || !preview) return;
 
   const themes = {
+    kaya: { background: "#011627", foreground: "#d6deeb" },
+    kayaDark: { background: "#011627", foreground: "#d6deeb" },
+    kayaLight: { background: "#ffffff", foreground: "#18181b" },
     homelab: { background: "#011627", foreground: "#d6deeb" },
     homelabDark: { background: "#011627", foreground: "#d6deeb" },
     homelabLight: { background: "#ffffff", foreground: "#18181b" },
@@ -30,13 +33,13 @@
   };
 
   const updatePreview = () => {
-    const themeValue = form.elements.terminal_theme?.value || "homelab";
+    const themeValue = form.elements.terminal_theme?.value || "kaya";
     const fontValue = form.elements.terminal_font_family?.value || "Caskaydia Cove Nerd Font Mono";
     const fontSize = form.elements.terminal_font_size?.value || "14";
     const letterSpacing = form.elements.terminal_letter_spacing?.value || "0";
     const lineHeight = form.elements.terminal_line_height?.value || "1";
 
-    const theme = themes[themeValue] || themes.homelab;
+    const theme = themes[themeValue] || themes.kaya;
 
     preview.style.backgroundColor = theme.background;
     preview.style.color = theme.foreground;

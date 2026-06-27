@@ -1,7 +1,7 @@
 APP_BRAND_NAME = "Kaya"
 APP_BRAND_TAGLINE = "Your Infrastructure. Your Home."
 APP_BRAND_PRODUCT = "Kaya"
-APP_BRAND_LEGACY_NAME = "HomeLab"
+APP_BRAND_LEGACY_NAME = "Kaya"
 
 BRAND_CONTEXT = {
     "name": APP_BRAND_NAME,

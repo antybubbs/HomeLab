@@ -1,6 +1,6 @@
 (function () {
-  const storageKey = "homelab.sidebar.openMenus";
-  const collapseStorageKey = "homelab.sidebar.collapsed";
+  const storageKey = "kaya.sidebar.openMenus";
+  const collapseStorageKey = "kaya.sidebar.collapsed";
   const themeStorageKey = "kaya.ui.theme";
   const legacyThemeStorageKey = "homelab.theme";
   const dashboardPath = "/dashboard";

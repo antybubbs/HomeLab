@@ -16,14 +16,14 @@ class Settings(BaseSettings):
     app_env: str = "production"
     base_url: str = "http://localhost:8080"
     root_path: str = ""
-    database_url: str = "sqlite:////app/data/homelab.db"
+    database_url: str = "sqlite:////app/data/kaya.db"
     secret_key: str = ""
     encryption_key: str = ""
     session_cookie_secure: bool = False
     upload_dir: str = "/app/uploads"
     max_upload_mb: int = 25
     allowed_hosts: str = ""
-    github_repo: str = "antybubbs/HomeLab"
+    github_repo: str = "antybubbs/Kaya"
     guacd_host: str = ""
     guacd_port: str = ""
     version_check_interval_seconds: int = 1800
@@ -40,7 +40,7 @@ def trusted_hosts(settings: Settings) -> list[str]:
     if not settings.allowed_hosts.strip():
         return ["*"]
 
-    hosts = {"localhost", "127.0.0.1", "::1", "homelab"}
+    hosts = {"localhost", "127.0.0.1", "::1", "kaya", "homelab"}
 
     parsed_host = urlparse(settings.base_url).hostname
     if parsed_host:

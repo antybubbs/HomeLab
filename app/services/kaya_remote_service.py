@@ -6,7 +6,7 @@ from pathlib import Path
 _process: subprocess.Popen | None = None
 
 
-def stop_homelab_remote_service() -> None:
+def stop_kaya_remote_service() -> None:
     global _process
     if not _process:
         return
@@ -19,18 +19,18 @@ def stop_homelab_remote_service() -> None:
     _process = None
 
 
-def start_homelab_remote_service() -> None:
+def start_kaya_remote_service() -> None:
     global _process
     if _process and _process.poll() is None:
         return
 
-    script = Path("/app/scripts/homelab-remote-manager.cjs")
+    script = Path("/app/scripts/kaya-remote-manager.cjs")
     if not script.exists():
-        script = Path("scripts/homelab-remote-manager.cjs")
+        script = Path("scripts/kaya-remote-manager.cjs")
     if not script.exists():
         return
 
     env = os.environ.copy()
-    env.setdefault("HOMELAB_REMOTE_WS_HOST", "127.0.0.1")
-    env.setdefault("HOMELAB_REMOTE_WS_PORT", "30009")
+    env.setdefault("KAYA_REMOTE_WS_HOST", os.environ.get("HOMELAB_REMOTE_WS_HOST", "127.0.0.1"))
+    env.setdefault("KAYA_REMOTE_WS_PORT", os.environ.get("HOMELAB_REMOTE_WS_PORT", "30009"))
     _process = subprocess.Popen(["node", str(script)], env=env)

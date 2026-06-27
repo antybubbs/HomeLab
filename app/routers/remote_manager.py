@@ -31,7 +31,7 @@ SETTINGS = {
     "guacamole_enabled": "0",
     "guacd_host": "",
     "guacd_port": "4822",
-    "terminal_theme": "homelab",
+    "terminal_theme": "kaya",
     "terminal_font_family": "Caskaydia Cove Nerd Font Mono",
     "terminal_font_size": "14",
     "terminal_cursor_style": "bar",
@@ -175,16 +175,19 @@ def clean_global_setting(key: str, value: str) -> str:
         return clean_float_text(value, 1, 0.8, 2)
     if key == "terminal_theme":
         legacy_themes = {
-            "termix": "homelab",
-            "termixDark": "homelabDark",
-            "termixLight": "homelabLight",
+            "termix": "kaya",
+            "termixDark": "kayaDark",
+            "termixLight": "kayaLight",
+            "homelab": "kaya",
+            "homelabDark": "kayaDark",
+            "homelabLight": "kayaLight",
             "night-owl": "nightOwl",
             "one-dark": "oneDark",
             "gruvbox": "gruvboxDark",
             "solarized-dark": "solarizedDark",
         }
         value = legacy_themes.get(value, value)
-        return clean_choice(value, {"homelab", "homelabDark", "homelabLight", "dracula", "monokai", "nord", "gruvboxDark", "gruvboxLight", "solarizedDark", "solarizedLight", "oneDark", "tokyoNight", "ayuDark", "materialTheme", "palenight", "oceanicNext", "nightOwl", "synthwave84", "cobalt2", "snazzy", "atomOneDark", "catppuccinMocha"}, SETTINGS[key])
+        return clean_choice(value, {"kaya", "kayaDark", "kayaLight", "dracula", "monokai", "nord", "gruvboxDark", "gruvboxLight", "solarizedDark", "solarizedLight", "oneDark", "tokyoNight", "ayuDark", "materialTheme", "palenight", "oceanicNext", "nightOwl", "synthwave84", "cobalt2", "snazzy", "atomOneDark", "catppuccinMocha"}, SETTINGS[key])
     if key == "terminal_cursor_style":
         return clean_choice(value, {"bar", "block", "underline"}, SETTINGS[key])
     if key == "terminal_bell_style":

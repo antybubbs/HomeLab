@@ -47,7 +47,7 @@
     <div class="remote-settings-grid two">
       <label>Color theme
         <select name="terminal_theme">
-          {% for value, label in [('homelab','Kaya Default'),('homelabDark','Kaya Dark'),('homelabLight','Kaya Light'),('nightOwl','Night Owl'),('dracula','Dracula'),('monokai','Monokai'),('nord','Nord'),('oneDark','One Dark'),('tokyoNight','Tokyo Night'),('gruvboxDark','Gruvbox Dark'),('solarizedDark','Solarized Dark'),('catppuccinMocha','Catppuccin Mocha')] %}
+          {% for value, label in [('kaya','Kaya Default'),('kayaDark','Kaya Dark'),('kayaLight','Kaya Light'),('nightOwl','Night Owl'),('dracula','Dracula'),('monokai','Monokai'),('nord','Nord'),('oneDark','One Dark'),('tokyoNight','Tokyo Night'),('gruvboxDark','Gruvbox Dark'),('solarizedDark','Solarized Dark'),('catppuccinMocha','Catppuccin Mocha')] %}
           <option value="{{ value }}" {% if settings.terminal_theme == value %}selected{% endif %}>{{ label }}</option>
           {% endfor %}
         </select>

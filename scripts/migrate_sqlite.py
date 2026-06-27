@@ -3,7 +3,7 @@
 import sqlite3
 from pathlib import Path
 
-DB_PATH = Path("/app/data/homelab.db")
+DB_PATH = Path("/app/data/kaya.db")
 
 
 def column_exists(cursor, table, column):

@@ -1,8 +1,8 @@
 const { WebSocket, WebSocketServer } = require("ws");
 const { Client } = require("ssh2");
 
-const port = Number.parseInt(process.env.HOMELAB_REMOTE_WS_PORT || "30009", 10);
-const bindHost = process.env.HOMELAB_REMOTE_WS_HOST || "127.0.0.1";
+const port = Number.parseInt(process.env.KAYA_REMOTE_WS_PORT || process.env.HOMELAB_REMOTE_WS_PORT || "30009", 10);
+const bindHost = process.env.KAYA_REMOTE_WS_HOST || process.env.HOMELAB_REMOTE_WS_HOST || "127.0.0.1";
 
 const UTF8_ENV = {
   TERM: "xterm-256color",

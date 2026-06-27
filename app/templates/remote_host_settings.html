@@ -30,7 +30,7 @@
   <section class="remote-settings-card">
     <header><span>Terminal overrides</span></header>
     <div class="remote-settings-grid two">
-      {{ override_select('terminal_theme', 'Theme', [('homelab','Kaya Default'),('homelabDark','Kaya Dark'),('homelabLight','Kaya Light'),('nightOwl','Night Owl'),('dracula','Dracula'),('monokai','Monokai'),('nord','Nord'),('oneDark','One Dark'),('tokyoNight','Tokyo Night')], remote_terminal_overrides) }}
+      {{ override_select('terminal_theme', 'Theme', [('kaya','Kaya Default'),('kayaDark','Kaya Dark'),('kayaLight','Kaya Light'),('nightOwl','Night Owl'),('dracula','Dracula'),('monokai','Monokai'),('nord','Nord'),('oneDark','One Dark'),('tokyoNight','Tokyo Night')], remote_terminal_overrides) }}
       <label>Font size<input name="override_terminal_font_size" type="number" min="8" max="28" placeholder="Global {{ remote_defaults.terminal_font_size }}" value="{{ remote_terminal_overrides.get('terminal_font_size', '') }}"></label>
       {{ override_select('terminal_cursor_style', 'Cursor style', [('bar','Bar'),('block','Block'),('underline','Underline')], remote_terminal_overrides) }}
       {{ override_select('terminal_cursor_blink', 'Cursor blinking', [('1','On'),('0','Off')], remote_terminal_overrides) }}

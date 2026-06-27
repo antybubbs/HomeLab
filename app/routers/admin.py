@@ -482,12 +482,12 @@ def export_csv(
     if module == "ip-addresses":
         csv_data = export_ip_addresses_csv(db)
         entity = "ip_address"
-        filename = "homelab-ip-addresses.csv"
+        filename = "kaya-ip-addresses.csv"
         detail = "Exported IP address CSV"
     else:
         csv_data = export_licences_csv(db)
         entity = "licence"
-        filename = "homelab-licences.csv"
+        filename = "kaya-licences.csv"
         detail = "Exported licence CSV"
 
     write_audit(
@@ -1267,7 +1267,7 @@ def save_settings(
     request: Request,
     app_name: str = Form(APP_BRAND_NAME),
     base_url: str = Form("http://localhost:8080"),
-    github_repo: str = Form("antybubbs/HomeLab"),
+    github_repo: str = Form("antybubbs/Kaya"),
     version_check_interval_seconds: str = Form("1800"),
     guacd_host: str = Form(""),
     guacd_port: str = Form(""),

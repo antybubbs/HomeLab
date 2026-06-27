@@ -4,18 +4,18 @@
 {% if host.platform == 'docker_agent' %}<section class="panel section-gap agent-setup-panel"><h2>Kaya Agent</h2><p class="muted">Install this agent on the Docker server using the docker-compose file below. It reports back to Kaya over HTTPS and does not require opening the Docker API port.</p>{% if agent_token %}<div class="alert"><strong>Copy this token now.</strong> For security, it will never be shown again. Regenerating it will immediately invalidate the current token.</div>{% endif %}<div class="agent-token-row"><label class="agent-token-field">Agent token{% if agent_token %}<input readonly value="{{ agent_token }}" autocomplete="off" spellcheck="false">{% else %}<input readonly value="********************************" aria-label="Agent token hidden">{% endif %}</label>{% if user.role in ['admin','editor'] %}<form class="agent-token-action" method="post" action="/infrastructure/vm-docker-manager/hosts/{{ host.id }}/regenerate-agent-token"><input type="hidden" name="csrf_token" value="{{ csrf_token }}"><button class="button secondary">Regenerate agent token</button></form>{% endif %}</div>{% if not agent_token %}<p class="muted agent-token-note">The token is stored as a one-way hash and cannot be viewed again.</p>{% endif %}<label class="agent-compose-field">docker-compose.yml file
   <textarea readonly rows="15">
 # This docker compose file is for the Kaya Docker agent, which allows Kaya to monitor and manage this host without exposing the Docker API port.
-# It is a separate repo and is maintained by the Kaya team. For more information, see https://github.com/antybubbs/HomeLab-Docker-Agent
+# It is a separate repo and is maintained by the Kaya team. For more information, see https://github.com/antybubbs/Kaya-Docker-Agent
 services:
-  homelab-agent:
-    image: ghcr.io/antybubbs/homelab-docker-agent:latest
-    container_name: homelab-docker-agent
+  kaya-agent:
+    image: ghcr.io/antybubbs/kaya-docker-agent:latest
+    container_name: kaya-docker-agent
     restart: unless-stopped
     environment:
-      HOMELAB_URL: "{{ request.base_url|string|trim('/') }}"
-      HOMELAB_AGENT_TOKEN: "Paste the agent token from above"
-      HOMELAB_AGENT_NAME: "{{ host.name }}"
-      HOMELAB_POLL_SECONDS: "30"
-      HOMELAB_VERIFY_TLS: "true"
+      KAYA_URL: "{{ request.base_url|string|trim('/') }}"
+      KAYA_AGENT_TOKEN: "Paste the agent token from above"
+      KAYA_AGENT_NAME: "{{ host.name }}"
+      KAYA_POLL_SECONDS: "30"
+      KAYA_VERIFY_TLS: "true"
     volumes:
          - /var/run/docker.sock:/var/run/docker.sock:ro
 </textarea></label></section>

@@ -12,10 +12,10 @@
   const hostResizer = root.querySelector("[data-remote-host-resizer]");
   const noResults = root.querySelector("[data-remote-no-results]");
   const sessionVersion = root.dataset.remoteSessionVersion || "1";
-  const storageKey = `homelab.remote.tabs.${sessionVersion}`;
-  const railWidthStorageKey = "homelab.remote.hostRailWidth";
-  const groupViewStorageKey = "homelab.remote.groupView";
-  const collapsedGroupsStorageKey = "homelab.remote.collapsedGroups";
+  const storageKey = `kaya.remote.tabs.${sessionVersion}`;
+  const railWidthStorageKey = "kaya.remote.hostRailWidth";
+  const groupViewStorageKey = "kaya.remote.groupView";
+  const collapsedGroupsStorageKey = "kaya.remote.collapsedGroups";
   const minimumHostRailWidth = 200;
   if (!tabbar || !panels || !empty) return;
 
@@ -61,7 +61,7 @@
     const iframe = panels.querySelector(`[data-remote-panel="${CSS.escape(id)}"] iframe`);
     if (!iframe || !iframe.contentWindow) return;
     window.setTimeout(() => {
-      iframe.contentWindow.postMessage({ type: "homelab:remote-tab-active" }, window.location.origin);
+      iframe.contentWindow.postMessage({ type: "kaya:remote-tab-active" }, window.location.origin);
     }, delay);
   };
 
@@ -113,7 +113,7 @@
     const tab = tabs.find((candidate) => candidate.id === id);
     if (!iframe || !tab) return;
     if (tab.protocol === "rdp" && iframe.contentWindow) {
-      iframe.contentWindow.postMessage({ type: "homelab:remote-display-refresh" }, window.location.origin);
+      iframe.contentWindow.postMessage({ type: "kaya:remote-display-refresh" }, window.location.origin);
       return;
     }
     iframe.src = iframe.src;

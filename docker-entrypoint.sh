@@ -2,7 +2,7 @@
 set -eu
 
 mkdir -p /app/data /app/uploads
-chown -R homelab:homelab /app/data /app/uploads
+chown -R kaya:kaya /app/data /app/uploads
 
 SECRETS_FILE="/app/data/.runtime.env"
 
@@ -39,7 +39,7 @@ SECRET_KEY=$PERSISTED_SECRET_KEY
 ENCRYPTION_KEY=$PERSISTED_ENCRYPTION_KEY
 EOF
 
-    chown homelab:homelab "$SECRETS_FILE"
+    chown kaya:kaya "$SECRETS_FILE"
     chmod 600 "$SECRETS_FILE"
 fi
 
@@ -50,39 +50,48 @@ set +a
 export SECRET_KEY
 export ENCRYPTION_KEY
 
+DATABASE_FILE="/app/data/kaya.db"
+LEGACY_DATABASE_FILE="/app/data/homelab.db"
+if [ ! -f "$DATABASE_FILE" ] && [ -f "$LEGACY_DATABASE_FILE" ]; then
+    echo "Migrating legacy HomeLab database filename to Kaya..."
+    mv "$LEGACY_DATABASE_FILE" "$DATABASE_FILE"
+    [ ! -f "$LEGACY_DATABASE_FILE-wal" ] || mv "$LEGACY_DATABASE_FILE-wal" "$DATABASE_FILE-wal"
+    [ ! -f "$LEGACY_DATABASE_FILE-shm" ] || mv "$LEGACY_DATABASE_FILE-shm" "$DATABASE_FILE-shm"
+    chown kaya:kaya "$DATABASE_FILE"
+fi
 if [ "${DEMO_MODE:-false}" = "true" ]; then
     DEMO_SEED_DIR="${DEMO_SEED_DIR:-/app/demo-seed}"
-    DEMO_SEED_DATABASE="$DEMO_SEED_DIR/homelab.db"
-    DEMO_DATABASE="/app/data/homelab.db"
+    DEMO_SEED_DATABASE="$DEMO_SEED_DIR/kaya.db"
+    DEMO_DATABASE="/app/data/kaya.db"
     mkdir -p "$DEMO_SEED_DIR" "$DEMO_SEED_DIR/uploads"
-    chown -R homelab:homelab "$DEMO_SEED_DIR"
+    chown -R kaya:kaya "$DEMO_SEED_DIR"
 
     if [ "${DEMO_REBUILD_SEED:-false}" = "true" ] || [ ! -f "$DEMO_SEED_DATABASE" ]; then
         echo "Creating public demo seed database..."
-        gosu homelab python -m scripts.seed_demo --database "$DEMO_SEED_DATABASE"
+        gosu kaya python -m scripts.seed_demo --database "$DEMO_SEED_DATABASE"
     fi
 
     if [ "${DEMO_RESET_ON_START:-false}" = "true" ] || [ ! -f "$DEMO_DATABASE" ]; then
         echo "Resetting public demo from seed..."
         cp "$DEMO_SEED_DATABASE" "$DEMO_DATABASE"
-        chown homelab:homelab "$DEMO_DATABASE"
-        rm -f /app/data/homelab.db-wal /app/data/homelab.db-shm
+        chown kaya:kaya "$DEMO_DATABASE"
+        rm -f /app/data/kaya.db-wal /app/data/kaya.db-shm
         find /app/uploads -mindepth 1 -maxdepth 1 -exec rm -rf -- {} +
         if [ -d "$DEMO_SEED_DIR/uploads" ]; then
             cp -a "$DEMO_SEED_DIR/uploads/." /app/uploads/
         fi
-        chown -R homelab:homelab /app/uploads
+        chown -R kaya:kaya /app/uploads
     fi
 
     if [ "${DEMO_RESET_ON_START:-false}" = "true" ] || [ ! -s "${DEMO_GENERATION_FILE:-/app/data/.demo-generation}" ]; then
         printf '%s-%s\n' "$(date +%s)" "$$" > "${DEMO_GENERATION_FILE:-/app/data/.demo-generation}"
-        chown homelab:homelab "${DEMO_GENERATION_FILE:-/app/data/.demo-generation}"
+        chown kaya:kaya "${DEMO_GENERATION_FILE:-/app/data/.demo-generation}"
     fi
 fi
 
 echo "Starting Kaya with ENCRYPTION_KEY length: ${#ENCRYPTION_KEY}"
 
 echo "Running database migrations..."
-gosu homelab python /app/scripts/migrate_sqlite.py
+gosu kaya python /app/scripts/migrate_sqlite.py
 
-exec gosu homelab "$@"
+exec gosu kaya "$@"

@@ -1,12 +1,12 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-APP_DIR="${APP_DIR:-/opt/homelab}"
-IMAGE="${1:-ghcr.io/antybubbs/homelab:latest}"
+APP_DIR="${APP_DIR:-/opt/kaya}"
+IMAGE="${1:-ghcr.io/antybubbs/kaya:latest}"
 
 if [ -z "$IMAGE" ]; then
-  echo "Usage: $0 ghcr.io/owner/homelab:latest"
-  echo "Example: $0 ghcr.io/antybubbs/homelab:v1.0.0"
+  echo "Usage: $0 ghcr.io/owner/kaya:latest"
+  echo "Example: $0 ghcr.io/antybubbs/kaya:v1.0.0"
   exit 1
 fi
 
@@ -24,17 +24,17 @@ sudo mkdir -p "$APP_DIR/data" "$APP_DIR/uploads"
 sudo chown -R "$(id -u):$(id -g)" "$APP_DIR"
 
 cat > "$APP_DIR/docker-compose.yml" <<'COMPOSE'
-name: homelab
+name: kaya
 
 services:
-  homelab:
-    image: ${HOMELAB_IMAGE:?Set HOMELAB_IMAGE in .env}
-    container_name: homelab
+  kaya:
+    image: ${KAYA_IMAGE:?Set KAYA_IMAGE in .env}
+    container_name: kaya
     restart: unless-stopped
     env_file:
       - .env
     ports:
-      - "${HOMELAB_PORT:-8080}:8080"
+      - "${KAYA_PORT:-8080}:8080"
     volumes:
       - ./data:/app/data
       - ./uploads:/app/uploads
@@ -65,8 +65,8 @@ PY
 )
 
 cat > "$APP_DIR/.env" <<ENV
-HOMELAB_IMAGE=$IMAGE
-HOMELAB_PORT=8080
+KAYA_IMAGE=$IMAGE
+KAYA_PORT=8080
 APP_NAME=Kaya
 APP_ENV=production
 BASE_URL=http://localhost:8080
@@ -75,7 +75,7 @@ SECRET_KEY=$SECRET_KEY
 ENCRYPTION_KEY=$ENCRYPTION_KEY
 ADMIN_EMAIL=admin@example.local
 ADMIN_PASSWORD=$ADMIN_PASSWORD
-DATABASE_URL=sqlite:////app/data/homelab.db
+DATABASE_URL=sqlite:////app/data/kaya.db
 UPLOAD_DIR=/app/uploads
 MAX_UPLOAD_MB=25
 ALLOWED_HOSTS=

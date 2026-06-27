@@ -95,3 +95,17 @@ a:hover,.panel a:hover{color:#ffd08a}
 .term-blue,.term-cyan{color:#ffb357}
 html[data-theme=light] .button.secondary,html[data-theme=light] .ghost,html[data-theme=light] .icon-button,html[data-theme=light] .table-settings>summary,html[data-theme=light] .category-tabs a,html[data-theme=light] .compute-tabs a{background:#fff8f0;border-color:rgba(255,138,0,.3);color:#7a3b00}
 html[data-theme=light] .panel th,html[data-theme=light] .table-head th{color:#a84b00!important}
+
+/* Warm metadata labels and remaining legacy highlight states */
+.module-stat,.record-identifier,.record-fields label,.record-kv-list dt,.runbook-info-list dt,.inline-edit-preview label,.preview-heading,.audit-method,.audit-inspector>summary,.dashboard-hero .eyebrow{color:#ffc477!important}
+.inline-edit-preview{border-color:rgba(255,138,0,.28)}
+.panel tbody tr:hover,.workload-address:hover,.favourites-menu>summary:hover,.favourites-popover a:hover{background:rgba(255,138,0,.08);border-color:rgba(255,138,0,.32)}
+.favourites-menu>summary span{background:rgba(255,138,0,.13);border-color:rgba(255,138,0,.3);color:#ffd08a}
+.audit-table th{background:#191510}
+html[data-theme=light] .module-stat,html[data-theme=light] .record-identifier,html[data-theme=light] .record-fields label,html[data-theme=light] .record-kv-list dt,html[data-theme=light] .runbook-info-list dt,html[data-theme=light] .inline-edit-preview label,html[data-theme=light] .preview-heading,html[data-theme=light] .audit-method,html[data-theme=light] .audit-inspector>summary,html[data-theme=light] .dashboard-hero .eyebrow{color:#a84b00!important}
+
+/* Domain and form accent cleanup */
+.domain-dns-type strong,.record-edit-grid label{color:#ffc477!important}
+.record-edit-grid select{border-color:rgba(255,138,0,.24)}
+.runbook-link-list a:hover{background:rgba(255,138,0,.08);border-color:rgba(255,138,0,.32)}
+html[data-theme=light] .domain-dns-type strong,html[data-theme=light] .record-edit-grid label{color:#a84b00!important}

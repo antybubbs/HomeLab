@@ -65,8 +65,8 @@ jobs:
             ${{ steps.meta.outputs.image }}:${{ steps.meta.outputs.short_sha }}
             ${{ steps.meta.outputs.image }}:latest
 
-      - name: Build and push branch image
-        if: startsWith(github.ref_name, 'dev') || github.ref_name == 'Kaya'
+      - name: Build and push development branch image
+        if: startsWith(github.ref_name, 'dev')
         uses: docker/build-push-action@v6
         with:
           context: .
@@ -76,6 +76,19 @@ jobs:
           tags: |
             ${{ steps.meta.outputs.image }}:${{ steps.meta.outputs.ref_tag }}
             ${{ steps.meta.outputs.image }}:${{ steps.meta.outputs.ref_tag }}-${{ steps.meta.outputs.short_sha }}
+
+      - name: Build and push Kaya branch image
+        if: github.ref_name == 'Kaya'
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          push: true
+          build-args: |
+            APP_VERSION=${{ steps.meta.outputs.version }}
+          tags: |
+            ${{ steps.meta.outputs.image }}:${{ steps.meta.outputs.ref_tag }}
+            ${{ steps.meta.outputs.image }}:${{ steps.meta.outputs.ref_tag }}-${{ steps.meta.outputs.short_sha }}
+            ${{ steps.meta.outputs.image }}:latest
 
       - name: Build and push release image
         if: startsWith(github.ref, 'refs/tags/')

@@ -184,3 +184,14 @@ html[data-kaya-theme=light-ops] .remote-settings-grid input,html[data-kaya-theme
 html[data-kaya-theme=light-ops] .remote-settings-tabs{border-bottom-color:#d8dee8}
 html[data-kaya-theme=light-ops] .remote-settings-tabs a,html[data-kaya-theme=light-ops] .remote-host-toolbar button,html[data-kaya-theme=light-ops] .remote-host-toolbar a,html[data-kaya-theme=light-ops] .remote-layout-button,html[data-kaya-theme=light-ops] .remote-protocol-icon{background:#fff8f0;border-color:rgba(255,138,0,.3);color:#7a3b00}
 html[data-kaya-theme=light-ops] .remote-session-frame,html[data-kaya-theme=light-ops] .remote-console-empty{background:#f5f7fa;border-color:#d8dee8;color:#111827}
+
+/* Kaya Light Ops remote search and form controls */
+html[data-kaya-theme=light-ops] .remote-host-search{background:#eef1f5;border-bottom-color:#cfd7e3}
+html[data-kaya-theme=light-ops] .remote-host-search label{background:#fff!important;border:1px solid #b8c2cf!important;color:#334155!important;box-shadow:inset 0 1px 0 rgba(17,24,39,.03)}
+html[data-kaya-theme=light-ops] .remote-host-search label:focus-within{border-color:#ff8a00!important;box-shadow:0 0 0 3px rgba(255,138,0,.18)!important}
+html[data-kaya-theme=light-ops] .remote-host-search input{background:transparent!important;border:0!important;color:#111827!important;box-shadow:none!important}
+html[data-kaya-theme=light-ops] .remote-host-search input::placeholder{color:#6b7280!important;opacity:1}
+html[data-kaya-theme=light-ops] .remote-host-toolbar button,html[data-kaya-theme=light-ops] .remote-host-toolbar a{background:#fff8f0!important;border-color:rgba(255,138,0,.42)!important;color:#7a3b00!important}
+html[data-kaya-theme=light-ops] .remote-host-toolbar button:hover,html[data-kaya-theme=light-ops] .remote-host-toolbar a:hover,html[data-kaya-theme=light-ops] .remote-host-toolbar button.active{background:#fff3e2!important;border-color:#ff8a00!important;color:#111827!important}
+html[data-kaya-theme=light-ops] .remote-host-header strong,html[data-kaya-theme=light-ops] .remote-host-main strong{color:#111827!important}
+html[data-kaya-theme=light-ops] .remote-host-header span,html[data-kaya-theme=light-ops] .remote-host-main span,html[data-kaya-theme=light-ops] .remote-host-meta{color:#5b6574!important}

@@ -1,1 +1,12 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 500 140" role="img" aria-label="Kaya"><text x="18" y="88" fill="#F8FAFC" font-family="Inter, Arial, Helvetica, sans-serif" font-size="76" font-weight="800" letter-spacing="22">KAYA</text><circle cx="194" cy="111" r="6" fill="#FF8A00"/><circle cx="397" cy="111" r="6" fill="#FF8A00"/></svg>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 500 92" role="img" aria-label="Kaya wordmark">
+<g transform="translate(10 8)"><g class="kaya-wordmark" fill="#090B0F">
+  <path d="M0 12h16v24l34-24h25L35 41l43 35H52L16 47v29H0z"/>
+  <path d="M103 76l34-64h18l-34 64z"/>
+  <path d="M155 12h18l34 64h-20z"/>
+  <circle cx="155" cy="63" r="5.5" fill="#FF8A00"/>
+  <path d="M244 12h22l25 25 25-25h22l-39 39v25h-17V51z"/>
+  <path d="M373 76l34-64h18l-34 64z"/>
+  <path d="M425 12h18l34 64h-20z"/>
+  <circle cx="425" cy="63" r="5.5" fill="#FF8A00"/>
+</g></g>
+</svg>

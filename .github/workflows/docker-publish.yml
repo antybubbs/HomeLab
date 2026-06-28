@@ -61,6 +61,12 @@ jobs:
           push: true
           build-args: |
             APP_VERSION=${{ steps.meta.outputs.version }}
+          labels: |
+            org.opencontainers.image.title=Kaya
+            org.opencontainers.image.description=Your Infrastructure. Your Home.
+            org.opencontainers.image.source=https://github.com/${{ github.repository }}
+            org.opencontainers.image.revision=${{ github.sha }}
+            org.opencontainers.image.version=${{ steps.meta.outputs.version }}
           tags: |
             ${{ steps.meta.outputs.image }}:${{ steps.meta.outputs.short_sha }}
             ${{ steps.meta.outputs.image }}:latest
@@ -73,6 +79,12 @@ jobs:
           push: true
           build-args: |
             APP_VERSION=${{ steps.meta.outputs.version }}
+          labels: |
+            org.opencontainers.image.title=Kaya
+            org.opencontainers.image.description=Your Infrastructure. Your Home.
+            org.opencontainers.image.source=https://github.com/${{ github.repository }}
+            org.opencontainers.image.revision=${{ github.sha }}
+            org.opencontainers.image.version=${{ steps.meta.outputs.version }}
           tags: |
             ${{ steps.meta.outputs.image }}:${{ steps.meta.outputs.ref_tag }}
             ${{ steps.meta.outputs.image }}:${{ steps.meta.outputs.ref_tag }}-${{ steps.meta.outputs.short_sha }}
@@ -85,6 +97,12 @@ jobs:
           push: true
           build-args: |
             APP_VERSION=${{ steps.meta.outputs.version }}
+          labels: |
+            org.opencontainers.image.title=Kaya
+            org.opencontainers.image.description=Your Infrastructure. Your Home.
+            org.opencontainers.image.source=https://github.com/${{ github.repository }}
+            org.opencontainers.image.revision=${{ github.sha }}
+            org.opencontainers.image.version=${{ steps.meta.outputs.version }}
           tags: |
             ${{ steps.meta.outputs.image }}:${{ steps.meta.outputs.ref_tag }}
             ${{ steps.meta.outputs.image }}:${{ steps.meta.outputs.ref_tag }}-${{ steps.meta.outputs.short_sha }}
@@ -98,6 +116,12 @@ jobs:
           push: true
           build-args: |
             APP_VERSION=${{ steps.meta.outputs.version }}
+          labels: |
+            org.opencontainers.image.title=Kaya
+            org.opencontainers.image.description=Your Infrastructure. Your Home.
+            org.opencontainers.image.source=https://github.com/${{ github.repository }}
+            org.opencontainers.image.revision=${{ github.sha }}
+            org.opencontainers.image.version=${{ steps.meta.outputs.version }}
           tags: |
             ${{ steps.meta.outputs.image }}:${{ github.ref_name }}
             ${{ steps.meta.outputs.image }}:latest
